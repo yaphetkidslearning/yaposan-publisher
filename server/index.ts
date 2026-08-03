@@ -18,7 +18,7 @@ import { BoundedRateLimiter, inspectJsonComplexity, validateRequestTarget } from
 const config = loadCloudConfig();
 const runtimeMetrics = new RuntimeMetrics();
 const releaseVersion = "1.0.0";
-await configureCollaborationStore({ driver: config.collaborationDriver, redisUrl: config.redisUrl });
+const runtimeReady = configureCollaborationStore({ driver: config.collaborationDriver, redisUrl: config.redisUrl });
 const securityConfig = loadSecurityEnvironment();
 const identityConfig = { secret: config.sessionSecret, accessTokenMinutes: config.accessTokenMinutes, refreshTokenDays: config.refreshTokenDays };
 let storage: ObjectStorage = config.storageDriver === "r2"
@@ -34,7 +34,7 @@ const requestLimiter=new BoundedRateLimiter({limit:config.rateLimitPerMinute,win
 function rateLimit(ip:string){return !requestLimiter.check(ip).allowed}
 const match=(path:string,pattern:RegExp)=>pattern.exec(path);
 
-export async function handleRequest(req:IncomingMessage,res:ServerResponse){const targetCheck=validateRequestTarget(req.url??"/",{maxBodyBytes:config.maxRequestBodyBytes,maxJsonDepth:config.maxJsonDepth,maxJsonNodes:config.maxJsonNodes,maxStringLength:config.maxRequestBodyBytes,maxQueryParameters:config.maxQueryParameters,maxPathLength:2048});const requestId=String(req.headers["x-request-id"]??randomUUID());const url=new URL(req.url??"/","http://localhost");const ip=clientIp(req,config.trustProxy);const finishMetric=runtimeMetrics.begin(req.method);res.once("finish",()=>finishMetric(res.statusCode));req.setTimeout(config.requestTimeoutMs,()=>{if(!res.headersSent)json(res,408,{error:{code:"REQUEST_TIMEOUT",message:"Request exceeded the configured time limit"}},requestId);req.destroy()});try{
+export async function handleRequest(req:IncomingMessage,res:ServerResponse){await runtimeReady;const targetCheck=validateRequestTarget(req.url??"/",{maxBodyBytes:config.maxRequestBodyBytes,maxJsonDepth:config.maxJsonDepth,maxJsonNodes:config.maxJsonNodes,maxStringLength:config.maxRequestBodyBytes,maxQueryParameters:config.maxQueryParameters,maxPathLength:2048});const requestId=String(req.headers["x-request-id"]??randomUUID());const url=new URL(req.url??"/","http://localhost");const ip=clientIp(req,config.trustProxy);const finishMetric=runtimeMetrics.begin(req.method);res.once("finish",()=>finishMetric(res.statusCode));req.setTimeout(config.requestTimeoutMs,()=>{if(!res.headersSent)json(res,408,{error:{code:"REQUEST_TIMEOUT",message:"Request exceeded the configured time limit"}},requestId);req.destroy()});try{
  if(!targetCheck.valid)return json(res,400,{error:{code:"INVALID_REQUEST_TARGET",message:"Request target failed security validation",details:targetCheck.findings}},requestId);
  if(!isOriginAllowed(String(req.headers.origin??"" )||undefined,securityConfig.publicOrigins))return json(res,403,{error:{code:"ORIGIN_NOT_ALLOWED",message:"Request origin is not trusted"}},requestId);
  if(rateLimit(ip))return json(res,429,{error:{code:"RATE_LIMITED",message:"Too many requests"}},requestId);
@@ -97,16 +97,21 @@ export async function handleRequest(req:IncomingMessage,res:ServerResponse){cons
  }catch(error){const message=error instanceof Error?error.message:"Unknown error";console.error(JSON.stringify({level:"error",requestId,path:req.url,message}));return json(res,message==="PAYLOAD_TOO_LARGE"?413:500,{error:{code:"INTERNAL_ERROR",message:process.env.NODE_ENV==="production"?"Internal server error":message}},requestId)}}
 export function createApiServer(){return createServer(handleRequest)}
 if(process.argv[1]&&import.meta.url.endsWith(process.argv[1].replace(/\\/g,"/"))){
- const issues=validateProductionConfig(config);
- if(issues.length&&process.env.NODE_ENV==="production")throw new Error(issues.join("; "));
- const port=Number(process.env.PORT??4100);
- const server=createApiServer();
- server.headersTimeout=Math.max(config.requestTimeoutMs+5000,10000);
- server.requestTimeout=config.requestTimeoutMs;
- server.keepAliveTimeout=5000;
- server.listen(port,async()=>{
+ void runtimeReady.then(async()=>{
+  const issues=validateProductionConfig(config);
+  if(issues.length&&process.env.NODE_ENV==="production")throw new Error(issues.join("; "));
+  const port=Number(process.env.PORT??4100);
+  const server=createApiServer();
+  server.headersTimeout=Math.max(config.requestTimeoutMs+5000,10000);
+  server.requestTimeout=config.requestTimeoutMs;
+  server.keepAliveTimeout=5000;
   const db=await getDatabase();
   installGracefulShutdown({server,database:db,timeoutMs:config.shutdownTimeoutMs});
-  console.log(JSON.stringify({level:"info",message:"Yaposan Publisher v1.0.0 API listening",version:releaseVersion,port,buildId:process.env.BUILD_ID??"local",commitSha:process.env.GIT_COMMIT_SHA??"unknown"}));
+  server.listen(port,()=>{
+   console.log(JSON.stringify({level:"info",message:"Yaposan Publisher v1.0.0 API listening",version:releaseVersion,port,buildId:process.env.BUILD_ID??"local",commitSha:process.env.GIT_COMMIT_SHA??"unknown"}));
+  });
+ }).catch((error)=>{
+  console.error(error);
+  process.exitCode=1;
  });
 }
