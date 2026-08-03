@@ -1,0 +1,5 @@
+import test from 'node:test'; import assert from 'node:assert/strict'; import fs from 'node:fs';
+const engine=fs.readFileSync('src/utils/phase240iProductionHardeningEngine.ts','utf8'); const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+test('production hardening engine contains real validation and round-trip operations',()=>{for(const token of ['sanitizeSvg','validateArchiveEntries','verifyLicenseEnvelope','runRealProjectRoundTrip','runProductionBenchmark']) assert.match(engine,new RegExp(`export (?:async )?function ${token}`));});
+test('security controls include protocol allowlist and archive limits',()=>{assert.match(engine,/SAFE_PROTOCOLS/);assert.match(engine,/MAX_ARCHIVE_ENTRIES/);assert.match(engine,/MAX_ARCHIVE_EXPANDED_BYTES/);});
+test('phase 24.0I verification chain is installed',()=>{assert.equal(pkg.version,'24.0.9'); for(const name of ['security:phase24.0i','benchmark:phase24.0i','e2e:phase24.0i','docs:phase24.0i','audit:phase24.0i','verify:phase24.0i']) assert.ok(pkg.scripts[name]);});

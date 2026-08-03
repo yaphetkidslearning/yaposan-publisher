@@ -1,0 +1,28 @@
+{
+  "phase": "43.5",
+  "baseTemplateCount": 225,
+  "addedTemplateCount": 200,
+  "totalTemplateCount": 425,
+  "uniqueTemplateIds": 200,
+  "uniqueTemplateNames": 200,
+  "uniqueLayoutSignatures": 200,
+  "duplicateTemplateIds": 0,
+  "duplicateTemplateNames": 0,
+  "duplicateLayoutSignatures": 0,
+  "editablePublisherObjectArchitecture": true,
+  "highResolutionPhotoPlaceholders": true,
+  "curatedFourColorPalettes": true,
+  "categoryDistribution": {
+    "Business": 20,
+    "Marketing": 20,
+    "Social Media": 20,
+    "Real Estate": 20,
+    "Restaurant": 20,
+    "Healthcare": 20,
+    "Education": 20,
+    "Technology": 20,
+    "Fashion": 20,
+    "Sports": 20
+  },
+  "typescriptValidation": "Syntax passed far enough to reach missing dependency errors; full validation requires node_modules, expo/tsconfig.base, and @types/node."
+}

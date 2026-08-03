@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": false,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  },
+  "include": [
+    "server/**/*.ts",
+    "scripts/export-worker.ts",
+    "scripts/phase75-launch-audit.ts"
+  ],
+  "exclude": ["tests", "src", "node_modules"]
+}

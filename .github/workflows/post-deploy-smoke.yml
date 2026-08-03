@@ -1,0 +1,38 @@
+name: Post-deploy production verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_version:
+        description: Expected production version
+        required: true
+        default: 1.0.0
+  schedule:
+    - cron: '17 * * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify public production services
+        env:
+          YAPOSAN_APP_URL: ${{ vars.YAPOSAN_APP_URL }}
+          YAPOSAN_API_URL: ${{ vars.YAPOSAN_API_URL }}
+          EXPECTED_RELEASE_VERSION: ${{ inputs.expected_version || '1.0.0' }}
+          METRICS_TOKEN: ${{ secrets.METRICS_TOKEN }}
+          POST_CUTOVER_REPORT: deployment-step5-live-report.json
+        run: node scripts/post-cutover-verify.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-verification-report
+          path: deployment-step5-live-report.json
+          retention-days: 30

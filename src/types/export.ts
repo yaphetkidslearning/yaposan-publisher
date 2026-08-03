@@ -1,0 +1,14 @@
+import type { PublisherProject } from './publisher';
+export type ExportFormat='pdf'|'png'|'jpg'|'webp'|'tiff'|'bmp'|'svg';
+export type ExportQuality='draft'|'standard'|'high'|'maximum';
+export type ExportColorMode='RGB'|'CMYK'|'grayscale';
+export type ExportBackground='transparent'|'white'|'custom';
+export type ExportPageMode='current'|'all'|'selected'|'range';
+export type ExportJobStatus='queued'|'validating'|'exporting'|'completed'|'failed'|'cancelled';
+export type ExportPreset={id:string;name:string;category:'Social Media'|'Flyer'|'Poster'|'Banner'|'Business Card'|'Brochure'|'Booklet'|'Label'|'Sticker'|'Presentation'|'Custom';favorite?:boolean;builtIn?:boolean;formats:ExportFormat[];dpi:number;quality:ExportQuality;colorMode:ExportColorMode;background:ExportBackground;backgroundColor:string;bleed:boolean;cropMarks:boolean;registrationMarks:boolean;safeArea:boolean;margins:boolean};
+export type ExportOptions={formats:ExportFormat[];pageMode:ExportPageMode;selectedPageIds:string[];pageRange:string;dpi:number;customDpi:number;quality:ExportQuality;background:ExportBackground;backgroundColor:string;colorMode:ExportColorMode;bleed:boolean;bleedSize:number;cropMarks:boolean;registrationMarks:boolean;safeArea:boolean;safeAreaSize:number;margins:boolean;marginSize:number;hyperlinks:boolean;bookmarks:boolean;metadata:boolean;embedFonts:boolean;preserveVectors:boolean;preserveText:boolean;preserveGradients:boolean;compression:number;password:string;ownerPassword:string;fileNameTemplate:string;autoNumber:boolean;presetId?:string;parallelExports:boolean;maxConcurrency:number;generateReport:boolean;pdfXReady:boolean};
+export type ExportWarning={code:string;severity:'info'|'warning'|'error';message:string;pageId?:string;elementId?:string};
+export type ExportJob={id:string;projectId:string;projectName:string;createdAt:number;updatedAt:number;status:ExportJobStatus;progress:number;currentStep:string;options:ExportOptions;warnings:ExportWarning[];files:string[];error?:string;attempt:number;durationMs?:number};
+export type ExportSummary={pages:number;formats:ExportFormat[];estimatedFiles:number;warnings:ExportWarning[];blocked:boolean};
+export type ExportContext={project:PublisherProject;options:ExportOptions};
+export type BatchExportRequest={projects:PublisherProject[];options:ExportOptions};

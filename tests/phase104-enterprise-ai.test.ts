@@ -1,0 +1,8 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { AI_PROVIDERS, analyzeAdvancedDocument, buildImagePrompt, contentLibrary, generatePublication, suggestLayouts } from "../src/services/enterpriseAiService";
+import type { PublisherProject } from "../src/types/publisher";
+const project:PublisherProject={id:"p",name:"Test",createdAt:1,updatedAt:1,version:2,autoSave:true,activePageId:"page",pages:[{id:"page",name:"Page 1",width:816,height:1056,orientation:"portrait",sizeKey:"letter",backgroundColor:"#fff",margin:36,bleed:0,elements:[{id:"t",name:"Body",type:"text",x:10,y:10,width:300,height:80,rotation:0,zIndex:1,opacity:1,text:"This is a clear sentence. This is another sentence about community community community.",fontSize:16,textColor:"#111111",fillColor:"#ffffff"}]}]};
+test("enterprise document generator creates native editable page",()=>{const next=generatePublication(project,"Flyer","Community Celebration");assert.equal(next.pages.length,2);assert.equal(next.pages[1].elements.some(e=>e.type==="text"),true);assert.equal(next.pages[1].elements.some(e=>e.type==="rectangle"),true);});
+test("advanced intelligence returns real metrics and layout suggestions",()=>{const m=analyzeAdvancedDocument(project);assert.ok(m.words>5);assert.ok(m.readability>=0);assert.ok(Array.isArray(suggestLayouts(project)));});
+test("provider, content, and image prompt systems are available",()=>{assert.ok(AI_PROVIDERS.some(p=>p.id==="local"&&p.enabled));assert.match(contentLibrary("FAQs","Yaposan"),/Yaposan/);assert.match(buildImagePrompt("Flux","church flyer","editorial"),/negative space/i);});

@@ -1,0 +1,25 @@
+export type Phase42Status="planned"|"implemented"|"verified"|"blocked";
+export type Phase42EvidenceKind="workflow-test"|"export-report"|"accessibility-report"|"security-report"|"signed-artifact"|"deployment-url"|"legal-approval"|"marketplace-audit"|"performance-report";
+export type Phase42Evidence={id:string;controlId:string;kind:Phase42EvidenceKind;value:string;verified:boolean;verifiedAt?:string;verifiedBy?:string};
+export type Phase42Control={id:string;area:string;title:string;status:Phase42Status;requiredEvidence:Phase42EvidenceKind[];releaseBlocking:boolean};
+export const PHASE42_CONTROLS:Phase42Control[]=[
+{id:"42.0",area:"Studios",title:"Publisher and Photo Studio production workflow certification",status:"implemented",requiredEvidence:["workflow-test","export-report","accessibility-report"],releaseBlocking:true},
+{id:"42.1",area:"Studios",title:"Video, Animation and Audio Studio production workflow certification",status:"implemented",requiredEvidence:["workflow-test","export-report","performance-report"],releaseBlocking:true},
+{id:"42.2",area:"Studios",title:"Presentation, Web, PDF, 3D and AI workspace certification",status:"implemented",requiredEvidence:["workflow-test","export-report","accessibility-report"],releaseBlocking:true},
+{id:"42.3",area:"Rendering",title:"FFmpeg-ready render orchestration, progress, cancellation, retry and resume",status:"implemented",requiredEvidence:["workflow-test","export-report","performance-report"],releaseBlocking:true},
+{id:"42.4",area:"Export",title:"Multi-format export validation and fidelity reporting",status:"implemented",requiredEvidence:["export-report","workflow-test"],releaseBlocking:true},
+{id:"42.5",area:"Marketplace",title:"Template, plugin and asset marketplace commercial operations",status:"implemented",requiredEvidence:["marketplace-audit","security-report","legal-approval"],releaseBlocking:true},
+{id:"42.6",area:"Templates",title:"Professional original template discovery library and quality audit",status:"implemented",requiredEvidence:["marketplace-audit","accessibility-report"],releaseBlocking:false},
+{id:"42.7",area:"Distribution",title:"Web, Windows, macOS, iOS and Android release artifacts",status:"planned",requiredEvidence:["signed-artifact","deployment-url","security-report"],releaseBlocking:true},
+{id:"42.8",area:"Documentation",title:"User, administrator, deployment, API, SDK and recovery documentation",status:"implemented",requiredEvidence:["workflow-test","legal-approval"],releaseBlocking:true},
+{id:"42.9",area:"Accessibility",title:"WCAG, keyboard, screen reader, contrast, reduced motion and localization review",status:"implemented",requiredEvidence:["accessibility-report","workflow-test"],releaseBlocking:true},
+{id:"42.10",area:"Legal",title:"Terms, privacy, cookies, AI use, copyright, marketplace and data processing",status:"implemented",requiredEvidence:["legal-approval","security-report"],releaseBlocking:true},
+{id:"42.11",area:"Testing",title:"Unit, integration, E2E, browser, mobile, load, security and recovery suites",status:"implemented",requiredEvidence:["workflow-test","performance-report","security-report"],releaseBlocking:true},
+{id:"42.12",area:"Release",title:"Evidence-backed Yaposan production release certification",status:"planned",requiredEvidence:["signed-artifact","deployment-url","workflow-test","security-report","accessibility-report","legal-approval"],releaseBlocking:true}
+];
+export const PHASE42_STUDIOS=["Publisher","Photo Studio","Video Studio","Animation Studio","Audio Studio","Presentation Studio","Web Studio","PDF Studio","3D and Mockup Studio","Yaposan AI","Social and Marketing Center"] as const;
+export const PHASE42_WORKFLOW_CHECKS=["create","open","save","restore","undo","redo","import","export","shared-assets","cross-studio","performance","error-recovery","accessibility","browser","mobile","large-project"] as const;
+export function evidenceComplete(control:Phase42Control,evidence:Phase42Evidence[]){return control.requiredEvidence.every(kind=>evidence.some(x=>x.controlId===control.id&&x.kind===kind&&x.verified&&x.value.trim().length>0))}
+export function phase42Score(controls:Phase42Control[],evidence:Phase42Evidence[]){if(!controls.length)return 0;return Math.round(controls.reduce((sum,c)=>sum+(c.status==="implemented"?50:c.status==="verified"&&evidenceComplete(c,evidence)?100:0),0)/controls.length)}
+export function phase42Blockers(controls:Phase42Control[],evidence:Phase42Evidence[]){return controls.filter(c=>c.releaseBlocking).flatMap(c=>{const out:string[]=[];if(c.status!=="verified")out.push(`${c.id}: ${c.title} is not verified`);for(const kind of c.requiredEvidence)if(!evidence.some(x=>x.controlId===c.id&&x.kind===kind&&x.verified))out.push(`${c.id}: missing verified ${kind}`);return out})}
+export function certifyPhase42(controls:Phase42Control[],evidence:Phase42Evidence[]){const blockers=phase42Blockers(controls,evidence);return{certified:blockers.length===0,score:phase42Score(controls,evidence),blockers,certifiedAt:blockers.length?undefined:new Date().toISOString()}}

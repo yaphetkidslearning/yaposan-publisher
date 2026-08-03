@@ -1,0 +1,33 @@
+name: Production Burn-In
+on:
+  workflow_dispatch:
+    inputs:
+      duration_minutes:
+        description: Burn-in duration in minutes
+        required: true
+        default: '60'
+  schedule:
+    - cron: '17 */6 * * *'
+jobs:
+  burn-in:
+    runs-on: ubuntu-latest
+    timeout-minutes: 370
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/deployment-step7-burn-in.mjs
+        env:
+          YAPOSAN_APP_URL: https://app.yaposan.com
+          YAPOSAN_API_URL: https://api.yaposan.com
+          EXPECTED_RELEASE_VERSION: 1.0.0
+          BURN_IN_DURATION_MINUTES: ${{ inputs.duration_minutes || '60' }}
+          BURN_IN_INTERVAL_SECONDS: '60'
+          BURN_IN_MAX_FAILURES: '0'
+          METRICS_TOKEN: ${{ secrets.METRICS_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-burn-in-report
+          path: deployment/burn-in/latest-report.json

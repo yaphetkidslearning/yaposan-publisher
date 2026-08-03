@@ -1,0 +1,14 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { archiveBranch, certifyPhase23, compareBranches, createBranch, createProjectVersion, getPhase23State, mergeBranch, saveActiveBranch, switchBranch, withPhase23State } from "../src/utils/collaborationVersionControlEngine";
+import type { PublisherProject } from "../src/types/publisher";
+
+const project=(text="Hello"):PublisherProject=>({id:"p1",name:"Project",createdAt:1,updatedAt:1,activePageId:"page1",pages:[{id:"page1",name:"Page 1",width:800,height:600,backgroundColor:"#fff",elements:[{id:"e1",type:"text",x:10,y:10,width:200,height:40,text}]}]}) as PublisherProject;
+const versioned=()=>{const p=project("Base");return withPhase23State(p,createProjectVersion(p,"Base","Owner"));};
+
+test("migrates Phase 23.0 state to a real Main branch",()=>{const state=getPhase23State(versioned());assert.equal(state.version,"23.2");assert.equal(state.branches[0].name,"Main");assert.equal(state.activeBranchId,"branch-main");});
+test("creates and switches isolated branch workspaces",()=>{let p=createBranch(versioned(),"Feature A","Dawit","New editor work",undefined,"development");const branch=getPhase23State(p).branches.find(item=>item.name==="Feature A")!;p=switchBranch(p,branch.id);p={...p,pages:[{...p.pages[0],elements:[{...p.pages[0].elements[0],text:"Feature text"}]}]};p=saveActiveBranch(p);p=switchBranch(p,"branch-main");assert.equal(p.pages[0].elements[0].text,"Base");p=switchBranch(p,branch.id);assert.equal(p.pages[0].elements[0].text,"Feature text");});
+test("compares branches at object level",()=>{let p=createBranch(versioned(),"Feature","Owner");const id=getPhase23State(p).branches.find(item=>item.name==="Feature")!.id;p=switchBranch(p,id);p={...p,pages:[{...p.pages[0],elements:[{...p.pages[0].elements[0],text:"Changed"}]}]};p=saveActiveBranch(p);const changes=compareBranches(p,"branch-main",id);assert.equal(changes.length,1);assert.equal(changes[0].kind,"element-updated");});
+test("merges branch content and records auditable merge history",()=>{let p=createBranch(versioned(),"Feature","Owner");const id=getPhase23State(p).branches.find(item=>item.name==="Feature")!.id;p=switchBranch(p,id);p={...p,pages:[{...p.pages[0],elements:[{...p.pages[0].elements[0],text:"Merged"}]}]};p=saveActiveBranch(p);p=switchBranch(p,"branch-main");const result=mergeBranch(p,id,"incoming","Owner");assert.equal(result.project.pages[0].elements[0].text,"Merged");assert.equal(getPhase23State(result.project).mergeHistory.length,1);});
+test("protects the active and Main branches from archive",()=>{const p=versioned();assert.throws(()=>archiveBranch(p,"branch-main"));});
+test("Phase 23.1 certification validates versions and branch integrity",()=>{const p=versioned();const cert=certifyPhase23(p);assert.equal(cert.passed,true);assert.equal(cert.branchCount,1);assert.equal(cert.activeBranchId,"branch-main");});

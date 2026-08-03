@@ -1,0 +1,13 @@
+{
+  "zone": "yaposan.com",
+  "records": [
+    {"type":"CNAME","name":"app","target":"REPLACE_WITH_RENDER_WEB_HOSTNAME","proxied":false},
+    {"type":"CNAME","name":"api","target":"REPLACE_WITH_RENDER_API_HOSTNAME","proxied":false},
+    {"type":"CNAME","name":"cdn","target":"REPLACE_WITH_R2_CUSTOM_DOMAIN_TARGET","proxied":true}
+  ],
+  "notes": [
+    "Add app.yaposan.com and api.yaposan.com as custom domains in Render before final verification.",
+    "Attach cdn.yaposan.com to the production R2 bucket in Cloudflare R2 settings.",
+    "Keep Render records DNS-only during initial domain verification; enable Cloudflare proxy only after TLS and health checks pass."
+  ]
+}

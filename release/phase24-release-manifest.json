@@ -1,0 +1,26 @@
+{
+  "schema": "yaposan.phase24.release-manifest",
+  "version": 1,
+  "packageVersion": "24.0.0",
+  "generatedAt": "2026-07-27T17:23:41.002Z",
+  "node": "v22.16.0",
+  "files": [
+    {
+      "file": "package.json",
+      "sha256": "811f347da89322af1347239336afb040caaa30702280ce1e939af739106f7424"
+    },
+    {
+      "file": "package-lock.json",
+      "sha256": "003b18b5282e564b6e818f43192c4ca7b527b01ccb74d17e26a87d65e5955372"
+    },
+    {
+      "file": "app.json",
+      "sha256": "c2809f9175e5aaf8ac56040f0c09b7a6832ffc3348bfd49942a78fb2edc06637"
+    },
+    {
+      "file": "tsconfig.json",
+      "sha256": "866c896d559f3439460cc9bfc772d512494a0af2b26c60ce5c20217299800d1c"
+    }
+  ],
+  "certificationCommand": "npm run verify:phase24"
+}

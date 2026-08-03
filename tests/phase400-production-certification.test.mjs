@@ -1,0 +1,5 @@
+import test from "node:test";import assert from "node:assert/strict";import fs from "node:fs";
+const engine=fs.readFileSync(new URL("../src/utils/phase40ProductionCertificationEngine.ts",import.meta.url),"utf8");const screen=fs.readFileSync(new URL("../src/app/production-certification.tsx",import.meta.url),"utf8");const home=fs.readFileSync(new URL("../src/app/index.tsx",import.meta.url),"utf8");
+test("Phase 40 contains Packages 40.0 through 40.12",()=>{for(let i=0;i<=12;i++)assert.match(engine,new RegExp(`id:\\"40\\.${i}\\"`));});
+test("Phase 40 contains release gates, studios, artifacts and evidence-based certification",()=>{assert.match(engine,/DEFAULT_RELEASE_GATES/);assert.match(engine,/DEFAULT_STUDIOS/);assert.match(engine,/DEFAULT_DISTRIBUTION_ARTIFACTS/);assert.match(engine,/score===100&&blockers.length===0/);assert.match(screen,/AsyncStorage/);});
+test("Phase 40 is integrated into home navigation",()=>{assert.match(home,/\/production-certification/);assert.match(screen,/Production Certification & Commercial Release/);});

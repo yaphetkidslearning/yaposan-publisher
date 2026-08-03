@@ -1,0 +1,10 @@
+const fs=require('fs');
+const assert=require('assert');
+const account=fs.readFileSync('src/app/account.tsx','utf8');
+const editor=fs.readFileSync('src/app/editor.tsx','utf8');
+const image=fs.readFileSync('src/app/image-editor.tsx','utf8');
+assert(!editor.includes('Recovered work found'));
+['Profile editing','Choose a plan','AI usage','Devices & sessions','Email preferences','Data & privacy','Recent account activity'].forEach(x=>assert(account.includes(x),x));
+assert(account.includes('AI provider not connected'));
+assert(image.includes('Open image in Photo Studio'));
+console.log('Phase 24.0Z4 verification passed');

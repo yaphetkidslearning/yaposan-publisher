@@ -1,0 +1,87 @@
+import { Ionicons } from "@expo/vector-icons";
+import { Link, router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useMemo, useState } from "react";
+import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import type { ImageEditorAdjustment, ImageEditorPanel, ImageEditorTool } from "../types/imageEditor";
+import { addAdjustmentLayer, addLayerGroup, addMaskToSelectedLayer, addRasterLayer, calculateLayerSummary, createImageEditorState, duplicateSelectedLayer, flattenImage, IMAGE_EDITOR_BLEND_MODES, mergeVisibleLayers, patchSelectedLayer, removeSelectedLayer, saveSelection } from "../utils/imageEditorEngine";
+import { loadImageEditorState, saveImageEditorState } from "../utils/imageEditorStorage";
+
+const TOOLS: { id: ImageEditorTool; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
+  { id: "move", icon: "move-outline", label: "Move" }, { id: "brush", icon: "brush-outline", label: "Brush" },
+  { id: "eraser", icon: "remove-circle-outline", label: "Eraser" }, { id: "clone", icon: "copy-outline", label: "Clone" },
+  { id: "spot-heal", icon: "bandage-outline", label: "Spot Heal" }, { id: "patch", icon: "git-merge-outline", label: "Patch" },
+  { id: "content-aware", icon: "sparkles-outline", label: "Content Aware" }, { id: "magic-wand", icon: "color-wand-outline", label: "Magic Wand" },
+  { id: "quick-selection", icon: "scan-outline", label: "Quick Select" }, { id: "eyedropper", icon: "eyedrop-outline", label: "Eyedropper" },
+];
+const ADJUSTMENTS: ImageEditorAdjustment[] = ["brightness-contrast","levels","curves","exposure","vibrance","hue-saturation","color-balance","black-white","gradient-map","selective-color","color-lookup"];
+const PANELS: ImageEditorPanel[] = ["layers","channels","history","navigator","histogram","info"];
+
+function Btn({ label, icon, active, disabled, onPress }: { label: string; icon: keyof typeof Ionicons.glyphMap; active?: boolean; disabled?: boolean; onPress: () => void }) {
+  return <Pressable disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.btn, active && styles.btnActive, disabled && styles.disabled, pressed && !disabled && styles.btnPressed]}><Ionicons name={icon} size={16} color={active ? "#fff" : "#183149"}/><Text style={[styles.btnText, active && styles.btnTextActive]}>{label}</Text></Pressable>;
+}
+
+export default function ImageEditorScreen() {
+  const { width } = useWindowDimensions();
+  const compact = width < 1050;
+  const params = useLocalSearchParams<{ imageUri?: string }>();
+  const requestedImageUri = typeof params.imageUri === "string" && params.imageUri ? params.imageUri : undefined;
+  const [state, setState] = useState(() => createImageEditorState(requestedImageUri));
+  const selected = useMemo(() => state.layers.find((layer) => layer.id === state.selectedLayerId), [state]);
+  const summary = useMemo(() => calculateLayerSummary(state), [state]);
+  useEffect(() => { loadImageEditorState().then((saved) => { if (saved) setState(requestedImageUri ? { ...saved, imageUri: requestedImageUri, updatedAt: Date.now() } : saved); }); }, [requestedImageUri]);
+  useEffect(() => { const timer = setTimeout(() => saveImageEditorState(state), 300); return () => clearTimeout(timer); }, [state]);
+  const patch = (next: typeof state) => setState(next);
+
+  return <SafeAreaView style={styles.safe}>
+    <View style={styles.topbar}>
+      <Link href="/photo-studio" asChild><Pressable style={styles.back}><Ionicons name="arrow-back" size={18} color="#fff"/><Text style={styles.backText}>Photo Studio</Text></Pressable></Link>
+      <View><Text style={styles.title}>Professional Image Editor</Text><Text style={styles.subtitle}>Layers, masks, adjustments, brushes, selections, healing and color</Text></View>
+      <View style={styles.topActions}><Btn icon="save-outline" label="Save" onPress={() => saveImageEditorState(state)}/><Btn icon="download-outline" label="Export" onPress={() => {}}/></View>
+    </View>
+
+    <View style={[styles.body, compact && styles.bodyCompact]}>
+      <ScrollView horizontal={compact} style={[styles.toolRail, compact && styles.toolRailCompact]} contentContainerStyle={compact ? styles.toolRailRow : undefined}>
+        {TOOLS.map((tool) => <Pressable key={tool.id} onPress={() => patch({ ...state, activeTool: tool.id, updatedAt: Date.now(), history: [`Selected ${tool.label}`, ...state.history] })} style={[styles.tool, state.activeTool === tool.id && styles.toolActive]}><Ionicons name={tool.icon} size={20} color={state.activeTool === tool.id ? "#fff" : "#b8c9d8"}/><Text style={[styles.toolLabel, state.activeTool === tool.id && {color:"#fff"}]}>{tool.label}</Text></Pressable>)}
+      </ScrollView>
+
+      <View style={styles.center}>
+        <View style={styles.optionsBar}>
+          <Text style={styles.optionTitle}>{state.activeTool.replace(/-/g," ").toUpperCase()}</Text>
+          <Text style={styles.optionText}>Size {state.brush.size}px</Text><Text style={styles.optionText}>Hardness {state.brush.hardness}%</Text><Text style={styles.optionText}>Flow {state.brush.flow}%</Text>
+          <Btn icon="remove" label="Zoom -" onPress={() => patch({ ...state, zoom: Math.max(.1, state.zoom - .1) })}/><Text style={styles.zoom}>{Math.round(state.zoom * 100)}%</Text><Btn icon="add" label="Zoom +" onPress={() => patch({ ...state, zoom: Math.min(8, state.zoom + .1) })}/>
+        </View>
+        <View style={styles.canvas}>
+          {state.imageUri ? <Image source={{ uri: state.imageUri }} style={[styles.image, { transform: [{ scale: state.zoom }] }]} resizeMode="contain"/> : <View style={styles.empty}><Ionicons name="images-outline" size={70} color="#7290a8"/><Text style={styles.emptyTitle}>Professional image workspace</Text><Text style={styles.emptyText}>Open an image from Photo Studio, then edit it with layers, masks, adjustments, selections, brushes, healing and soft proofing.</Text><Pressable style={styles.openImageButton} onPress={() => router.push("/photo-studio" as never)}><Ionicons name="images-outline" size={18} color="#fff"/><Text style={styles.openImageButtonText}>Open image in Photo Studio</Text></Pressable></View>}
+          <View style={styles.canvasBadge}><Text style={styles.canvasBadgeText}>{state.colorMode} • {state.softProof ? "SOFT PROOF" : "STANDARD"} • TILE {state.performance.tileSize}</Text></View>
+        </View>
+        <View style={styles.status}><Text style={styles.statusText}>Layers {summary.total} • Visible {summary.visible} • Masks {summary.masks} • Cache {state.performance.cacheBudgetMb} MB • GPU-ready {state.performance.gpuReady ? "Yes" : "No"}</Text></View>
+      </View>
+
+      <View style={[styles.right, compact && styles.rightCompact]}>
+        <ScrollView horizontal={compact} contentContainerStyle={compact ? styles.panelTabsRow : undefined} style={styles.panelTabs}>{PANELS.map((panel) => <Pressable key={panel} onPress={() => patch({ ...state, activePanel: panel })} style={[styles.panelTab, state.activePanel === panel && styles.panelTabActive]}><Text style={[styles.panelTabText, state.activePanel === panel && {color:"#fff"}]}>{panel}</Text></Pressable>)}</ScrollView>
+        <ScrollView style={styles.inspector}>
+          {state.activePanel === "layers" && <>
+            <Text style={styles.sectionTitle}>Layers</Text>
+            <View style={styles.row}><Btn icon="add" label="Layer" onPress={() => patch(addRasterLayer(state))}/><Btn icon="folder-outline" label="Group" onPress={() => patch(addLayerGroup(state))}/></View>
+            <View style={styles.row}><Btn icon="copy-outline" label="Duplicate" disabled={!selected} onPress={() => patch(duplicateSelectedLayer(state))}/><Btn icon="trash-outline" label="Delete" disabled={state.layers.length <= 1} onPress={() => patch(removeSelectedLayer(state))}/></View>
+            {state.layers.slice().reverse().map((layer) => <Pressable key={layer.id} onPress={() => patch({ ...state, selectedLayerId: layer.id })} style={[styles.layer, state.selectedLayerId === layer.id && styles.layerSelected]}><Pressable onPress={() => patch(patchSelectedLayer(state, { visible: !layer.visible }))}><Ionicons name={layer.visible ? "eye-outline" : "eye-off-outline"} size={17} color="#36546d"/></Pressable><View style={styles.layerThumb}><Ionicons name={layer.kind === "group" ? "folder" : layer.kind === "adjustment" ? "options" : "image"} size={16} color="#1d4ed8"/></View><View style={{flex:1}}><Text style={styles.layerName}>{layer.name}</Text><Text style={styles.layerMeta}>{layer.kind} • {layer.blendMode} • {layer.opacity}%</Text></View>{layer.mask && <View style={styles.maskBadge}><Text style={styles.maskBadgeText}>M</Text></View>}</Pressable>)}
+            <Text style={styles.sectionTitle}>Layer controls</Text>
+            <ScrollView horizontal>{IMAGE_EDITOR_BLEND_MODES.map((mode) => <Pressable key={mode} onPress={() => patch(patchSelectedLayer(state,{blendMode:mode}))} style={[styles.chip, selected?.blendMode===mode && styles.chipActive]}><Text style={[styles.chipText, selected?.blendMode===mode && {color:"#fff"}]}>{mode}</Text></Pressable>)}</ScrollView>
+            <View style={styles.row}><Btn icon="contrast-outline" label="Raster mask" onPress={() => patch(addMaskToSelectedLayer(state,"raster"))}/><Btn icon="shapes-outline" label="Vector mask" onPress={() => patch(addMaskToSelectedLayer(state,"vector"))}/></View>
+            <View style={styles.row}><Btn icon="git-merge-outline" label="Merge visible" onPress={() => patch(mergeVisibleLayers(state))}/><Btn icon="layers-outline" label="Flatten" onPress={() => patch(flattenImage(state))}/></View>
+            <Text style={styles.sectionTitle}>Adjustment layers</Text><View style={styles.adjustments}>{ADJUSTMENTS.map((adjustment) => <Pressable key={adjustment} onPress={() => patch(addAdjustmentLayer(state,adjustment))} style={styles.adjustment}><Ionicons name="options-outline" size={15} color="#1d4ed8"/><Text style={styles.adjustmentText}>{adjustment.replace(/-/g," ")}</Text></Pressable>)}</View>
+          </>}
+          {state.activePanel === "history" && <><Text style={styles.sectionTitle}>History</Text>{state.history.map((item,index)=><View key={`${item}-${index}`} style={styles.historyRow}><Ionicons name="time-outline" size={15} color="#607b91"/><Text style={styles.historyText}>{item}</Text></View>)}</>}
+          {state.activePanel === "histogram" && <><Text style={styles.sectionTitle}>Histogram</Text><View style={styles.histogram}>{[30,54,78,45,88,62,95,70,42,58,80,35].map((h,i)=><View key={i} style={[styles.bar,{height:h}]}/>)}</View><Btn icon="color-palette-outline" label={state.colorMode} onPress={() => patch({...state,colorMode:state.colorMode==="RGB"?"CMYK-preview":"RGB"})}/><Btn icon="eye-outline" label="Soft proof" active={state.softProof} onPress={() => patch({...state,softProof:!state.softProof})}/></>}
+          {state.activePanel === "navigator" && <><Text style={styles.sectionTitle}>Navigator</Text><View style={styles.navigator}><Ionicons name="scan-outline" size={50} color="#7890a5"/><Text style={styles.navigatorText}>{Math.round(state.zoom*100)}%</Text></View></>}
+          {state.activePanel === "channels" && <><Text style={styles.sectionTitle}>Channels</Text>{["RGB Composite","Red","Green","Blue","Alpha / Masks"].map((item)=><View key={item} style={styles.channel}><Ionicons name="eye-outline" size={16} color="#496278"/><Text style={styles.channelText}>{item}</Text></View>)}</>}
+          {state.activePanel === "info" && <><Text style={styles.sectionTitle}>Selection & performance</Text><Btn icon="bookmark-outline" label="Save selection" onPress={() => patch(saveSelection(state,`Selection ${state.selection.savedNames.length+1}`))}/><Text style={styles.infoText}>Saved selections: {state.selection.savedNames.length}</Text><Text style={styles.infoText}>Antialias: {state.selection.antialias ? "On" : "Off"}</Text><Text style={styles.infoText}>Background rendering: {state.performance.backgroundRendering ? "On" : "Off"}</Text><Text style={styles.infoText}>Large image optimization: {state.performance.largeImageOptimization ? "On" : "Off"}</Text></>}
+        </ScrollView>
+      </View>
+    </View>
+  </SafeAreaView>;
+}
+
+const styles=StyleSheet.create({
+  safe:{flex:1,backgroundColor:"#0f1d2a"},topbar:{minHeight:74,backgroundColor:"#102235",borderBottomWidth:4,borderBottomColor:"#07131f",paddingHorizontal:14,paddingVertical:9,flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12},back:{flexDirection:"row",alignItems:"center",gap:7,backgroundColor:"#203b54",paddingHorizontal:12,paddingVertical:9,borderRadius:10},backText:{color:"#fff",fontWeight:"800"},title:{color:"#fff",fontSize:18,fontWeight:"900"},subtitle:{color:"#9fc0dc",fontSize:11,marginTop:2},topActions:{flexDirection:"row",gap:7},body:{flex:1,flexDirection:"row"},bodyCompact:{flexDirection:"column"},toolRail:{width:88,backgroundColor:"#142536",padding:8},toolRailCompact:{width:"100%",maxHeight:74},toolRailRow:{gap:7,alignItems:"center"},tool:{alignItems:"center",justifyContent:"center",padding:8,borderRadius:10,marginBottom:6,minWidth:68},toolActive:{backgroundColor:"#1d4ed8",borderBottomWidth:3,borderBottomColor:"#1e3a8a"},toolLabel:{fontSize:9,color:"#b8c9d8",fontWeight:"800",marginTop:3,textAlign:"center"},center:{flex:1,minWidth:0},optionsBar:{minHeight:56,backgroundColor:"#edf3f7",borderBottomWidth:1,borderBottomColor:"#c6d4df",flexDirection:"row",alignItems:"center",gap:8,paddingHorizontal:10,flexWrap:"wrap"},optionTitle:{fontWeight:"900",color:"#183149",marginRight:4},optionText:{fontSize:11,fontWeight:"700",color:"#58748b"},zoom:{fontWeight:"900",minWidth:45,textAlign:"center"},canvas:{flex:1,minHeight:360,backgroundColor:"#243746",alignItems:"center",justifyContent:"center",overflow:"hidden"},image:{width:"85%",height:"85%"},empty:{alignItems:"center",maxWidth:520,padding:30},emptyTitle:{color:"#fff",fontSize:24,fontWeight:"900",marginTop:12},emptyText:{color:"#b4c8d8",textAlign:"center",lineHeight:20,marginTop:8},canvasBadge:{position:"absolute",top:12,right:12,backgroundColor:"rgba(4,14,24,.8)",borderRadius:8,paddingHorizontal:10,paddingVertical:6},canvasBadgeText:{color:"#fff",fontSize:9,fontWeight:"900"},status:{minHeight:30,backgroundColor:"#102235",justifyContent:"center",paddingHorizontal:10},statusText:{color:"#a8bfd1",fontSize:10,fontWeight:"700"},right:{width:340,backgroundColor:"#f8fbfd",borderLeftWidth:1,borderLeftColor:"#bccbd7"},rightCompact:{width:"100%",maxHeight:360},panelTabs:{maxHeight:46,backgroundColor:"#dfe9f0"},panelTabsRow:{alignItems:"center"},panelTab:{paddingHorizontal:11,paddingVertical:13},panelTabActive:{backgroundColor:"#1d4ed8"},panelTabText:{fontSize:10,fontWeight:"900",textTransform:"uppercase",color:"#37556d"},inspector:{padding:12},sectionTitle:{fontSize:14,fontWeight:"900",color:"#183149",marginTop:5,marginBottom:9},row:{flexDirection:"row",gap:7,marginBottom:8,flexWrap:"wrap"},btn:{flexDirection:"row",alignItems:"center",justifyContent:"center",gap:5,backgroundColor:"#fff",borderWidth:1,borderColor:"#bfd0df",borderRadius:9,paddingHorizontal:9,paddingVertical:8,borderBottomWidth:3,borderBottomColor:"#93a9bb"},btnActive:{backgroundColor:"#1d4ed8",borderBottomColor:"#1e3a8a"},btnPressed:{transform:[{translateY:2}],borderBottomWidth:1},btnText:{fontSize:11,fontWeight:"900",color:"#183149"},btnTextActive:{color:"#fff"},disabled:{opacity:.4},layer:{flexDirection:"row",alignItems:"center",gap:8,backgroundColor:"#fff",borderWidth:1,borderColor:"#d3dfe8",padding:8,borderRadius:10,marginBottom:6},layerSelected:{borderColor:"#1d4ed8",borderWidth:2},layerThumb:{width:28,height:28,borderRadius:6,backgroundColor:"#e8eff7",alignItems:"center",justifyContent:"center"},layerName:{fontWeight:"900",fontSize:12,color:"#183149"},layerMeta:{fontSize:9,color:"#6d8294",marginTop:2},maskBadge:{width:22,height:22,borderRadius:5,backgroundColor:"#0f766e",alignItems:"center",justifyContent:"center"},maskBadgeText:{color:"#fff",fontWeight:"900",fontSize:10},chip:{paddingHorizontal:9,paddingVertical:7,borderRadius:12,backgroundColor:"#e8eff5",marginRight:5,marginBottom:8},chipActive:{backgroundColor:"#1d4ed8"},chipText:{fontSize:10,fontWeight:"800",color:"#38566e"},adjustments:{flexDirection:"row",flexWrap:"wrap",gap:6},adjustment:{width:"48%",flexDirection:"row",alignItems:"center",gap:5,backgroundColor:"#eef4f9",padding:8,borderRadius:8},adjustmentText:{fontSize:10,fontWeight:"800",color:"#294860",textTransform:"capitalize"},historyRow:{flexDirection:"row",gap:7,paddingVertical:8,borderBottomWidth:1,borderBottomColor:"#e0e8ef"},historyText:{fontSize:11,color:"#38566e",flex:1},histogram:{height:120,backgroundColor:"#172a3c",borderRadius:10,flexDirection:"row",alignItems:"flex-end",gap:3,padding:10,marginBottom:10},bar:{flex:1,backgroundColor:"#8fb1cb",borderRadius:2},navigator:{height:180,backgroundColor:"#dfe8ef",borderRadius:10,alignItems:"center",justifyContent:"center"},navigatorText:{fontWeight:"900",color:"#294860",marginTop:8},channel:{flexDirection:"row",alignItems:"center",gap:8,padding:10,backgroundColor:"#eef4f8",borderRadius:8,marginBottom:6},channelText:{fontSize:12,fontWeight:"800",color:"#294860"},infoText:{fontSize:11,color:"#49667d",marginTop:8},openImageButton:{marginTop:18,backgroundColor:"#1d4ed8",paddingHorizontal:16,paddingVertical:11,borderRadius:10,flexDirection:"row",alignItems:"center",gap:8},openImageButtonText:{color:"#fff",fontWeight:"900"}
+});

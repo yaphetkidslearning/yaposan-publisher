@@ -1,0 +1,14 @@
+{
+  "domains": [
+    {"name":"app.yaposan.com","target":"<render-web-cname>","proxy":true,"ttl":300},
+    {"name":"api.yaposan.com","target":"<render-api-cname>","proxy":true,"ttl":300},
+    {"name":"assets.yaposan.com","target":"<r2-custom-domain>","proxy":true,"ttl":300}
+  ],
+  "preconditions": [
+    "Temporary web URL passes smoke checks",
+    "Temporary API URL passes live, health, ready, and release checks",
+    "Render custom domains show verified",
+    "Cloudflare R2 custom domain shows active",
+    "Rollback DNS values are recorded"
+  ]
+}

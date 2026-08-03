@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { addBookmark, addCrossReference, addIndexEntry, addNote, buildIndex, buildTableOfContents, createDocumentReferenceState, normalizeDocumentReferences, resolveCrossReference, validateDocumentReferences } from "../src/utils/documentReferenceEngine";
+import type { PublisherProject } from "../src/types/publisher";
+const page=(id:string,name:string,text:string,style?:string)=>({id,name,width:816,height:1056,orientation:"portrait" as const,sizeKey:"letter" as const,backgroundColor:"#fff",margin:48,bleed:0,elements:[{id:`e-${id}`,name:text,type:"text" as const,x:0,y:0,width:200,height:40,rotation:0,zIndex:1,opacity:1,text,documentStyleId:style}]});
+const project:PublisherProject={id:"p",name:"Book",createdAt:1,updatedAt:1,pages:[page("p1","Start","Chapter One","style-heading-1"),page("p2","Body","Content")],activePageId:"p1",autoSave:true,version:2,documentFoundation:{version:"21.0",viewMode:"single",createdAt:1,updatedAt:1,metadata:{title:"Book",author:"",company:"",keywords:[],subject:"",description:"",language:"en",publisher:"",copyright:"",license:"",revision:1},sections:[{id:"s1",name:"Chapter One",pageIds:["p1","p2"],breakKind:"next-page",numbering:{style:"arabic",startAt:1,prefix:"",continueFromPrevious:false},color:"#000",icon:"book",locked:false,hidden:false,collapsed:false,createdAt:1,updatedAt:1}]},documentReferences:createDocumentReferenceState()};
+let next=normalizeDocumentReferences(project); assert.equal(next.phase21Version,"21.2");
+next=addBookmark(next,{name:"Opening",pageId:"p1",elementId:"e-p1"}); assert.equal(next.documentReferences?.bookmarks.length,1);
+next=addNote(next,{kind:"footnote",text:"Source note",pageId:"p1"}); assert.equal(next.documentReferences?.notes[0].marker,"1");
+next=addIndexEntry(next,{term:"Publishing",pageId:"p2"}); assert.deepEqual(buildIndex(next)[0].pageNumbers,["2"]);
+const bookmarkId=next.documentReferences!.bookmarks[0].id; next=addCrossReference(next,{label:"Opening",targetKind:"bookmark",targetId:bookmarkId,displayMode:"label-and-page"});
+assert.equal(resolveCrossReference(next,next.documentReferences!.crossReferences[0].id),"Opening (p. 1)");
+assert.ok(buildTableOfContents(next).some(x=>x.title==="Chapter One")); assert.equal(validateDocumentReferences(next).length,0);
+console.log("Phase 21.2 reference engine assertions passed");

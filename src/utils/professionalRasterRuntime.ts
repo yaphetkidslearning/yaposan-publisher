@@ -1,0 +1,55 @@
+import type { PublisherElement } from "../types/publisher";
+
+export type RasterBackend = "webgpu" | "webgl2" | "skia" | "canvas2d" | "cpu";
+export type RasterExecutionStatus = "idle" | "queued" | "running" | "complete" | "cancelled" | "failed";
+export type RasterTile = { id:string; x:number; y:number; width:number; height:number; level:number; dirty:boolean; cacheKey:string };
+export type RasterBrushDynamics = { size:number; hardness:number; spacing:number; flow:number; opacity:number; smoothing:number; pressureSize:boolean; pressureOpacity:boolean; tilt:boolean; scatter:number; texture?:string; wetEdges:boolean };
+export type RasterSelectionRuntime = { mode:"replace"|"add"|"subtract"|"intersect"; marchingAnts:boolean; edgeRefine:number; decontaminateColors:boolean; hairRefinement:boolean; magicWandTolerance:number; contiguous:boolean };
+export type RasterPerformanceProfile = { backend:RasterBackend; tileSize:number; maxMemoryMB:number; workerCount:number; gpuAcceleration:boolean; progressivePreview:boolean; proxyScale:number; diskCache:boolean; incrementalSave:boolean };
+export type RasterColorPipeline = { linearLight:boolean; floatingPoint:boolean; iccEnabled:boolean; proofProfile?:string; displayProfile?:string; preserveOutOfGamut:boolean };
+export type RasterExecutionJob = { id:string; kind:"render"|"filter"|"selection"|"raw"|"hdr"|"panorama"|"focus-stack"|"export"; label:string; status:RasterExecutionStatus; progress:number; cancellable:boolean; createdAt:number; completedAt?:number; error?:string; outputUri?:string; outputMime?:string };
+export type RasterLayeredExport = { format:"yaposan-raster"|"psd-compatible"|"tiff-layered"; preserveLayers:boolean; preserveMasks:boolean; preserveSmartObjects:boolean; preserveChannels:boolean; embedProfile:boolean; compression:"none"|"zip"|"lzw" };
+export type RasterRuntimeState = { performance:RasterPerformanceProfile; brush:RasterBrushDynamics; selection:RasterSelectionRuntime; color:RasterColorPipeline; jobs:RasterExecutionJob[]; tiles:RasterTile[]; layeredExport:RasterLayeredExport; undoLimit:number; redoCount:number; checkpointInterval:number; crashRecovery:boolean; lastCheckpointAt?:number };
+
+const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,Number.isFinite(v)?v:min));
+const uid=(p:string)=>`${p}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+
+export const DEFAULT_RASTER_RUNTIME: RasterRuntimeState = {
+  performance:{backend:"webgl2",tileSize:512,maxMemoryMB:1024,workerCount:4,gpuAcceleration:true,progressivePreview:true,proxyScale:.5,diskCache:true,incrementalSave:true},
+  brush:{size:40,hardness:.8,spacing:.12,flow:1,opacity:1,smoothing:.35,pressureSize:true,pressureOpacity:false,tilt:false,scatter:0,wetEdges:false},
+  selection:{mode:"replace",marchingAnts:true,edgeRefine:0,decontaminateColors:false,hairRefinement:false,magicWandTolerance:32,contiguous:true},
+  color:{linearLight:true,floatingPoint:true,iccEnabled:true,preserveOutOfGamut:true},
+  jobs:[],tiles:[],
+  layeredExport:{format:"yaposan-raster",preserveLayers:true,preserveMasks:true,preserveSmartObjects:true,preserveChannels:true,embedProfile:true,compression:"zip"},
+  undoLimit:200,redoCount:0,checkpointInterval:30,crashRecovery:true,
+};
+
+export function normalizeRasterRuntime(state?:Partial<RasterRuntimeState>):RasterRuntimeState {
+  const s={...DEFAULT_RASTER_RUNTIME,...state};
+  return {
+    ...s,
+    performance:{...DEFAULT_RASTER_RUNTIME.performance,...state?.performance,tileSize:clamp(Number(state?.performance?.tileSize??512),128,2048),maxMemoryMB:clamp(Number(state?.performance?.maxMemoryMB??1024),128,32768),workerCount:clamp(Number(state?.performance?.workerCount??4),1,32),proxyScale:clamp(Number(state?.performance?.proxyScale??.5),.05,1)},
+    brush:{...DEFAULT_RASTER_RUNTIME.brush,...state?.brush,size:clamp(Number(state?.brush?.size??40),1,2000),hardness:clamp(Number(state?.brush?.hardness??.8),0,1),spacing:clamp(Number(state?.brush?.spacing??.12),.01,2),flow:clamp(Number(state?.brush?.flow??1),0,1),opacity:clamp(Number(state?.brush?.opacity??1),0,1),smoothing:clamp(Number(state?.brush?.smoothing??.35),0,1),scatter:clamp(Number(state?.brush?.scatter??0),0,10)},
+    selection:{...DEFAULT_RASTER_RUNTIME.selection,...state?.selection,edgeRefine:clamp(Number(state?.selection?.edgeRefine??0),0,250),magicWandTolerance:clamp(Number(state?.selection?.magicWandTolerance??32),0,255)},
+    color:{...DEFAULT_RASTER_RUNTIME.color,...state?.color}, jobs:(state?.jobs??[]).slice(-100),tiles:state?.tiles??[],
+    layeredExport:{...DEFAULT_RASTER_RUNTIME.layeredExport,...state?.layeredExport},undoLimit:clamp(Number(state?.undoLimit??200),10,1000),redoCount:Math.max(0,Number(state?.redoCount??0)),checkpointInterval:clamp(Number(state?.checkpointInterval??30),5,300),crashRecovery:state?.crashRecovery!==false,
+  };
+}
+
+export function setRasterRuntime(element:PublisherElement, patch:Partial<RasterRuntimeState>):PublisherElement { return {...element,rasterRuntime:normalizeRasterRuntime({...element.rasterRuntime,...patch}),rasterEditedAt:Date.now()}; }
+export function configureRasterPerformance(element:PublisherElement, patch:Partial<RasterPerformanceProfile>):PublisherElement { const r=normalizeRasterRuntime(element.rasterRuntime); return setRasterRuntime(element,{performance:{...r.performance,...patch}}); }
+export function configureRasterBrush(element:PublisherElement, patch:Partial<RasterBrushDynamics>):PublisherElement { const r=normalizeRasterRuntime(element.rasterRuntime); return setRasterRuntime(element,{brush:{...r.brush,...patch}}); }
+export function configureRasterSelectionRuntime(element:PublisherElement, patch:Partial<RasterSelectionRuntime>):PublisherElement { const r=normalizeRasterRuntime(element.rasterRuntime); return setRasterRuntime(element,{selection:{...r.selection,...patch}}); }
+export function configureRasterColorPipeline(element:PublisherElement, patch:Partial<RasterColorPipeline>):PublisherElement { const r=normalizeRasterRuntime(element.rasterRuntime); return setRasterRuntime(element,{color:{...r.color,...patch}}); }
+export function configureLayeredRasterExport(element:PublisherElement, patch:Partial<RasterLayeredExport>):PublisherElement { const r=normalizeRasterRuntime(element.rasterRuntime); return setRasterRuntime(element,{layeredExport:{...r.layeredExport,...patch}}); }
+export function queueRasterJob(element:PublisherElement, kind:RasterExecutionJob["kind"], label:string):PublisherElement { const r=normalizeRasterRuntime(element.rasterRuntime); const job:RasterExecutionJob={id:uid("rjob"),kind,label,status:"queued",progress:0,cancellable:true,createdAt:Date.now()}; return setRasterRuntime(element,{jobs:[...r.jobs,job]}); }
+export function updateRasterJob(element:PublisherElement, jobId:string, patch:Partial<RasterExecutionJob>):PublisherElement { const r=normalizeRasterRuntime(element.rasterRuntime); return setRasterRuntime(element,{jobs:r.jobs.map(j=>j.id===jobId?{...j,...patch,progress:clamp(Number(patch.progress??j.progress),0,1)}:j)}); }
+export function cancelRasterJob(element:PublisherElement, jobId:string):PublisherElement { return updateRasterJob(element,jobId,{status:"cancelled",completedAt:Date.now()}); }
+export function buildRasterTiles(width:number,height:number,tileSize=512,level=0):RasterTile[]{ const out:RasterTile[]=[]; for(let y=0;y<height;y+=tileSize)for(let x=0;x<width;x+=tileSize)out.push({id:uid("tile"),x,y,width:Math.min(tileSize,width-x),height:Math.min(tileSize,height-y),level,dirty:true,cacheKey:`${level}:${x}:${y}:${tileSize}`}); return out; }
+export function initializeRasterTiles(element:PublisherElement,width=4096,height=4096):PublisherElement { const r=normalizeRasterRuntime(element.rasterRuntime); return setRasterRuntime(element,{tiles:buildRasterTiles(width,height,r.performance.tileSize)}); }
+export function checkpointRasterRuntime(element:PublisherElement):PublisherElement { return setRasterRuntime(element,{lastCheckpointAt:Date.now(),redoCount:0}); }
+export function buildRasterExecutionManifest(element:PublisherElement){ const r=normalizeRasterRuntime(element.rasterRuntime); return {backend:r.performance.backend,gpu:r.performance.gpuAcceleration,workers:r.performance.workerCount,tiles:r.tiles.length,bitDepth:element.rasterColorProfile?.bitDepth??16,linearLight:r.color.linearLight,floatingPoint:r.color.floatingPoint,icc:r.color.iccEnabled,smartFilters:element.rasterSmartFilters?.length??0,adjustments:element.rasterAdjustments?.length??0,masks:element.rasterMasks?.length??0,selections:element.rasterSelections?.length??0,retouch:element.rasterRetouchStrokes?.length??0,raw:Boolean(element.rasterRawDevelopment?.enabled),hdr:Boolean(element.rasterHDR?.enabled),composite:element.rasterCompositeStack?.mode??"none",layeredExport:r.layeredExport.format}; }
+export function auditRasterRuntime(element:PublisherElement){ const r=normalizeRasterRuntime(element.rasterRuntime); const issues:{severity:"error"|"warning"|"info";message:string;fix?:string}[]=[]; if(!r.performance.gpuAcceleration)issues.push({severity:"warning",message:"GPU acceleration is disabled.",fix:"Enable GPU acceleration for production-size images."}); if((element.rasterColorProfile?.bitDepth??16)>8&&!r.color.floatingPoint)issues.push({severity:"error",message:"High-bit-depth document requires floating-point processing."}); if(element.rasterRawDevelopment?.enabled&&!r.color.iccEnabled)issues.push({severity:"warning",message:"RAW development should use ICC color management."}); if(r.performance.maxMemoryMB<512)issues.push({severity:"warning",message:"Raster memory budget is below 512 MB."}); if(!r.crashRecovery)issues.push({severity:"warning",message:"Crash recovery is disabled."}); if(!issues.length)issues.push({severity:"info",message:"Phase 17.8 raster runtime is production-configured."}); return issues; }
+
+export async function processRasterJobs(element:PublisherElement, executor:(job:RasterExecutionJob,onProgress:(progress:number)=>void)=>Promise<void>):Promise<PublisherElement>{ let current=element; const jobs=normalizeRasterRuntime(current.rasterRuntime).jobs.filter(j=>j.status==="queued"); for(const job of jobs){ current=updateRasterJob(current,job.id,{status:"running",progress:.01}); try{ await executor(job,(progress)=>{ current=updateRasterJob(current,job.id,{status:"running",progress}); }); current=updateRasterJob(current,job.id,{status:"complete",progress:1,completedAt:Date.now()}); }catch(error){ current=updateRasterJob(current,job.id,{status:"failed",error:error instanceof Error?error.message:String(error),completedAt:Date.now()}); } } return current; }
+export function markRasterTilesDirty(element:PublisherElement,bounds?:{x:number;y:number;width:number;height:number}):PublisherElement{const r=normalizeRasterRuntime(element.rasterRuntime);const intersects=(t:RasterTile)=>!bounds||!(t.x+t.width<bounds.x||t.y+t.height<bounds.y||t.x>bounds.x+bounds.width||t.y>bounds.y+bounds.height);return setRasterRuntime(element,{tiles:r.tiles.map(t=>intersects(t)?{...t,dirty:true,cacheKey:`${t.cacheKey}:${Date.now()}`} : t)});}

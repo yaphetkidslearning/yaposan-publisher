@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
+test('Phase 28 AI Video Studio is integrated',()=>{const e=fs.readFileSync('src/utils/aiVideoEngine.ts','utf8');for(const t of ['image-to-video','text-to-video','talking-photo','ai-avatar','product-video','video-upscale','auto-highlights'])assert.match(e,new RegExp(t));const page=fs.readFileSync('src/app/ai-video-studio.tsx','utf8');assert.match(page,/YAPOSAN PHASE 28/);assert.match(fs.readFileSync('src/app/index.tsx','utf8'),/ai-video-studio/);});

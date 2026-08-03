@@ -1,0 +1,169 @@
+# yaml-language-server: $schema=https://render.com/static/blueprint-spec.schema.json
+services:
+  - type: web
+    name: yaposan-web
+    runtime: static
+    buildCommand: npm install --ignore-scripts && EXPO_PUBLIC_API_URL=https://api.yaposan.com npm run build:web
+    staticPublishPath: ./dist
+    autoDeployTrigger: checksPass
+    domains:
+      - app.yaposan.com
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=()
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  - type: web
+    name: yaposan-api
+    runtime: docker
+    plan: starter
+    region: virginia
+    dockerfilePath: ./Dockerfile.api
+    dockerContext: .
+    autoDeployTrigger: checksPass
+    healthCheckPath: /ready
+    maxShutdownDelaySeconds: 60
+    domains:
+      - api.yaposan.com
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: yaposan-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: yaposan-redis
+          property: connectionString
+      - key: PUBLIC_ORIGINS
+        value: https://app.yaposan.com
+      - key: COLLABORATION_DRIVER
+        value: redis
+      - key: STORAGE_DRIVER
+        value: r2
+      - key: TRUST_PROXY
+        value: "true"
+      - key: READINESS_STORAGE_PROBE
+        value: "true"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: EXPORT_WORKER_TOKEN
+        generateValue: true
+      - key: BACKUP_SIGNING_SECRET
+        generateValue: true
+      - key: LICENSE_SIGNING_SECRET
+        generateValue: true
+      - key: METRICS_TOKEN
+        generateValue: true
+      - key: STORAGE_ENDPOINT
+        sync: false
+      - key: STORAGE_BUCKET
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: PUBLIC_ASSET_BASE_URL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_CREATOR
+        sync: false
+      - key: STRIPE_PRICE_PRO
+        sync: false
+      - key: STRIPE_PRICE_BUSINESS
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+
+  - type: worker
+    name: yaposan-export-worker
+    runtime: docker
+    plan: starter
+    region: virginia
+    dockerfilePath: ./Dockerfile.api
+    dockerContext: .
+    dockerCommand: node --import tsx scripts/export-worker.ts
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 120
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: yaposan-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: yaposan-redis
+          property: connectionString
+      - key: COLLABORATION_DRIVER
+        value: redis
+      - key: STORAGE_DRIVER
+        value: r2
+      - key: EXPORT_WORKER_ENABLED
+        value: "true"
+      - key: EXPORT_WORKER_ID
+        value: render-worker-1
+      - key: EXPORT_JOB_LEASE_SECONDS
+        value: "60"
+      - key: EXPORT_WORKER_POLL_MS
+        value: "1000"
+      - key: FFMPEG_PATH
+        value: /usr/bin/ffmpeg
+      - key: RENDERER_TIMEOUT_MS
+        value: "120000"
+      - key: EXPORT_WORKER_TOKEN
+        fromService:
+          type: web
+          name: yaposan-api
+          envVarKey: EXPORT_WORKER_TOKEN
+      - key: STORAGE_ENDPOINT
+        sync: false
+      - key: STORAGE_BUCKET
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: PUBLIC_ASSET_BASE_URL
+        sync: false
+
+  - type: keyvalue
+    name: yaposan-redis
+    plan: starter
+    region: virginia
+    ipAllowList: []
+
+
+databases:
+  - name: yaposan-postgres
+    databaseName: yaposan
+    user: yaposan
+    plan: basic-256mb
+    region: virginia
+    postgresMajorVersion: "17"
+    ipAllowList: []

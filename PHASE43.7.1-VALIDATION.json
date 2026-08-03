@@ -1,0 +1,12 @@
+{
+  "templateCount": 20,
+  "pageCount": 40,
+  "uniqueTemplateNames": 20,
+  "uniqueTemplateIds": 20,
+  "nameOverlapWithExistingSource": [],
+  "idOverlapWithExistingSource": [],
+  "categoryIntegrated": true,
+  "templateTotalExpected": 745,
+  "typescriptProjectCheck": "blocked by missing expo/tsconfig.base and @types/node",
+  "syntaxTranspile": "passed"
+}

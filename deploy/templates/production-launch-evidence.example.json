@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "gitCommitSha": "REPLACE_WITH_DEPLOYED_COMMIT_SHA",
+  "buildId": "REPLACE_WITH_CI_BUILD_ID",
+  "webUrl": "https://app.yaposan.com",
+  "apiUrl": "https://api.yaposan.com",
+  "burnIn24HoursAccepted": false,
+  "burnIn7DaysAccepted": false,
+  "backupVerified": false,
+  "restoreDrillVerified": false,
+  "stripeVerified": false,
+  "emailVerified": false,
+  "aiVerified": false,
+  "r2Verified": false,
+  "collaborationVerified": false,
+  "exportsVerified": false,
+  "adminVerified": false,
+  "securityReviewAccepted": false,
+  "operationsOwner": "REPLACE_WITH_OWNER",
+  "approvedBy": "REPLACE_WITH_APPROVER",
+  "approvedAt": "2026-08-03T17:00:00.000Z"
+}

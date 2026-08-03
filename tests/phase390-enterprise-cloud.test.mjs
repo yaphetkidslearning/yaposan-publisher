@@ -1,0 +1,5 @@
+import test from "node:test";import assert from "node:assert/strict";import fs from "node:fs";
+const engine=fs.readFileSync(new URL("../src/utils/phase39EnterpriseCloudEngine.ts",import.meta.url),"utf8");const screen=fs.readFileSync(new URL("../src/app/enterprise-cloud-completion.tsx",import.meta.url),"utf8");const home=fs.readFileSync(new URL("../src/app/index.tsx",import.meta.url),"utf8");
+test("Phase 39 contains Packages 39.0 through 39.12",()=>{for(let i=0;i<=12;i++)assert.match(engine,new RegExp(`id:\\"39\\.${i}\\"`));});
+test("Phase 39 contains enterprise controls, cloud services, security policies and evidence-based certification",()=>{assert.match(engine,/DEFAULT_ENTERPRISE_CONTROLS/);assert.match(engine,/DEFAULT_CLOUD_SERVICES/);assert.match(engine,/DEFAULT_SECURITY_POLICIES/);assert.match(engine,/score===100&&blockers.length===0/);assert.match(screen,/AsyncStorage/);});
+test("Phase 39 is integrated into home navigation",()=>{assert.match(home,/\/enterprise-cloud-completion/);assert.match(screen,/Enterprise Cloud, Security & Platform Completion/);});

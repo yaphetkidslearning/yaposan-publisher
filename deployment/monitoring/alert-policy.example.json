@@ -1,0 +1,13 @@
+{
+  "service": "Yaposan Publisher v1.0.0",
+  "evaluationWindowMinutes": 5,
+  "alerts": [
+    {"name":"API unavailable","condition":"/live fails twice","severity":"critical","action":"rollback or restore previous Render deploy"},
+    {"name":"API not ready","condition":"/ready fails for 5 minutes","severity":"critical","action":"inspect PostgreSQL, Redis and R2 readiness"},
+    {"name":"High server errors","condition":"HTTP 5xx rate > 2% for 10 minutes","severity":"high","action":"pause releases and inspect API logs"},
+    {"name":"Slow API","condition":"p95 response time > 1500ms for 15 minutes","severity":"high","action":"inspect database, worker queue and resource use"},
+    {"name":"Export backlog","condition":"oldest queued export > 10 minutes","severity":"high","action":"inspect export worker and FFmpeg capacity"},
+    {"name":"Release mismatch","condition":"/release version differs from expected","severity":"high","action":"stop cutover and reconcile deployed commit"},
+    {"name":"Certificate warning","condition":"TLS certificate expires within 14 days","severity":"medium","action":"verify Render/Cloudflare certificate management"}
+  ]
+}

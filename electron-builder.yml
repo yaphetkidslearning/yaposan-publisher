@@ -1,0 +1,79 @@
+appId: com.yaposan.publisher
+productName: Yaposan Publisher
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+directories:
+  output: release/installers
+  buildResources: release
+files:
+  - dist/**/*
+  - desktop/main.cjs
+  - desktop/preload.cjs
+  - package.json
+asar: true
+compression: maximum
+electronVersion: 39.2.7
+extraMetadata:
+  main: desktop/main.cjs
+  version: 1.0.0
+  description: Professional desktop publishing and creative suite
+  author: Yaposan
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: msi
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  verifyUpdateCodeSignature: true
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Yaposan Publisher
+  deleteAppDataOnUninstall: false
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  category: public.app-category.graphics-design
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: desktop/entitlements.mac.plist
+  entitlementsInherit: desktop/entitlements.mac.plist
+dmg:
+  sign: false
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  category: Graphics
+  synopsis: Professional desktop publishing and creative suite
+  description: Yaposan Publisher provides professional layout, publishing, illustration, image editing, and digital export tools.
+deb:
+  priority: optional
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+publish:
+  provider: generic
+  url: ${env.YAPOSAN_UPDATE_URL}
+  channel: stable
+
+fileAssociations:
+  - ext: yaposan
+    name: Yaposan Project
+    role: Editor
+  - ext: ypt
+    name: Yaposan Template
+    role: Editor
+protocols:
+  - name: Yaposan Publisher
+    schemes:
+      - yaposan

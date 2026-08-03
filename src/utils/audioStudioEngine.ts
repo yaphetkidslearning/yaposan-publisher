@@ -1,0 +1,10 @@
+export type AudioTrackKind = "voice" | "music" | "effects" | "dialogue";
+export type AudioTrack = { id:string; name:string; kind:AudioTrackKind; uri?:string; start:number; duration:number; volume:number; muted:boolean; solo:boolean; fadeIn:number; fadeOut:number };
+export type AudioProject = { id:string; name:string; sampleRate:44100|48000; duration:number; playhead:number; playing:boolean; tracks:AudioTrack[]; updatedAt:number };
+const id=()=>`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+export const createAudioProject=(name="Untitled Audio Project"):AudioProject=>({id:id(),name,sampleRate:48000,duration:60,playhead:0,playing:false,updatedAt:Date.now(),tracks:[{id:id(),name:"Voiceover",kind:"voice",start:0,duration:18,volume:90,muted:false,solo:false,fadeIn:.2,fadeOut:.5},{id:id(),name:"Background music",kind:"music",start:0,duration:45,volume:45,muted:false,solo:false,fadeIn:1,fadeOut:2}]});
+export function addAudioTrack(p:AudioProject,kind:AudioTrackKind,name?:string,uri?:string):AudioProject{return {...p,tracks:[...p.tracks,{id:id(),name:name??`${kind[0].toUpperCase()+kind.slice(1)} track`,kind,uri,start:p.playhead,duration:Math.max(5,Math.min(30,p.duration-p.playhead)),volume:80,muted:false,solo:false,fadeIn:0,fadeOut:0}],updatedAt:Date.now()}}
+export function updateAudioTrack(p:AudioProject,trackId:string,patch:Partial<AudioTrack>):AudioProject{return {...p,tracks:p.tracks.map(t=>t.id===trackId?{...t,...patch}:t),updatedAt:Date.now()}}
+export function removeAudioTrack(p:AudioProject,trackId:string):AudioProject{return {...p,tracks:p.tracks.filter(t=>t.id!==trackId),updatedAt:Date.now()}}
+export function setAudioPlayhead(p:AudioProject,value:number):AudioProject{return {...p,playhead:Math.max(0,Math.min(p.duration,value)),updatedAt:Date.now()}}
+export function waveformBars(seed:string,count=64){let value=[...seed].reduce((a,c)=>a+c.charCodeAt(0),17);return Array.from({length:count},(_,i)=>{value=(value*9301+49297+i)%233280;return .2+(value/233280)*.8})}

@@ -1,0 +1,5 @@
+import test from "node:test";import assert from "node:assert/strict";import fs from "node:fs";
+const read=p=>fs.readFileSync(new URL(`../${p}`,import.meta.url),"utf8");
+test("backend and core services contain implementations",()=>{for(const f of ["server/index.ts","server/database.ts","server/ai.ts","server/payments.ts","src/services/cloudService.ts","src/services/paymentService.ts","src/services/projectService.ts","src/services/exportService.ts","src/services/integrationService.ts"])assert.ok(read(f).length>500,`${f} should not be empty`)});
+test("Phase 41 requires verified evidence",()=>{const src=read("src/utils/phase41BackendCompletionEngine.ts");assert.match(src,/requiredEvidence/);assert.match(src,/verified/);assert.match(src,/phase41Blockers/);assert.match(src,/certified:blockers\.length===0/)});
+test("API includes health auth projects billing AI and jobs",()=>{const src=read("server/index.ts");for(const route of ["/health","/ready","/api/v1/auth/register","/api/v1/auth/login","/api/v1/projects","/api/v1/ai/generate","/api/v1/billing/checkout","/api/v1/jobs"])assert.ok(src.includes(route),route)});

@@ -1,0 +1,16 @@
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
+const root=process.cwd();
+const required=["desktop/main.cjs","desktop/preload.cjs","electron-builder.yml","src/utils/desktopUpdateEngine.ts","src/components/publisher/DesktopUpdateCenterModal.tsx","src/types/desktop.d.ts","tests/phase240b-auto-update.test.mjs","PHASE24.0B-PROFESSIONAL-AUTO-UPDATE-SYSTEM.md"];
+const errors=[];
+for(const file of required) if(!fs.existsSync(path.join(root,file))) errors.push(`Missing ${file}`);
+const pkg=JSON.parse(fs.readFileSync(path.join(root,"package.json"),"utf8"));
+if(!/^24\.0\.[2-9]$|^24\.[1-9]\./.test(pkg.version)) errors.push("Package version must be 24.0.2 or newer");
+if(!pkg.devDependencies?.["electron-updater"]) errors.push("electron-updater is not configured");
+if(!pkg.scripts?.["verify:phase24.0b"]?.includes("verify:phase24.0a")) errors.push("Phase 24.0B does not preserve Phase 24.0A verification");
+const main=fs.readFileSync(path.join(root,"desktop/main.cjs"),"utf8");
+for(const token of ["autoDownload","autoInstallOnAppQuit","allowPrerelease","downloadUpdate","quitAndInstall"]) if(!main.includes(token)) errors.push(`Updater runtime missing ${token}`);
+const builder=fs.readFileSync(path.join(root,"electron-builder.yml"),"utf8");
+if(!builder.includes("YAPOSAN_UPDATE_URL")) errors.push("Update feed URL is not environment configured");
+if(errors.length){console.error(errors.join("\n"));process.exit(1);} console.log("Phase 24.0B auto-update audit passed.");
