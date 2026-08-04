@@ -180,7 +180,12 @@ const publishChannels: PublishChannel[] = [
   { name: "Instagram Shop", short: "◎", href: "/marketplace?channel=instagram", accent: "#d62976", background: "#fff0f7", kind: "badge" },
   { name: "TikTok Shop", short: "♪", href: "/marketplace?channel=tiktok", accent: "#00f2ea", background: "#07151f", kind: "badge" },
   { name: "Walmart Marketplace", short: "✹", href: "/marketplace?channel=walmart", accent: "#0071ce", background: "#edf7ff", kind: "badge" },
-  { name: "Pinterest Catalog", short: "P", href: "/marketplace?channel=pinterest", accent: "#e60023", background: "#fff0f3", kind: "badge" },
+  { name: "Pinterest", short: "P", href: "/marketplace?channel=pinterest", accent: "#e60023", background: "#fff0f3", kind: "badge" },
+  { name: "YouTube", short: "▶", href: "/marketplace?channel=youtube", accent: "#ff0000", background: "#fff0f0", kind: "badge" },
+  { name: "LinkedIn", short: "in", href: "/marketplace?channel=linkedin", accent: "#0a66c2", background: "#edf6ff", kind: "badge" },
+  { name: "Twitter / X", short: "X", href: "/marketplace?channel=twitter", accent: "#ffffff", background: "#101820", kind: "badge" },
+  { name: "Website", short: "◎", href: "/web-studio", accent: "#0ea5e9", background: "#ecf9ff", kind: "badge" },
+  { name: "More", short: "•••", href: "/marketplace", accent: "#64748b", background: "#f1f5f9", kind: "badge" },
 ];
 
 const recentProjects = [
@@ -468,43 +473,32 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={[styles.sectionTitle, darkMode && styles.darkSectionTitle]}>Publish channels</Text>
-              <Text style={[styles.sectionSubtitle, darkMode && styles.darkSectionSubtitle]}>Connect your storefronts and publish your finished designs where customers shop.</Text>
-            </View>
-            <Pressable onPress={() => router.push("/marketplace")} style={styles.viewAllButton}>
-              <Text style={styles.viewAllText}>Manage channels</Text>
-              <Ionicons name="arrow-forward" size={15} color="#0f9f91" />
-            </Pressable>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.channelScroller}
-            contentContainerStyle={styles.channelGrid}
-          >
-            {publishChannels.map((channel) => (
-              <Pressable
-                key={channel.name}
-                onPress={() => router.push(channel.href)}
-                style={({ pressed }) => [
-                  styles.channelCard,
-                  darkMode && styles.darkChannelCard,
-                  pressed && styles.channelCardPressed,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`Open ${channel.name} publishing channel`}
-              >
-                <ChannelLogo channel={channel} />
-                <Text numberOfLines={1} style={[styles.channelName, darkMode && styles.darkChannelName]}>{channel.name}</Text>
-                <View style={[styles.channelStatus, darkMode && styles.darkChannelStatus]}>
-                  <View style={styles.channelStatusDot} />
-                  <Text style={[styles.channelStatusText, darkMode && styles.darkChannelStatusText]}>Ready to connect</Text>
-                </View>
+          <View style={[styles.publishStrip, darkMode && styles.darkPublishStrip]}>
+            <View style={styles.publishStripHeader}>
+              <View>
+                <Text style={[styles.sectionTitle, darkMode && styles.darkSectionTitle]}>Publish anywhere</Text>
+                <Text style={[styles.sectionSubtitle, darkMode && styles.darkSectionSubtitle]}>Export and publish your designs across all major platforms.</Text>
+              </View>
+              <Pressable onPress={() => router.push("/marketplace")} style={styles.viewAllButton}>
+                <Text style={styles.viewAllText}>Manage channels</Text>
+                <Ionicons name="arrow-forward" size={15} color="#0f9f91" />
               </Pressable>
-            ))}
-          </ScrollView>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.channelLogoRow}>
+              {publishChannels.map((channel) => (
+                <Pressable
+                  key={channel.name}
+                  onPress={() => router.push(channel.href)}
+                  style={({ pressed }) => [styles.channelLogoItem, pressed && styles.channelLogoItemPressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${channel.name} publishing channel`}
+                >
+                  <ChannelLogo channel={channel} />
+                  <Text numberOfLines={1} style={[styles.channelLogoLabel, darkMode && styles.darkChannelLogoLabel]}>{channel.name}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
 
           <View style={[styles.recentSection, darkMode && styles.darkRecentSection]}>
             <View style={styles.recentSectionHeader}>
@@ -599,21 +593,21 @@ const styles = StyleSheet.create({
   profileButton: { width: 31, height: 31, borderRadius: 16, backgroundColor: "#0d9b92", alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "#08665f", shadowColor: "#075a54", shadowOpacity: 0.25, shadowRadius: 5, shadowOffset: { width: 0, height: 3 } },
   profileText: { color: "#ffffff", fontSize: 9, fontWeight: "900" },
   mobileNav: { gap: 7, paddingVertical: 12 },
-  hero: { marginTop: 9, width: "100%", alignSelf: "stretch", height: 430, borderRadius: 18, backgroundColor: "#05091d", overflow: "hidden", borderWidth: 2, borderColor: "#31a8ff", borderBottomWidth: 7, borderBottomColor: "#ff4f93", shadowColor: "#6b35ff", shadowOpacity: 0.62, shadowRadius: 20, shadowOffset: { width: 0, height: 13 }, elevation: 18 },
-  heroMobile: { width: "100%", height: 310, borderRadius: 15, borderBottomWidth: 5 },
+  hero: { marginTop: 9, width: "100%", alignSelf: "stretch", height: 250, borderRadius: 18, backgroundColor: "#05091d", overflow: "hidden", borderWidth: 2, borderColor: "#31a8ff", borderBottomWidth: 7, borderBottomColor: "#ff4f93", shadowColor: "#6b35ff", shadowOpacity: 0.62, shadowRadius: 20, shadowOffset: { width: 0, height: 13 }, elevation: 18 },
+  heroMobile: { width: "100%", height: 220, borderRadius: 15, borderBottomWidth: 5 },
   heroArtwork: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, width: "100%", height: "100%", borderRadius: 16, backgroundColor: "#05091d" },
   heroGloss: { position: "absolute", left: 8, right: 8, top: 6, height: "28%", borderRadius: 15, backgroundColor: "rgba(255,255,255,0.055)" },
-  heroPromptShell: { position: "absolute", left: 20, right: 20, bottom: 12, minHeight: 48, backgroundColor: "rgba(255,255,255,0.98)", borderRadius: 16, padding: 6, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.98)", shadowColor: "#7c3cff", shadowOpacity: 0.55, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 14 },
+  heroPromptShell: { position: "absolute", left: 16, right: 16, bottom: 10, minHeight: 42, backgroundColor: "rgba(255,255,255,0.98)", borderRadius: 16, padding: 6, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.98)", shadowColor: "#7c3cff", shadowOpacity: 0.55, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 14 },
   heroPromptShellMobile: { left: 12, right: 12, bottom: 10, minHeight: 48, borderRadius: 12, padding: 4, gap: 5 },
   promptIconMobile: { width: 36, height: 36, borderRadius: 9, borderBottomWidth: 3 },
   promptInputMobile: { minHeight: 32, fontSize: 11, lineHeight: 15, paddingHorizontal: 5 },
   generateButtonMobile: { minWidth: 96, minHeight: 36, borderRadius: 9, borderBottomWidth: 4, gap: 4, paddingHorizontal: 10 },
   generateTextMobile: { fontSize: 12, lineHeight: 15 },
   promptShell: { minHeight: 58, backgroundColor: "rgba(255,255,255,0.97)", borderRadius: 16, marginTop: 13, padding: 6, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.98)", shadowColor: "#7c3cff", shadowOpacity: 0.45, shadowRadius: 14, shadowOffset: { width: 0, height: 8 }, elevation: 12 },
-  promptIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#f3efff", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#d7ccff", borderBottomWidth: 4, borderBottomColor: "#b9a8ff", shadowColor: "#7c3cff", shadowOpacity: 0.28, shadowRadius: 7, shadowOffset: { width: 0, height: 5 } },
+  promptIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: "#f3efff", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#d7ccff", borderBottomWidth: 4, borderBottomColor: "#b9a8ff", shadowColor: "#7c3cff", shadowOpacity: 0.28, shadowRadius: 7, shadowOffset: { width: 0, height: 5 } },
   promptInput: { flex: 1, minHeight: 36, color: "#13253a", fontSize: 15, lineHeight: 20, paddingHorizontal: 8, paddingVertical: 0 },
-  generateButton: { minWidth: 132, minHeight: 40, borderRadius: 12, backgroundColor: "#6d43ff", borderWidth: 1, borderColor: "#9d7cff", borderBottomWidth: 5, borderBottomColor: "#d13f7c", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, shadowColor: "#ff4d9a", shadowOpacity: 0.58, shadowRadius: 12, shadowOffset: { width: 0, height: 7 }, elevation: 14 },
-  generateText: { color: "#ffffff", fontSize: 15, lineHeight: 19, fontWeight: "900" },
+  generateButton: { minWidth: 116, minHeight: 36, borderRadius: 12, backgroundColor: "#6d43ff", borderWidth: 1, borderColor: "#9d7cff", borderBottomWidth: 5, borderBottomColor: "#d13f7c", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, shadowColor: "#ff4d9a", shadowOpacity: 0.58, shadowRadius: 12, shadowOffset: { width: 0, height: 7 }, elevation: 14 },
+  generateText: { color: "#ffffff", fontSize: 13, lineHeight: 19, fontWeight: "900" },
   workspaceRow: { flexDirection: "row", alignItems: "stretch", gap: 10, marginTop: 11 },
   workspaceGrid: { flex: 1, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 10 },
   workspaceCard: { height: 194, borderRadius: 18, padding: 16, borderWidth: 2, borderBottomWidth: 7, shadowOpacity: 0.48, shadowRadius: 18, shadowOffset: { width: 0, height: 12 }, justifyContent: "space-between", overflow: "visible" },
@@ -791,6 +785,16 @@ const styles = StyleSheet.create({
   darkRecentCard: { backgroundColor: "#071a29", borderColor: "rgba(120,190,255,0.22)", shadowOpacity: 0.62 },
   darkProjectTitle: { color: "#f4f8ff" },
   darkProjectMeta: { color: "#a9bdcf" },
+
+
+  publishStrip: { marginTop: 16, borderRadius: 18, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, backgroundColor: "#f7fbff", borderWidth: 1, borderColor: "#d7e4ef", overflow: "hidden" },
+  darkPublishStrip: { backgroundColor: "#06182a", borderColor: "#17344b" },
+  publishStripHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 },
+  channelLogoRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 18, paddingTop: 12, paddingBottom: 4, paddingRight: 10 },
+  channelLogoItem: { width: 64, alignItems: "center", justifyContent: "flex-start", gap: 6, paddingVertical: 2 },
+  channelLogoItemPressed: { opacity: 0.72, transform: [{ translateY: 2 }, { scale: 0.97 }] },
+  channelLogoLabel: { width: 72, color: "#33465d", fontSize: 9, lineHeight: 12, fontWeight: "700", textAlign: "center" },
+  darkChannelLogoLabel: { color: "#c8d7e6" },
 
   channelScroller: { marginTop: 10, flexGrow: 0 },
   channelGrid: { flexDirection: "row", alignItems: "stretch", gap: 10, paddingBottom: 8, paddingRight: 12 },
