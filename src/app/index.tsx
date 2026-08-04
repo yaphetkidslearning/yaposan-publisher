@@ -279,9 +279,9 @@ export default function HomeScreen() {
   const [darkMode, setDarkMode] = useState(true);
   const [activeSidebarSection, setActiveSidebarSection] = useState("Home");
   const workspaceWidth = useMemo(() => (mobile ? "100%" : compact ? "48%" : "31.7%") as `${number}%`, [mobile, compact]);
-  const templateWidth = useMemo(() => (mobile ? "48%" : width < 980 ? "18.6%" : "9.3%") as `${number}%`, [mobile, width]);
-  const recentWidth = useMemo(() => (mobile ? "100%" : width < 980 ? "31.7%" : "19.3%") as `${number}%`, [mobile, width]);
-  const planWidth = useMemo(() => (mobile ? "100%" : width < 1050 ? "48.8%" : "24%") as `${number}%`, [mobile, width]);
+  const templateWidth = useMemo(() => (mobile ? "48%" : width < 980 ? "18%" : "8.8%") as `${number}%`, [mobile, width]);
+  const recentWidth = useMemo(() => (mobile ? "100%" : width < 980 ? "31.2%" : "18.2%") as `${number}%`, [mobile, width]);
+  const planWidth = useMemo(() => (mobile ? "100%" : width < 1050 ? "48.2%" : "22.9%") as `${number}%`, [mobile, width]);
 
   return (
     <SafeAreaView style={[styles.safeArea, darkMode && styles.darkSafeArea]}>
@@ -324,7 +324,7 @@ export default function HomeScreen() {
           <View style={[styles.topShowcase, mobile && styles.topShowcaseMobile]}>
             <View style={styles.iHeader}>
               <View style={styles.iHeaderCopy}>
-                <Text style={[styles.iEyebrow, darkMode && styles.darkEyebrow]}>Welcome back, Dawit! 👋</Text>
+                <Text style={[styles.iEyebrow, darkMode && styles.darkEyebrow]}>Welcome to Yaposan! 👋</Text>
                 <Text style={[styles.iHeading, darkMode && styles.darkHeading, mobile && styles.headingMobile]}>
                   What will you <Text style={styles.headingCreate}>create</Text><Text style={styles.headingToday}> today?</Text>
                 </Text>
@@ -344,18 +344,10 @@ export default function HomeScreen() {
             {mobile ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mobileNav}>{navItems.slice(0, 9).map((item) => <NavigationButton key={item.label} item={item} active={item.label === "Home"} />)}</ScrollView> : null}
 
             <View style={[styles.hero, mobile && styles.heroMobile]}>
-              <View style={styles.heroDepthLayer} />
               <Image
                 source={require("../../assets/home/hero-phase25.42.6-clean.png")}
-                resizeMode="cover"
-                style={styles.heroArtworkBackdrop}
-                accessibilityElementsHidden
-                importantForAccessibility="no-hide-descendants"
-              />
-              <Image
-                source={require("../../assets/home/hero-phase25.42.6-clean.png")}
-                resizeMode="cover"
-                style={styles.heroFullArtwork}
+                resizeMode="stretch"
+                style={styles.heroArtwork}
                 accessibilityLabel="Create, edit, and publish without leaving Yaposan"
               />
               <View pointerEvents="none" style={styles.heroGloss} />
@@ -449,15 +441,15 @@ export default function HomeScreen() {
                       <Ionicons name={plan.icon} size={31} color="#ffffff" />
                     </View>
                     <View style={styles.planTitleWrap}>
-                      <Text style={styles.planName3d}>{plan.name}</Text>
+                      <Text style={[styles.planName3d, darkMode && styles.darkPlanName3d]}>{plan.name}</Text>
                       <Text style={[styles.planPrice3d, { color: plan.accent }]}>{plan.price}</Text>
                     </View>
                   </View>
                   <View style={styles.planFeatures}>
                     {plan.features.map((feature) => (
                       <View key={feature} style={styles.planFeatureRow}>
-                        <Ionicons name="checkmark" size={17} color="#dce8f5" />
-                        <Text style={styles.planFeatureText}>{feature}</Text>
+                        <Ionicons name="checkmark" size={17} color={darkMode ? "#8be8dc" : plan.accent} />
+                        <Text style={[styles.planFeatureText, darkMode && styles.darkPlanFeatureText]}>{feature}</Text>
                       </View>
                     ))}
                   </View>
@@ -587,8 +579,8 @@ const styles = StyleSheet.create({
   planUsage: { color: "#9cb3c5", fontSize: 6, marginTop: 1 },
   progressTrack: { width: "100%", height: 5, borderRadius: 8, backgroundColor: "#355067", marginTop: 7, overflow: "hidden" },
   progressFill: { width: "5%", height: "100%", backgroundColor: "#14cbbb" },
-  content: { flexGrow: 1, width: "100%", alignSelf: "stretch", paddingHorizontal: 18, paddingVertical: 12, paddingBottom: 24, backgroundColor: "#f6f9fd" },
-  topShowcase: { position: "relative", borderRadius: 18, paddingHorizontal: 18, paddingTop: 14, paddingBottom: 16, backgroundColor: "#020817", shadowColor: "#071a2f", shadowOpacity: 0.46, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 14, overflow: "visible" },
+  content: { flexGrow: 1, width: "100%", alignSelf: "stretch", paddingHorizontal: 14, paddingVertical: 10, paddingBottom: 22, backgroundColor: "#f6f9fd" },
+  topShowcase: { position: "relative", borderRadius: 16, paddingHorizontal: 15, paddingTop: 10, paddingBottom: 13, backgroundColor: "#020817", shadowColor: "#071a2f", shadowOpacity: 0.46, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 14, overflow: "visible" },
   topShowcaseMobile: { paddingHorizontal: 10, paddingTop: 10, paddingBottom: 12, borderRadius: 14 },
   mobileContent: { paddingHorizontal: 15, paddingTop: 15 },
   topBar: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 14 },
@@ -607,34 +599,32 @@ const styles = StyleSheet.create({
   profileButton: { width: 31, height: 31, borderRadius: 16, backgroundColor: "#0d9b92", alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "#08665f", shadowColor: "#075a54", shadowOpacity: 0.25, shadowRadius: 5, shadowOffset: { width: 0, height: 3 } },
   profileText: { color: "#ffffff", fontSize: 9, fontWeight: "900" },
   mobileNav: { gap: 7, paddingVertical: 12 },
-  hero: { marginTop: 12, width: "100%", alignSelf: "stretch", height: 338, borderRadius: 18, backgroundColor: "#05091d", overflow: "hidden", borderWidth: 2, borderColor: "#31a8ff", borderBottomWidth: 7, borderBottomColor: "#ff4f93", shadowColor: "#6b35ff", shadowOpacity: 0.62, shadowRadius: 20, shadowOffset: { width: 0, height: 13 }, elevation: 18 },
-  heroMobile: { width: "100%", height: 245, borderRadius: 15, borderBottomWidth: 5 },
-  heroDepthLayer: { position: "absolute", left: 7, right: -7, top: 8, bottom: -10, borderRadius: 18, backgroundColor: "#161347", opacity: 0.92 },
-  heroArtworkBackdrop: { display: "none" },
-  heroFullArtwork: { width: "100%", height: "100%", borderRadius: 16, backgroundColor: "transparent" },
+  hero: { marginTop: 9, width: "100%", alignSelf: "stretch", height: 430, borderRadius: 18, backgroundColor: "#05091d", overflow: "hidden", borderWidth: 2, borderColor: "#31a8ff", borderBottomWidth: 7, borderBottomColor: "#ff4f93", shadowColor: "#6b35ff", shadowOpacity: 0.62, shadowRadius: 20, shadowOffset: { width: 0, height: 13 }, elevation: 18 },
+  heroMobile: { width: "100%", height: 310, borderRadius: 15, borderBottomWidth: 5 },
+  heroArtwork: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, width: "100%", height: "100%", borderRadius: 16, backgroundColor: "#05091d" },
   heroGloss: { position: "absolute", left: 8, right: 8, top: 6, height: "28%", borderRadius: 15, backgroundColor: "rgba(255,255,255,0.055)" },
-  heroPromptShell: { position: "absolute", left: 22, right: 22, bottom: 14, minHeight: 54, backgroundColor: "rgba(255,255,255,0.98)", borderRadius: 16, padding: 6, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.98)", shadowColor: "#7c3cff", shadowOpacity: 0.55, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 14 },
+  heroPromptShell: { position: "absolute", left: 20, right: 20, bottom: 12, minHeight: 48, backgroundColor: "rgba(255,255,255,0.98)", borderRadius: 16, padding: 6, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.98)", shadowColor: "#7c3cff", shadowOpacity: 0.55, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 14 },
   heroPromptShellMobile: { left: 12, right: 12, bottom: 10, minHeight: 48, borderRadius: 12, padding: 4, gap: 5 },
   promptIconMobile: { width: 36, height: 36, borderRadius: 9, borderBottomWidth: 3 },
   promptInputMobile: { minHeight: 32, fontSize: 11, lineHeight: 15, paddingHorizontal: 5 },
   generateButtonMobile: { minWidth: 96, minHeight: 36, borderRadius: 9, borderBottomWidth: 4, gap: 4, paddingHorizontal: 10 },
   generateTextMobile: { fontSize: 12, lineHeight: 15 },
   promptShell: { minHeight: 58, backgroundColor: "rgba(255,255,255,0.97)", borderRadius: 16, marginTop: 13, padding: 6, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.98)", shadowColor: "#7c3cff", shadowOpacity: 0.45, shadowRadius: 14, shadowOffset: { width: 0, height: 8 }, elevation: 12 },
-  promptIcon: { width: 46, height: 46, borderRadius: 12, backgroundColor: "#f3efff", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#d7ccff", borderBottomWidth: 4, borderBottomColor: "#b9a8ff", shadowColor: "#7c3cff", shadowOpacity: 0.28, shadowRadius: 7, shadowOffset: { width: 0, height: 5 } },
+  promptIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#f3efff", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#d7ccff", borderBottomWidth: 4, borderBottomColor: "#b9a8ff", shadowColor: "#7c3cff", shadowOpacity: 0.28, shadowRadius: 7, shadowOffset: { width: 0, height: 5 } },
   promptInput: { flex: 1, minHeight: 36, color: "#13253a", fontSize: 15, lineHeight: 20, paddingHorizontal: 8, paddingVertical: 0 },
-  generateButton: { minWidth: 150, minHeight: 46, borderRadius: 12, backgroundColor: "#6d43ff", borderWidth: 1, borderColor: "#9d7cff", borderBottomWidth: 5, borderBottomColor: "#d13f7c", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, shadowColor: "#ff4d9a", shadowOpacity: 0.58, shadowRadius: 12, shadowOffset: { width: 0, height: 7 }, elevation: 14 },
+  generateButton: { minWidth: 132, minHeight: 40, borderRadius: 12, backgroundColor: "#6d43ff", borderWidth: 1, borderColor: "#9d7cff", borderBottomWidth: 5, borderBottomColor: "#d13f7c", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, shadowColor: "#ff4d9a", shadowOpacity: 0.58, shadowRadius: 12, shadowOffset: { width: 0, height: 7 }, elevation: 14 },
   generateText: { color: "#ffffff", fontSize: 15, lineHeight: 19, fontWeight: "900" },
-  workspaceRow: { flexDirection: "row", alignItems: "stretch", gap: 12, marginTop: 14 },
+  workspaceRow: { flexDirection: "row", alignItems: "stretch", gap: 10, marginTop: 11 },
   workspaceGrid: { flex: 1, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 10 },
-  workspaceCard: { height: 242, borderRadius: 22, padding: 22, borderWidth: 2, borderBottomWidth: 7, shadowOpacity: 0.48, shadowRadius: 18, shadowOffset: { width: 0, height: 12 }, justifyContent: "space-between", overflow: "visible" },
-  workspaceTop: { flexDirection: "row", gap: 18, alignItems: "flex-start" },
-  workspaceIconDepth: { position: "absolute", left: 4, top: 9, width: 66, height: 66, borderRadius: 17, opacity: 0.78 },
-  workspaceIcon: { width: 66, height: 66, borderRadius: 17, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "rgba(255,255,255,0.44)", borderBottomWidth: 9, shadowOpacity: 0.72, shadowRadius: 13, shadowOffset: { width: 0, height: 10 }, elevation: 14 },
+  workspaceCard: { height: 194, borderRadius: 18, padding: 16, borderWidth: 2, borderBottomWidth: 7, shadowOpacity: 0.48, shadowRadius: 18, shadowOffset: { width: 0, height: 12 }, justifyContent: "space-between", overflow: "visible" },
+  workspaceTop: { flexDirection: "row", gap: 13, alignItems: "flex-start" },
+  workspaceIconDepth: { position: "absolute", left: 4, top: 8, width: 54, height: 54, borderRadius: 17, opacity: 0.78 },
+  workspaceIcon: { width: 54, height: 54, borderRadius: 17, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "rgba(255,255,255,0.44)", borderBottomWidth: 9, shadowOpacity: 0.72, shadowRadius: 13, shadowOffset: { width: 0, height: 10 }, elevation: 14 },
   workspaceCopy: { flex: 1 },
-  workspaceTitle: { fontSize: 23, lineHeight: 29, fontWeight: "900", marginTop: 10, textShadowColor: "rgba(0,0,0,0.72)", textShadowOffset: { width: 0, height: 3 }, textShadowRadius: 5 },
-  workspaceDescription: { color: "#33465d", fontSize: 14, lineHeight: 22, marginTop: 14 },
-  raisedButton: { alignSelf: "stretch", minHeight: 52, borderRadius: 18, borderWidth: 2, borderColor: "rgba(255,255,255,0.30)", borderBottomWidth: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 14, paddingHorizontal: 20, shadowOpacity: 0.72, shadowRadius: 14, shadowOffset: { width: 0, height: 11 }, elevation: 14 },
-  raisedButtonText: { color: "#ffffff", fontWeight: "900", fontSize: 17, textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+  workspaceTitle: { fontSize: 19, lineHeight: 24, fontWeight: "900", marginTop: 10, textShadowColor: "rgba(0,0,0,0.72)", textShadowOffset: { width: 0, height: 3 }, textShadowRadius: 5 },
+  workspaceDescription: { color: "#24364a", fontSize: 12, lineHeight: 18, marginTop: 8, fontWeight: "600" },
+  raisedButton: { alignSelf: "stretch", minHeight: 42, borderRadius: 14, borderWidth: 2, borderColor: "rgba(255,255,255,0.30)", borderBottomWidth: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 14, paddingHorizontal: 20, shadowOpacity: 0.72, shadowRadius: 14, shadowOffset: { width: 0, height: 11 }, elevation: 14 },
+  raisedButtonText: { color: "#ffffff", fontWeight: "900", fontSize: 14, textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
   raisedPressed: { transform: [{ translateY: 4 }], borderBottomWidth: 1, shadowOpacity: 0.12 },
   proCard: { width: 220, minHeight: 242, borderRadius: 22, padding: 20, backgroundColor: "#15110d", borderWidth: 2, borderBottomWidth: 7, borderColor: "#d97706", shadowColor: "#f59e0b", shadowOpacity: 0.55, shadowRadius: 18, shadowOffset: { width: 0, height: 12 }, alignItems: "center", elevation: 16 },
   proTitle: { color: "#ffffff", fontSize: 22, lineHeight: 27, fontWeight: "900", marginTop: 9, marginBottom: 10, textShadowColor: "rgba(0,0,0,0.8)", textShadowOffset: { width: 0, height: 3 }, textShadowRadius: 5 },
@@ -642,60 +632,60 @@ const styles = StyleSheet.create({
   featureText: { color: "#fff8e8", fontSize: 13, lineHeight: 18, fontWeight: "700" },
   proButton: { width: "100%", minHeight: 52, marginTop: "auto", borderRadius: 18, backgroundColor: "#f59e0b", borderWidth: 2, borderColor: "#ffd45c", borderBottomWidth: 8, borderBottomColor: "#a64f00", alignItems: "center", justifyContent: "center", shadowColor: "#ffb000", shadowOpacity: 0.78, shadowRadius: 15, shadowOffset: { width: 0, height: 11 }, elevation: 14 },
   proButtonText: { color: "#ffffff", fontSize: 17, fontWeight: "900", textShadowColor: "rgba(80,35,0,0.65)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
-  sectionHeader: { marginTop: 20, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 },
+  sectionHeader: { marginTop: 15, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 10 },
   sectionTitle: { color: "#142338", fontSize: 18, lineHeight: 22, fontWeight: "900" },
-  sectionSubtitle: { color: "#687c91", fontSize: 12, lineHeight: 16, marginTop: 3 },
+  sectionSubtitle: { color: "#465b72", fontSize: 12, lineHeight: 16, marginTop: 3, fontWeight: "600" },
   viewAllButton: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 5, paddingHorizontal: 6 },
   viewAllText: { color: "#15d6c5", fontSize: 12, fontWeight: "900" },
-  templateGrid: { marginTop: 12, flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start", gap: 10, paddingBottom: 14 },
-  templateCard: { height: 118, borderRadius: 17, backgroundColor: "#101d30", borderWidth: 2, borderBottomWidth: 6, alignItems: "center", justifyContent: "center", paddingHorizontal: 7, overflow: "visible", shadowOpacity: 0.58, shadowRadius: 12, shadowOffset: { width: 0, height: 9 }, elevation: 12 },
+  templateGrid: { marginTop: 10, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 7, paddingBottom: 14 },
+  templateCard: { height: 103, borderRadius: 15, backgroundColor: "#101d30", borderWidth: 2, borderBottomWidth: 6, alignItems: "center", justifyContent: "center", paddingHorizontal: 7, overflow: "visible", shadowOpacity: 0.58, shadowRadius: 12, shadowOffset: { width: 0, height: 9 }, elevation: 12 },
   templateTopHighlight: { position: "absolute", left: 11, right: 11, top: 3, height: 2, borderRadius: 99, opacity: 0.78 },
   templateBottomGlow: { position: "absolute", left: 12, right: 12, bottom: -13, height: 17, borderRadius: 99, opacity: 0.28, shadowOpacity: 0.8, shadowRadius: 16, shadowOffset: { width: 0, height: 4 } },
-  templateIconDepth: { position: "absolute", top: 22, width: 57, height: 57, borderRadius: 14, opacity: 0.7, shadowOpacity: 0.68, shadowRadius: 12, shadowOffset: { width: 0, height: 8 } },
-  templateIcon: { width: 57, height: 57, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 1, borderBottomWidth: 6, overflow: "hidden", shadowOpacity: 0.52, shadowRadius: 9, shadowOffset: { width: 0, height: 7 }, elevation: 10 },
+  templateIconDepth: { position: "absolute", top: 18, width: 48, height: 48, borderRadius: 14, opacity: 0.7, shadowOpacity: 0.68, shadowRadius: 12, shadowOffset: { width: 0, height: 8 } },
+  templateIcon: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 1, borderBottomWidth: 6, overflow: "hidden", shadowOpacity: 0.52, shadowRadius: 9, shadowOffset: { width: 0, height: 7 }, elevation: 10 },
   templateIconGloss: { position: "absolute", left: 4, right: 4, top: 3, height: 20, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.42)" },
-  templateTitle: { color: "#ffffff", fontSize: 13, lineHeight: 17, fontWeight: "900", marginTop: 10, textAlign: "center", textShadowColor: "rgba(0,0,0,0.82)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+  templateTitle: { color: "#ffffff", fontSize: 11, lineHeight: 17, fontWeight: "900", marginTop: 10, textAlign: "center", textShadowColor: "rgba(0,0,0,0.82)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
   cardPressed: { transform: [{ translateY: 4 }, { scale: 0.98 }], borderBottomWidth: 2, shadowOpacity: 0.2, opacity: 0.96 },
   planSection: { marginTop: 10 },
-  planSectionTitle: { color: "#142338", fontSize: 24, lineHeight: 30, fontWeight: "900", marginBottom: 14 },
-  planGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "stretch", gap: 14 },
-  planCard3d: { minHeight: 315, borderRadius: 18, borderWidth: 2, borderBottomWidth: 8, padding: 18, justifyContent: "space-between", shadowOpacity: 0.56, shadowRadius: 17, shadowOffset: { width: 0, height: 12 }, elevation: 15, overflow: "visible" },
-  planHeaderRow: { minHeight: 78, flexDirection: "row", alignItems: "flex-start", gap: 15 },
-  planIconDepth3d: { position: "absolute", left: 3, top: 9, width: 62, height: 62, borderRadius: 16, opacity: 0.76 },
-  planIcon3d: { width: 62, height: 62, borderRadius: 16, borderWidth: 2, borderColor: "rgba(255,255,255,0.45)", borderBottomWidth: 8, alignItems: "center", justifyContent: "center", overflow: "hidden", shadowOpacity: 0.75, shadowRadius: 13, shadowOffset: { width: 0, height: 9 }, elevation: 14 },
+  planSectionTitle: { color: "#142338", fontSize: 20, lineHeight: 25, fontWeight: "900", marginBottom: 10 },
+  planGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "stretch", gap: 10 },
+  planCard3d: { minHeight: 264, borderRadius: 16, borderWidth: 2, borderBottomWidth: 7, padding: 14, justifyContent: "space-between", shadowOpacity: 0.56, shadowRadius: 17, shadowOffset: { width: 0, height: 12 }, elevation: 15, overflow: "visible" },
+  planHeaderRow: { minHeight: 62, flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  planIconDepth3d: { position: "absolute", left: 3, top: 8, width: 50, height: 50, borderRadius: 16, opacity: 0.76 },
+  planIcon3d: { width: 50, height: 50, borderRadius: 16, borderWidth: 2, borderColor: "rgba(255,255,255,0.45)", borderBottomWidth: 8, alignItems: "center", justifyContent: "center", overflow: "hidden", shadowOpacity: 0.75, shadowRadius: 13, shadowOffset: { width: 0, height: 9 }, elevation: 14 },
   planIconGloss3d: { position: "absolute", left: 4, right: 4, top: 3, height: 23, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.28)" },
   planTitleWrap: { flex: 1, paddingTop: 7 },
-  planName3d: { color: "#ffffff", fontSize: 18, lineHeight: 23, fontWeight: "900", textShadowColor: "rgba(0,0,0,0.8)", textShadowOffset: { width: 0, height: 3 }, textShadowRadius: 5 },
-  planPrice3d: { fontSize: 22, lineHeight: 28, fontWeight: "900", marginTop: 13, textShadowColor: "rgba(0,0,0,0.48)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
-  planFeatures: { flex: 1, marginTop: 13, gap: 7 },
+  planName3d: { color: "#172338", fontSize: 15, lineHeight: 19, fontWeight: "900" },
+  planPrice3d: { fontSize: 18, lineHeight: 23, fontWeight: "900", marginTop: 8 },
+  planFeatures: { flex: 1, marginTop: 9, gap: 5 },
   planFeatureRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  planFeatureText: { flex: 1, color: "#e5edf7", fontSize: 14, lineHeight: 19, fontWeight: "600" },
-  planButton3d: { minHeight: 48, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.28)", borderBottomWidth: 7, alignItems: "center", justifyContent: "center", marginTop: 17, shadowOpacity: 0.72, shadowRadius: 12, shadowOffset: { width: 0, height: 9 }, elevation: 12 },
+  planFeatureText: { flex: 1, color: "#33465d", fontSize: 11, lineHeight: 15, fontWeight: "700" },
+  planButton3d: { minHeight: 40, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.28)", borderBottomWidth: 7, alignItems: "center", justifyContent: "center", marginTop: 17, shadowOpacity: 0.72, shadowRadius: 12, shadowOffset: { width: 0, height: 9 }, elevation: 12 },
   planButtonPressed: { transform: [{ translateY: 4 }], borderBottomWidth: 2, shadowOpacity: 0.18 },
-  planButtonText3d: { color: "#ffffff", fontSize: 15, lineHeight: 19, fontWeight: "900", textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
-  recentSection: { marginTop: 24, borderRadius: 24, padding: 18, backgroundColor: "#f7fbff", borderWidth: 1, borderColor: "#d7e4ef", shadowColor: "#000000", shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 10 } },
+  planButtonText3d: { color: "#ffffff", fontSize: 13, lineHeight: 19, fontWeight: "900", textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+  recentSection: { marginTop: 18, borderRadius: 20, padding: 14, backgroundColor: "#f7fbff", borderWidth: 1, borderColor: "#d7e4ef", shadowColor: "#000000", shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 10 } },
   darkRecentSection: { backgroundColor: "#031220", borderColor: "#102d43", shadowColor: "#00111f", shadowOpacity: 0.65 },
   recentSectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16 },
   recentHeadingRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   recentHeadingIcon: { width: 42, height: 42, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#3949db", borderBottomWidth: 5, borderBottomColor: "#18249b", shadowColor: "#5566ff", shadowOpacity: 0.55, shadowRadius: 10, shadowOffset: { width: 0, height: 7 } },
-  recentSectionTitle: { color: "#142338", fontSize: 24, lineHeight: 30, fontWeight: "900" },
-  recentGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start", gap: 12 },
-  recentCard: { position: "relative", minHeight: 202, borderRadius: 16, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "rgba(255,255,255,0.48)", borderBottomWidth: 8, overflow: "hidden", shadowOpacity: 0.52, shadowRadius: 14, shadowOffset: { width: 0, height: 11 }, elevation: 14 },
+  recentSectionTitle: { color: "#142338", fontSize: 20, lineHeight: 25, fontWeight: "900" },
+  recentGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 9 },
+  recentCard: { position: "relative", minHeight: 174, borderRadius: 16, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "rgba(255,255,255,0.48)", borderBottomWidth: 8, overflow: "hidden", shadowOpacity: 0.52, shadowRadius: 14, shadowOffset: { width: 0, height: 11 }, elevation: 14 },
   recentCardPressed: { transform: [{ translateY: 5 }, { scale: 0.992 }], borderBottomWidth: 3, shadowOpacity: 0.18 },
   recentCardTopGloss: { position: "absolute", zIndex: 4, top: 0, left: 0, right: 0, height: 4, opacity: 0.92 },
   recentCardDepth: { position: "absolute", zIndex: 0, left: 8, right: 8, bottom: -2, height: 13, borderRadius: 13, opacity: 0.72 },
-  projectPreviewFrame: { position: "relative", zIndex: 1, margin: 7, marginBottom: 0, height: 118, borderRadius: 11, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.4)", backgroundColor: "#0b1d2d" },
+  projectPreviewFrame: { position: "relative", zIndex: 1, margin: 6, marginBottom: 0, height: 94, borderRadius: 11, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.4)", backgroundColor: "#0b1d2d" },
   projectPreview: { width: "100%", height: "100%" },
   projectPreviewGloss: { position: "absolute", left: 0, right: 0, top: 0, height: 42, backgroundColor: "rgba(255,255,255,0.12)" },
   previewGlow: { position: "absolute", width: 120, height: 120, borderRadius: 70, backgroundColor: "rgba(255,255,255,0.19)", right: -45, top: -55 },
   previewTitle: { color: "#ffffff", fontSize: 14, lineHeight: 14, fontWeight: "900", textAlign: "center", textShadowColor: "rgba(0,0,0,0.24)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 },
   previewDetail: { color: "#ffffff", fontSize: 6, fontWeight: "900", marginTop: 3, letterSpacing: 0.8 },
-  projectMetaRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 13 },
+  projectMetaRow: { flexDirection: "row", alignItems: "flex-start", gap: 7, paddingHorizontal: 9, paddingTop: 9, paddingBottom: 10 },
   projectTag: { minWidth: 31, height: 25, borderRadius: 6, alignItems: "center", justifyContent: "center", marginTop: 1 },
   projectTagText: { color: "#dffcff", fontSize: 9, fontWeight: "900" },
   projectTextWrap: { flex: 1 },
-  projectTitle: { color: "#172338", fontSize: 13, lineHeight: 17, fontWeight: "900" },
-  projectMeta: { color: "#718397", fontSize: 12, lineHeight: 16, marginTop: 5 },
+  projectTitle: { color: "#172338", fontSize: 11, lineHeight: 15, fontWeight: "900" },
+  projectMeta: { color: "#53677d", fontSize: 10, lineHeight: 13, marginTop: 3, fontWeight: "600" },
 
   iSidebar: { width: 184, backgroundColor: "#061b2e", borderRightWidth: 1, borderRightColor: "#12344d", paddingHorizontal: 14, paddingTop: 14, paddingBottom: 14 },
   iSidebarCollapsed: { width: 64, paddingHorizontal: 9 },
@@ -722,13 +712,13 @@ const styles = StyleSheet.create({
   iPlanCardCollapsed: { justifyContent: "center", padding: 8 },
   iPlanTitle: { color: "#ffffff", fontSize: 12, fontWeight: "800" },
   iPlanText: { color: "#a8bfd0", fontSize: 9, marginTop: 2 },
-  iHeader: { minHeight: 72, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16 },
+  iHeader: { minHeight: 60, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16 },
   iHeaderCopy: { flex: 1 },
-  iEyebrow: { color: "#53657a", fontSize: 14, lineHeight: 18, fontWeight: "800", letterSpacing: 0 },
-  iHeading: { color: "#102238", fontSize: 34, lineHeight: 40, fontWeight: "900", marginTop: 4, textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 3 }, textShadowRadius: 6 },
+  iEyebrow: { color: "#2dd4bf", fontSize: 12, lineHeight: 18, fontWeight: "800", letterSpacing: 0 },
+  iHeading: { color: "#f8fafc", fontSize: 29, lineHeight: 34, fontWeight: "900", marginTop: 4, textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 3 }, textShadowRadius: 6 },
   headingCreate: { color: "#18d5df" },
   headingToday: { color: "#b43cff" },
-  iSubheading: { color: "#607389", fontSize: 15, lineHeight: 21, marginTop: 3 },
+  iSubheading: { color: "#c4d4e3", fontSize: 13, lineHeight: 18, marginTop: 3 },
   iHeaderActions: { flexDirection: "row", alignItems: "center", gap: 10 },
   iSearchBox: { width: 190, height: 38, borderRadius: 19, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "#258cff", flexDirection: "row", alignItems: "center", paddingHorizontal: 13, gap: 8, shadowColor: "#168cff", shadowOpacity: 0.52, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
   iSearchInput: { flex: 1, color: "#1d3045", fontSize: 14, lineHeight: 18, outlineStyle: "none" } as any,
@@ -791,7 +781,9 @@ const styles = StyleSheet.create({
   darkSearchBox: { backgroundColor: "#0a1d2d", borderColor: "#29445a" },
   darkSearchInput: { color: "#eef7ff" },
   darkWorkspaceCard: { shadowOpacity: 0.64 },
-  darkWorkspaceDescription: { color: "#c4d4e3" },
+  darkWorkspaceDescription: { color: "#d3e0ec" },
+  darkPlanName3d: { color: "#ffffff", textShadowColor: "rgba(0,0,0,0.8)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+  darkPlanFeatureText: { color: "#e6eff7" },
   darkSectionTitle: { color: "#f4f8ff" },
   darkSectionSubtitle: { color: "#9eb2c4" },
   darkTemplateCard: { backgroundColor: "#091827", shadowOpacity: 0.72 },
