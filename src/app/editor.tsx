@@ -1949,11 +1949,15 @@ A local recovery copy is still stored in this browser.`);
       else if (modifier && event.shiftKey && key === "a") { event.preventDefault(); setShowAiPanel(true); setActiveTab("AI Tools"); showEditorNotice("AI Writing Suite opened"); }
       else if (event.key === "F7") { event.preventDefault(); setShowAiPanel(true); setActiveTab("AI Tools"); showEditorNotice("Document Intelligence ready"); }
       else if (modifier && key === "d") { event.preventDefault(); duplicateSelected(); }
+      else if (event.key === "Backspace" && selectedElement?.type === "text") {
+        event.preventDefault();
+        window.dispatchEvent(new CustomEvent("yaposan:edit-text", { detail: { elementId: selectedElement.id } }));
+      }
       else if (event.key === "Delete" || event.key === "Backspace") { event.preventDefault(); deleteSelected(); }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [copySelected, deleteSelected, duplicateSelected, mutateSelectedTable, newProject, openProject, paste, redo, saveProject, selectedTable, tableClipboard, undo, showEditorNotice]);
+  }, [copySelected, deleteSelected, duplicateSelected, mutateSelectedTable, newProject, openProject, paste, redo, saveProject, selectedElement?.id, selectedElement?.type, selectedTable, tableClipboard, undo, showEditorNotice]);
 
   useEffect(() => {
     if (selectedElements.length > 1) { setActiveTab("Home"); return; }

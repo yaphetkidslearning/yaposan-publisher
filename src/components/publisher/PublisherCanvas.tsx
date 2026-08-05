@@ -400,6 +400,16 @@ function CanvasElement({
 }: ElementProps) {
   const item = element as ExtendedElement;
   const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || element.type !== "text") return;
+    const beginKeyboardEditing = (event: Event) => {
+      const detail = (event as CustomEvent<{ elementId?: string }>).detail;
+      if (detail?.elementId === element.id && !item.locked) setEditing(true);
+    };
+    window.addEventListener("yaposan:edit-text", beginKeyboardEditing as EventListener);
+    return () => window.removeEventListener("yaposan:edit-text", beginKeyboardEditing as EventListener);
+  }, [element.id, element.type, item.locked]);
   const lastPressRef = useRef(0);
   const rasterPointsRef = useRef<Point[]>([]);
   const [rasterPreviewPoints, setRasterPreviewPoints] = useState<Point[]>([]);

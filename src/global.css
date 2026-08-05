@@ -7,3 +7,39 @@
   --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
 }
+
+html,
+body,
+#root {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+  min-width: 0;
+}
+
+/* React Native Web frequently creates nested flex wrappers. These guards keep
+   compact desktop content inside the available viewport instead of allowing a
+   wide child to push the right side off screen. */
+[data-yaposan-compact-desktop="true"] body,
+[data-yaposan-compact-desktop="true"] #root,
+[data-yaposan-compact-desktop="true"] #root > div {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+svg,
+canvas,
+video {
+  max-width: 100%;
+}
