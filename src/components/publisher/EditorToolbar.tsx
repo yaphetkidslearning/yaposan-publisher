@@ -45,6 +45,8 @@ type Props = {
   showGrid: boolean;
   snapToGrid: boolean;
   selectedText: PublisherElement | null;
+  saveStatusLabel?: string;
+  profileInitials?: string;
   selectionCount: number;
   drawingTool: "select" | "pen" | "node" | "pencil" | "brush" | "calligraphy" | "marker" | "crayon" | "airbrush" | "highlighter" | "eraser";
   onProjectNameChange: (name: string) => void;
@@ -259,6 +261,7 @@ export default function EditorToolbar(props: Props) {
     showGrid,
     snapToGrid,
     selectedText,
+    saveStatusLabel = "Saved locally", profileInitials = "GU",
     selectionCount, drawingTool, onDrawingToolChange, onGroup, onUngroup,
     onAlignMultiLeft, onAlignMultiCenter, onAlignMultiRight, onAlignTop, onAlignMiddle, onAlignBottom, onDistributeHorizontal, onDistributeVertical,
     onFlipHorizontal, onFlipVertical, selectedImage, onReplaceImage, onResetImage, onRemoveBackground, onApplyImageFilter, selectedSvg, onImportSvg, onGenerateQr, onGenerateBarcode, onExportSelectedSvg, onReplaceAsset, onConvertSvg, onOpenAssetLibrary,
@@ -1013,7 +1016,7 @@ export default function EditorToolbar(props: Props) {
         <View style={styles.titleActions}>
           <View style={styles.savedStatus}>
             <Ionicons name="cloud-done-outline" size={15} color="#9CD6CE" />
-            <Text style={styles.savedText}>Auto-save on</Text>
+            <Text style={styles.savedText}>{saveStatusLabel}</Text>
           </View>
           <Pressable onPress={onSave} style={styles.saveButton}>
             <Ionicons name="save-outline" size={15} color="#FFFFFF" />
@@ -1023,7 +1026,7 @@ export default function EditorToolbar(props: Props) {
             <Ionicons name="download-outline" size={15} color="#FFFFFF" />
             <Text style={styles.exportButtonText}>Export</Text>
           </Pressable>
-          <View style={styles.profileCircle}><Text style={styles.profileText}>DG</Text></View>
+          <View style={styles.profileCircle}><Text style={styles.profileText}>{profileInitials}</Text></View>
         </View>
       </View>
 

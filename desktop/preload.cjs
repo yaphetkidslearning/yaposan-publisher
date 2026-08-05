@@ -3,6 +3,16 @@ contextBridge.exposeInMainWorld("yaposanDesktop", Object.freeze({
   getDesktopInfo: () => ipcRenderer.invoke("yaposan:desktop-info"),
   verifyArtifact: (filePath) => ipcRenderer.invoke("yaposan:verify-artifact", filePath),
   selectReleaseDirectory: () => ipcRenderer.invoke("yaposan:select-release-directory"),
+  offline: Object.freeze({
+    getSnapshot: () => ipcRenderer.invoke("yaposan:offline-snapshot"),
+    saveProject: (input) => ipcRenderer.invoke("yaposan:offline-save-project", input),
+    loadProject: (projectId) => ipcRenderer.invoke("yaposan:offline-load-project", projectId),
+    removeProject: (projectId) => ipcRenderer.invoke("yaposan:offline-remove-project", projectId),
+    queueOperation: (input) => ipcRenderer.invoke("yaposan:offline-queue-operation", input),
+    resolveOperation: (input) => ipcRenderer.invoke("yaposan:offline-resolve-operation", input),
+    exportBackup: () => ipcRenderer.invoke("yaposan:offline-export-backup"),
+    subscribe: (listener) => { const handler = (_event, snapshot) => listener(snapshot); ipcRenderer.on("yaposan:offline-status", handler); return () => ipcRenderer.removeListener("yaposan:offline-status", handler); },
+  }),
   telemetry: Object.freeze({
     getSnapshot: () => ipcRenderer.invoke("yaposan:telemetry-snapshot"),
     setConsent: (consent) => ipcRenderer.invoke("yaposan:telemetry-consent", consent),

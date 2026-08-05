@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 const tools = [
@@ -13,7 +13,12 @@ const tools = [
 ] as const;
 
 export default function AiStudio() {
+  const params = useLocalSearchParams<{ prompt?: string | string[] }>();
+  const incomingPrompt = Array.isArray(params.prompt) ? params.prompt[0] : params.prompt;
   const [prompt,setPrompt]=useState(""); const [result,setResult]=useState(""); const [history,setHistory]=useState<string[]>([]); const [message,setMessage]=useState("");
+  useEffect(() => {
+    if (incomingPrompt?.trim()) setPrompt(incomingPrompt.trim());
+  }, [incomingPrompt]);
   const generate=()=>{ const clean=prompt.trim(); if(!clean){ setMessage("Enter a prompt or choose Use example first."); return; } setMessage(""); const output=`Creative brief ready: ${clean}\n\nSuggested workflow: choose a format, apply your Brand Kit, generate three variations, review accessibility, then open the selected concept in Publisher.`; setResult(output); setHistory(v=>[clean,...v].slice(0,6)); };
   return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.page}>
     <View style={s.top}><Pressable onPress={()=>router.canGoBack() ? router.back() : router.replace("/" as never)} style={s.back}><Ionicons name="arrow-back" size={20} color="#fff"/></Pressable><View><Text style={s.brand}>Yaposan AI Studio</Text><Text style={s.small}>Writing, design, image, and document intelligence</Text></View><Pressable onPress={()=>router.push("/ai-provider-settings" as never)} style={s.credit}><Ionicons name="settings-outline" size={16} color="#7c3aed"/><Text style={s.creditText}>Provider settings</Text></Pressable></View>

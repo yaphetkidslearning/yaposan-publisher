@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Link, useRouter, type Href } from "expo-router";
 import { useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
   Pressable,
   SafeAreaView,
@@ -180,12 +181,7 @@ const publishChannels: PublishChannel[] = [
   { name: "Instagram Shop", short: "◎", href: "/marketplace?channel=instagram", accent: "#d62976", background: "#fff0f7", kind: "badge" },
   { name: "TikTok Shop", short: "♪", href: "/marketplace?channel=tiktok", accent: "#00f2ea", background: "#07151f", kind: "badge" },
   { name: "Walmart Marketplace", short: "✹", href: "/marketplace?channel=walmart", accent: "#0071ce", background: "#edf7ff", kind: "badge" },
-  { name: "Pinterest", short: "P", href: "/marketplace?channel=pinterest", accent: "#e60023", background: "#fff0f3", kind: "badge" },
-  { name: "YouTube", short: "▶", href: "/marketplace?channel=youtube", accent: "#ff0000", background: "#fff0f0", kind: "badge" },
-  { name: "LinkedIn", short: "in", href: "/marketplace?channel=linkedin", accent: "#0a66c2", background: "#edf6ff", kind: "badge" },
-  { name: "Twitter / X", short: "X", href: "/marketplace?channel=twitter", accent: "#ffffff", background: "#101820", kind: "badge" },
-  { name: "Website", short: "◎", href: "/web-studio", accent: "#0ea5e9", background: "#ecf9ff", kind: "badge" },
-  { name: "More", short: "•••", href: "/marketplace", accent: "#64748b", background: "#f1f5f9", kind: "badge" },
+  { name: "Pinterest Catalog", short: "P", href: "/marketplace?channel=pinterest", accent: "#e60023", background: "#fff0f3", kind: "badge" },
 ];
 
 const recentProjects = [
@@ -276,6 +272,7 @@ function RaisedButton({ label, href, accent, dark }: { label: string; href: Href
 }
 
 export default function HomeScreen() {
+  const auth = useAuth();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const mobile = width < 620;
@@ -287,6 +284,11 @@ export default function HomeScreen() {
   const templateWidth = useMemo(() => (mobile ? "48%" : width < 980 ? "18%" : "8.8%") as `${number}%`, [mobile, width]);
   const recentWidth = useMemo(() => (mobile ? "100%" : width < 980 ? "31.2%" : "18.2%") as `${number}%`, [mobile, width]);
   const planWidth = useMemo(() => (mobile ? "100%" : width < 1050 ? "48.2%" : "22.9%") as `${number}%`, [mobile, width]);
+  const submitHeroPrompt = () => {
+    const cleanPrompt = prompt.trim();
+    if (!cleanPrompt) return;
+    router.push((`/ai?prompt=${encodeURIComponent(cleanPrompt)}`) as Href);
+  };
 
   return (
     <SafeAreaView style={[styles.safeArea, darkMode && styles.darkSafeArea]}>
@@ -342,7 +344,7 @@ export default function HomeScreen() {
                   <Ionicons name={darkMode ? "sunny-outline" : "moon-outline"} size={18} color={darkMode ? "#ffd45c" : "#24364a"} />
                   <Text style={[styles.themeToggleText, darkMode && styles.themeToggleTextDark]}>{darkMode ? "Light" : "Dark"}</Text>
                 </Pressable>
-                <Pressable style={({ pressed }) => [styles.iProfileButton, pressed && styles.profilePressed]}><Text style={styles.iProfileText}>DG</Text></Pressable>
+                {auth.isAuthenticated ? <Pressable onPress={() => router.push("/account")} style={({ pressed }) => [styles.iProfileButton, pressed && styles.profilePressed]}><Text style={styles.iProfileText}>{auth.session?.user?.email?.slice(0,2).toUpperCase() ?? "YA"}</Text></Pressable> : <View style={{ flexDirection:"row", gap:8 }}><Pressable onPress={() => router.push("/sign-in")} style={({ pressed }) => [styles.signInButton, pressed && styles.iSmallPressed]}><Text style={styles.signInButtonText}>Sign In</Text></Pressable><Pressable onPress={() => router.push("/register")} style={({ pressed }) => [styles.iProfileButton, { width:100, borderRadius:20 }, pressed && styles.profilePressed]}><Text style={styles.iProfileText}>Get Started</Text></Pressable></View>}
               </View>
             </View>
 
@@ -350,17 +352,34 @@ export default function HomeScreen() {
 
             <View style={[styles.hero, mobile && styles.heroMobile]}>
               <Image
-                source={require("../../assets/home/hero-phase25.42.6-clean.png")}
+                source={require("../../assets/home/hero-phase89.1.png")}
                 resizeMode="stretch"
                 style={styles.heroArtwork}
                 accessibilityLabel="Create, edit, and publish without leaving Yaposan"
               />
-              <View pointerEvents="none" style={styles.heroGloss} />
-              <View style={[styles.heroPromptShell, mobile && styles.heroPromptShellMobile]}>
-                <View style={[styles.promptIcon, mobile && styles.promptIconMobile]}><Ionicons name="sparkles" size={mobile ? 18 : 22} color="#7c3aed" /></View>
-                <TextInput value={prompt} onChangeText={setPrompt} style={[styles.promptInput, mobile && styles.promptInputMobile]} placeholder="Describe a flyer, product scene, campaign, or document..." placeholderTextColor="#50627a" />
-                <Pressable onPress={() => router.push("/ai")} style={({ pressed }) => [styles.generateButton, mobile && styles.generateButtonMobile, pressed && styles.raisedPressed]}>
-                  <Text style={[styles.generateText, mobile && styles.generateTextMobile]}>Generate</Text><Ionicons name="sparkles" size={mobile ? 14 : 17} color="#ffffff" />
+              <View style={[styles.heroPromptBar, mobile && styles.heroPromptBarMobile]}>
+                <View style={styles.heroPromptIcon}>
+                  <Ionicons name="sparkles" size={18} color="#7c3aed" />
+                </View>
+                <TextInput
+                  value={prompt}
+                  onChangeText={setPrompt}
+                  onSubmitEditing={submitHeroPrompt}
+                  returnKeyType="send"
+                  placeholder="Describe a flyer, product scene..."
+                  placeholderTextColor="#667085"
+                  style={styles.heroPromptInput}
+                  accessibilityLabel="Describe what you want Yaposan AI to create"
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Generate with Yaposan AI"
+                  disabled={!prompt.trim()}
+                  onPress={submitHeroPrompt}
+                  style={({ pressed }) => [styles.heroGenerateButton, !prompt.trim() && styles.heroGenerateButtonDisabled, pressed && prompt.trim() && styles.heroGenerateButtonPressed]}
+                >
+                  <Text style={styles.heroGenerateText}>Generate</Text>
+                  <Ionicons name="sparkles" size={15} color="#ffffff" />
                 </Pressable>
               </View>
             </View>
@@ -473,32 +492,43 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <View style={[styles.publishStrip, darkMode && styles.darkPublishStrip]}>
-            <View style={styles.publishStripHeader}>
-              <View>
-                <Text style={[styles.sectionTitle, darkMode && styles.darkSectionTitle]}>Publish anywhere</Text>
-                <Text style={[styles.sectionSubtitle, darkMode && styles.darkSectionSubtitle]}>Export and publish your designs across all major platforms.</Text>
-              </View>
-              <Pressable onPress={() => router.push("/marketplace")} style={styles.viewAllButton}>
-                <Text style={styles.viewAllText}>Manage channels</Text>
-                <Ionicons name="arrow-forward" size={15} color="#0f9f91" />
-              </Pressable>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={[styles.sectionTitle, darkMode && styles.darkSectionTitle]}>Publish channels</Text>
+              <Text style={[styles.sectionSubtitle, darkMode && styles.darkSectionSubtitle]}>Connect your storefronts and publish your finished designs where customers shop.</Text>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.channelLogoRow}>
-              {publishChannels.map((channel) => (
-                <Pressable
-                  key={channel.name}
-                  onPress={() => router.push(channel.href)}
-                  style={({ pressed }) => [styles.channelLogoItem, pressed && styles.channelLogoItemPressed]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Open ${channel.name} publishing channel`}
-                >
-                  <ChannelLogo channel={channel} />
-                  <Text numberOfLines={1} style={[styles.channelLogoLabel, darkMode && styles.darkChannelLogoLabel]}>{channel.name}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
+            <Pressable onPress={() => router.push("/marketplace")} style={styles.viewAllButton}>
+              <Text style={styles.viewAllText}>Manage channels</Text>
+              <Ionicons name="arrow-forward" size={15} color="#0f9f91" />
+            </Pressable>
           </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.channelScroller}
+            contentContainerStyle={styles.channelGrid}
+          >
+            {publishChannels.map((channel) => (
+              <Pressable
+                key={channel.name}
+                onPress={() => router.push(channel.href)}
+                style={({ pressed }) => [
+                  styles.channelCard,
+                  darkMode && styles.darkChannelCard,
+                  pressed && styles.channelCardPressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Open ${channel.name} publishing channel`}
+              >
+                <ChannelLogo channel={channel} />
+                <Text numberOfLines={1} style={[styles.channelName, darkMode && styles.darkChannelName]}>{channel.name}</Text>
+                <View style={[styles.channelStatus, darkMode && styles.darkChannelStatus]}>
+                  <View style={styles.channelStatusDot} />
+                  <Text style={[styles.channelStatusText, darkMode && styles.darkChannelStatusText]}>Ready to connect</Text>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
 
           <View style={[styles.recentSection, darkMode && styles.darkRecentSection]}>
             <View style={styles.recentSectionHeader}>
@@ -593,33 +623,41 @@ const styles = StyleSheet.create({
   profileButton: { width: 31, height: 31, borderRadius: 16, backgroundColor: "#0d9b92", alignItems: "center", justifyContent: "center", borderBottomWidth: 3, borderBottomColor: "#08665f", shadowColor: "#075a54", shadowOpacity: 0.25, shadowRadius: 5, shadowOffset: { width: 0, height: 3 } },
   profileText: { color: "#ffffff", fontSize: 9, fontWeight: "900" },
   mobileNav: { gap: 7, paddingVertical: 12 },
-  hero: { marginTop: 9, width: "100%", alignSelf: "stretch", height: 250, borderRadius: 18, backgroundColor: "#05091d", overflow: "hidden", borderWidth: 2, borderColor: "#31a8ff", borderBottomWidth: 7, borderBottomColor: "#ff4f93", shadowColor: "#6b35ff", shadowOpacity: 0.62, shadowRadius: 20, shadowOffset: { width: 0, height: 13 }, elevation: 18 },
-  heroMobile: { width: "100%", height: 220, borderRadius: 15, borderBottomWidth: 5 },
+  hero: { marginTop: 9, width: "100%", alignSelf: "stretch", height: 235, borderRadius: 18, backgroundColor: "#05091d", overflow: "hidden", borderWidth: 1, borderColor: "rgba(124,92,255,0.38)", shadowColor: "#000000", shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
+  heroMobile: { width: "100%", height: 205, borderRadius: 15 },
   heroArtwork: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, width: "100%", height: "100%", borderRadius: 16, backgroundColor: "#05091d" },
+  heroPromptBar: { position: "absolute", right: 14, bottom: 12, width: 340, maxWidth: "42%", height: 42, borderRadius: 12, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "rgba(255,255,255,0.94)", flexDirection: "row", alignItems: "center", paddingLeft: 6, paddingRight: 5, shadowColor: "#7c3aed", shadowOpacity: 0.18, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
+  heroPromptBarMobile: { left: 12, right: 12, width: "auto", maxWidth: "none" as never, bottom: 10, height: 42 },
+  heroPromptIcon: { width: 30, height: 30, borderRadius: 9, backgroundColor: "#f4efff", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  heroPromptInput: { flex: 1, minWidth: 0, height: 36, paddingHorizontal: 9, color: "#26364a", fontSize: 11, fontWeight: "600", outlineStyle: "none" as never },
+  heroGenerateButton: { height: 31, minWidth: 94, paddingHorizontal: 11, borderRadius: 8, backgroundColor: "#6d28d9", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer" as never },
+  heroGenerateButtonDisabled: { opacity: 0.58 },
+  heroGenerateButtonPressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
+  heroGenerateText: { color: "#ffffff", fontSize: 11, fontWeight: "900" },
   heroGloss: { position: "absolute", left: 8, right: 8, top: 6, height: "28%", borderRadius: 15, backgroundColor: "rgba(255,255,255,0.055)" },
-  heroPromptShell: { position: "absolute", left: 16, right: 16, bottom: 10, minHeight: 42, backgroundColor: "rgba(255,255,255,0.98)", borderRadius: 16, padding: 6, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.98)", shadowColor: "#7c3cff", shadowOpacity: 0.55, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 14 },
+  heroPromptShell: { position: "absolute", left: 20, right: 20, bottom: 12, minHeight: 48, backgroundColor: "rgba(255,255,255,0.98)", borderRadius: 16, padding: 6, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.98)", shadowColor: "#7c3cff", shadowOpacity: 0.55, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 14 },
   heroPromptShellMobile: { left: 12, right: 12, bottom: 10, minHeight: 48, borderRadius: 12, padding: 4, gap: 5 },
   promptIconMobile: { width: 36, height: 36, borderRadius: 9, borderBottomWidth: 3 },
   promptInputMobile: { minHeight: 32, fontSize: 11, lineHeight: 15, paddingHorizontal: 5 },
   generateButtonMobile: { minWidth: 96, minHeight: 36, borderRadius: 9, borderBottomWidth: 4, gap: 4, paddingHorizontal: 10 },
   generateTextMobile: { fontSize: 12, lineHeight: 15 },
   promptShell: { minHeight: 58, backgroundColor: "rgba(255,255,255,0.97)", borderRadius: 16, marginTop: 13, padding: 6, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.98)", shadowColor: "#7c3cff", shadowOpacity: 0.45, shadowRadius: 14, shadowOffset: { width: 0, height: 8 }, elevation: 12 },
-  promptIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: "#f3efff", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#d7ccff", borderBottomWidth: 4, borderBottomColor: "#b9a8ff", shadowColor: "#7c3cff", shadowOpacity: 0.28, shadowRadius: 7, shadowOffset: { width: 0, height: 5 } },
+  promptIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: "#f3efff", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#d7ccff", borderBottomWidth: 4, borderBottomColor: "#b9a8ff", shadowColor: "#7c3cff", shadowOpacity: 0.28, shadowRadius: 7, shadowOffset: { width: 0, height: 5 } },
   promptInput: { flex: 1, minHeight: 36, color: "#13253a", fontSize: 15, lineHeight: 20, paddingHorizontal: 8, paddingVertical: 0 },
-  generateButton: { minWidth: 116, minHeight: 36, borderRadius: 12, backgroundColor: "#6d43ff", borderWidth: 1, borderColor: "#9d7cff", borderBottomWidth: 5, borderBottomColor: "#d13f7c", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, shadowColor: "#ff4d9a", shadowOpacity: 0.58, shadowRadius: 12, shadowOffset: { width: 0, height: 7 }, elevation: 14 },
-  generateText: { color: "#ffffff", fontSize: 13, lineHeight: 19, fontWeight: "900" },
+  generateButton: { minWidth: 132, minHeight: 40, borderRadius: 12, backgroundColor: "#6d43ff", borderWidth: 1, borderColor: "#9d7cff", borderBottomWidth: 5, borderBottomColor: "#d13f7c", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, shadowColor: "#ff4d9a", shadowOpacity: 0.58, shadowRadius: 12, shadowOffset: { width: 0, height: 7 }, elevation: 14 },
+  generateText: { color: "#ffffff", fontSize: 15, lineHeight: 19, fontWeight: "900" },
   workspaceRow: { flexDirection: "row", alignItems: "stretch", gap: 10, marginTop: 11 },
   workspaceGrid: { flex: 1, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 10 },
-  workspaceCard: { height: 194, borderRadius: 18, padding: 16, borderWidth: 2, borderBottomWidth: 7, shadowOpacity: 0.48, shadowRadius: 18, shadowOffset: { width: 0, height: 12 }, justifyContent: "space-between", overflow: "visible" },
+  workspaceCard: { height: 194, borderRadius: 18, padding: 16, borderWidth: 1, shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, justifyContent: "space-between", overflow: "hidden" },
   workspaceTop: { flexDirection: "row", gap: 13, alignItems: "flex-start" },
-  workspaceIconDepth: { position: "absolute", left: 4, top: 8, width: 54, height: 54, borderRadius: 17, opacity: 0.78 },
-  workspaceIcon: { width: 54, height: 54, borderRadius: 17, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "rgba(255,255,255,0.44)", borderBottomWidth: 9, shadowOpacity: 0.72, shadowRadius: 13, shadowOffset: { width: 0, height: 10 }, elevation: 14 },
+  workspaceIconDepth: { display: "none" },
+  workspaceIcon: { width: 54, height: 54, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.24)", shadowOpacity: 0.10, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 3 },
   workspaceCopy: { flex: 1 },
-  workspaceTitle: { fontSize: 19, lineHeight: 24, fontWeight: "900", marginTop: 10, textShadowColor: "rgba(0,0,0,0.72)", textShadowOffset: { width: 0, height: 3 }, textShadowRadius: 5 },
+  workspaceTitle: { fontSize: 19, lineHeight: 24, fontWeight: "900", marginTop: 10 },
   workspaceDescription: { color: "#24364a", fontSize: 12, lineHeight: 18, marginTop: 8, fontWeight: "600" },
-  raisedButton: { alignSelf: "stretch", minHeight: 42, borderRadius: 14, borderWidth: 2, borderColor: "rgba(255,255,255,0.30)", borderBottomWidth: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 14, paddingHorizontal: 20, shadowOpacity: 0.72, shadowRadius: 14, shadowOffset: { width: 0, height: 11 }, elevation: 14 },
-  raisedButtonText: { color: "#ffffff", fontWeight: "900", fontSize: 14, textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
-  raisedPressed: { transform: [{ translateY: 4 }], borderBottomWidth: 1, shadowOpacity: 0.12 },
+  raisedButton: { alignSelf: "stretch", minHeight: 42, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.24)", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 14, paddingHorizontal: 20, shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  raisedButtonText: { color: "#ffffff", fontWeight: "900", fontSize: 14 },
+  raisedPressed: { transform: [{ scale: 0.985 }], opacity: 0.9 },
   proCard: { width: 220, minHeight: 242, borderRadius: 22, padding: 20, backgroundColor: "#15110d", borderWidth: 2, borderBottomWidth: 7, borderColor: "#d97706", shadowColor: "#f59e0b", shadowOpacity: 0.55, shadowRadius: 18, shadowOffset: { width: 0, height: 12 }, alignItems: "center", elevation: 16 },
   proTitle: { color: "#ffffff", fontSize: 22, lineHeight: 27, fontWeight: "900", marginTop: 9, marginBottom: 10, textShadowColor: "rgba(0,0,0,0.8)", textShadowOffset: { width: 0, height: 3 }, textShadowRadius: 5 },
   featureRow: { width: "100%", flexDirection: "row", alignItems: "center", gap: 6, marginTop: 5 },
@@ -632,18 +670,18 @@ const styles = StyleSheet.create({
   viewAllButton: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 5, paddingHorizontal: 6 },
   viewAllText: { color: "#15d6c5", fontSize: 12, fontWeight: "900" },
   templateGrid: { marginTop: 10, flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 7, paddingBottom: 14 },
-  templateCard: { height: 103, borderRadius: 15, backgroundColor: "#101d30", borderWidth: 2, borderBottomWidth: 6, alignItems: "center", justifyContent: "center", paddingHorizontal: 7, overflow: "visible", shadowOpacity: 0.58, shadowRadius: 12, shadowOffset: { width: 0, height: 9 }, elevation: 12 },
+  templateCard: { height: 103, borderRadius: 15, backgroundColor: "#101d30", borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 7, overflow: "hidden", shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   templateTopHighlight: { position: "absolute", left: 11, right: 11, top: 3, height: 2, borderRadius: 99, opacity: 0.78 },
   templateBottomGlow: { position: "absolute", left: 12, right: 12, bottom: -13, height: 17, borderRadius: 99, opacity: 0.28, shadowOpacity: 0.8, shadowRadius: 16, shadowOffset: { width: 0, height: 4 } },
-  templateIconDepth: { position: "absolute", top: 18, width: 48, height: 48, borderRadius: 14, opacity: 0.7, shadowOpacity: 0.68, shadowRadius: 12, shadowOffset: { width: 0, height: 8 } },
-  templateIcon: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 1, borderBottomWidth: 6, overflow: "hidden", shadowOpacity: 0.52, shadowRadius: 9, shadowOffset: { width: 0, height: 7 }, elevation: 10 },
+  templateIconDepth: { display: "none" },
+  templateIcon: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 1, overflow: "hidden", shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   templateIconGloss: { position: "absolute", left: 4, right: 4, top: 3, height: 20, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.42)" },
   templateTitle: { color: "#ffffff", fontSize: 11, lineHeight: 17, fontWeight: "900", marginTop: 10, textAlign: "center", textShadowColor: "rgba(0,0,0,0.82)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
   cardPressed: { transform: [{ translateY: 4 }, { scale: 0.98 }], borderBottomWidth: 2, shadowOpacity: 0.2, opacity: 0.96 },
   planSection: { marginTop: 10 },
   planSectionTitle: { color: "#142338", fontSize: 20, lineHeight: 25, fontWeight: "900", marginBottom: 10 },
   planGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "stretch", gap: 10 },
-  planCard3d: { minHeight: 264, borderRadius: 16, borderWidth: 2, borderBottomWidth: 7, padding: 14, justifyContent: "space-between", shadowOpacity: 0.56, shadowRadius: 17, shadowOffset: { width: 0, height: 12 }, elevation: 15, overflow: "visible" },
+  planCard3d: { minHeight: 264, borderRadius: 16, borderWidth: 1, borderTopWidth: 4, padding: 14, justifyContent: "space-between", shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3, overflow: "hidden" },
   planHeaderRow: { minHeight: 62, flexDirection: "row", alignItems: "flex-start", gap: 10 },
   planIconDepth3d: { position: "absolute", left: 3, top: 8, width: 50, height: 50, borderRadius: 16, opacity: 0.76 },
   planIcon3d: { width: 50, height: 50, borderRadius: 16, borderWidth: 2, borderColor: "rgba(255,255,255,0.45)", borderBottomWidth: 8, alignItems: "center", justifyContent: "center", overflow: "hidden", shadowOpacity: 0.75, shadowRadius: 13, shadowOffset: { width: 0, height: 9 }, elevation: 14 },
@@ -654,17 +692,17 @@ const styles = StyleSheet.create({
   planFeatures: { flex: 1, marginTop: 9, gap: 5 },
   planFeatureRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   planFeatureText: { flex: 1, color: "#33465d", fontSize: 11, lineHeight: 15, fontWeight: "700" },
-  planButton3d: { minHeight: 40, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.28)", borderBottomWidth: 7, alignItems: "center", justifyContent: "center", marginTop: 17, shadowOpacity: 0.72, shadowRadius: 12, shadowOffset: { width: 0, height: 9 }, elevation: 12 },
+  planButton3d: { minHeight: 40, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.28)", alignItems: "center", justifyContent: "center", marginTop: 17, shadowOpacity: 0.10, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   planButtonPressed: { transform: [{ translateY: 4 }], borderBottomWidth: 2, shadowOpacity: 0.18 },
   planButtonText3d: { color: "#ffffff", fontSize: 13, lineHeight: 19, fontWeight: "900", textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
-  recentSection: { marginTop: 18, borderRadius: 20, padding: 14, backgroundColor: "#f7fbff", borderWidth: 1, borderColor: "#d7e4ef", shadowColor: "#000000", shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 10 } },
+  recentSection: { marginTop: 18, borderRadius: 18, padding: 14, backgroundColor: "#f7fbff", borderWidth: 1, borderColor: "#d7e4ef", shadowColor: "#000000", shadowOpacity: 0.10, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
   darkRecentSection: { backgroundColor: "#031220", borderColor: "#102d43", shadowColor: "#00111f", shadowOpacity: 0.65 },
   recentSectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16 },
   recentHeadingRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  recentHeadingIcon: { width: 42, height: 42, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#3949db", borderBottomWidth: 5, borderBottomColor: "#18249b", shadowColor: "#5566ff", shadowOpacity: 0.55, shadowRadius: 10, shadowOffset: { width: 0, height: 7 } },
+  recentHeadingIcon: { width: 42, height: 42, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#3949db", borderWidth: 1, borderColor: "rgba(255,255,255,0.22)", shadowColor: "#000000", shadowOpacity: 0.10, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
   recentSectionTitle: { color: "#142338", fontSize: 20, lineHeight: 25, fontWeight: "900" },
   recentGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 9 },
-  recentCard: { position: "relative", minHeight: 174, borderRadius: 16, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "rgba(255,255,255,0.48)", borderBottomWidth: 8, overflow: "hidden", shadowOpacity: 0.52, shadowRadius: 14, shadowOffset: { width: 0, height: 11 }, elevation: 14 },
+  recentCard: { position: "relative", minHeight: 174, borderRadius: 16, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "rgba(255,255,255,0.48)", overflow: "hidden", shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   recentCardPressed: { transform: [{ translateY: 5 }, { scale: 0.992 }], borderBottomWidth: 3, shadowOpacity: 0.18 },
   recentCardTopGloss: { position: "absolute", zIndex: 4, top: 0, left: 0, right: 0, height: 4, opacity: 0.92 },
   recentCardDepth: { position: "absolute", zIndex: 0, left: 8, right: 8, bottom: -2, height: 13, borderRadius: 13, opacity: 0.72 },
@@ -714,7 +752,7 @@ const styles = StyleSheet.create({
   headingToday: { color: "#b43cff" },
   iSubheading: { color: "#c4d4e3", fontSize: 13, lineHeight: 18, marginTop: 3 },
   iHeaderActions: { flexDirection: "row", alignItems: "center", gap: 10 },
-  iSearchBox: { width: 190, height: 38, borderRadius: 19, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "#258cff", flexDirection: "row", alignItems: "center", paddingHorizontal: 13, gap: 8, shadowColor: "#168cff", shadowOpacity: 0.52, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  iSearchBox: { width: 164, height: 36, borderRadius: 18, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "#258cff", flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 7, shadowColor: "#168cff", shadowOpacity: 0.16, shadowRadius: 7, shadowOffset: { width: 0, height: 3 } },
   iSearchInput: { flex: 1, color: "#1d3045", fontSize: 14, lineHeight: 18, outlineStyle: "none" } as any,
   iIconButton: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   iProfileButton: { width: 38, height: 38, borderRadius: 19, backgroundColor: "#0f9f91", alignItems: "center", justifyContent: "center", borderBottomWidth: 4, borderBottomColor: "#087c73" },
@@ -762,6 +800,8 @@ const styles = StyleSheet.create({
   tProgressTrack: { width: "100%", height: 5, borderRadius: 8, backgroundColor: "#355067", marginTop: 7, overflow: "hidden" },
   tProgressFill: { width: "5%", height: "100%", backgroundColor: "#14cbbb" },
 
+  signInButton: { height: 36, minWidth: 78, borderRadius: 18, paddingHorizontal: 14, alignItems: "center", justifyContent: "center", backgroundColor: "#ffffff", borderWidth: 1, borderColor: "#d7e2ec", shadowColor: "#000000", shadowOpacity: 0.10, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
+  signInButtonText: { color: "#0f172a", fontSize: 13, lineHeight: 17, fontWeight: "900" },
   themeToggle: { height: 36, minWidth: 74, borderRadius: 18, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "#d7e2ec", shadowColor: "#1f3853", shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
   themeToggleDark: { backgroundColor: "#0b2032", borderColor: "#29445a" },
   themeToggleText: { color: "#24364a", fontSize: 13, lineHeight: 17, fontWeight: "800" },
@@ -774,31 +814,21 @@ const styles = StyleSheet.create({
   darkSubheading: { color: "#b4c7d8" },
   darkSearchBox: { backgroundColor: "#0a1d2d", borderColor: "#29445a" },
   darkSearchInput: { color: "#eef7ff" },
-  darkWorkspaceCard: { shadowOpacity: 0.64 },
+  darkWorkspaceCard: { shadowOpacity: 0.12 },
   darkWorkspaceDescription: { color: "#d3e0ec" },
   darkPlanName3d: { color: "#ffffff", textShadowColor: "rgba(0,0,0,0.8)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
   darkPlanFeatureText: { color: "#e6eff7" },
   darkSectionTitle: { color: "#f4f8ff" },
   darkSectionSubtitle: { color: "#9eb2c4" },
-  darkTemplateCard: { backgroundColor: "#091827", shadowOpacity: 0.72 },
+  darkTemplateCard: { backgroundColor: "#091827", shadowOpacity: 0.12 },
   darkTemplateTitle: { color: "#ffffff" },
-  darkRecentCard: { backgroundColor: "#071a29", borderColor: "rgba(120,190,255,0.22)", shadowOpacity: 0.62 },
+  darkRecentCard: { backgroundColor: "#071a29", borderColor: "rgba(120,190,255,0.22)", shadowOpacity: 0.12 },
   darkProjectTitle: { color: "#f4f8ff" },
   darkProjectMeta: { color: "#a9bdcf" },
 
-
-  publishStrip: { marginTop: 16, borderRadius: 18, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, backgroundColor: "#f7fbff", borderWidth: 1, borderColor: "#d7e4ef", overflow: "hidden" },
-  darkPublishStrip: { backgroundColor: "#06182a", borderColor: "#17344b" },
-  publishStripHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 },
-  channelLogoRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 18, paddingTop: 12, paddingBottom: 4, paddingRight: 10 },
-  channelLogoItem: { width: 64, alignItems: "center", justifyContent: "flex-start", gap: 6, paddingVertical: 2 },
-  channelLogoItemPressed: { opacity: 0.72, transform: [{ translateY: 2 }, { scale: 0.97 }] },
-  channelLogoLabel: { width: 72, color: "#33465d", fontSize: 9, lineHeight: 12, fontWeight: "700", textAlign: "center" },
-  darkChannelLogoLabel: { color: "#c8d7e6" },
-
   channelScroller: { marginTop: 10, flexGrow: 0 },
   channelGrid: { flexDirection: "row", alignItems: "stretch", gap: 10, paddingBottom: 8, paddingRight: 12 },
-  channelCard: { width: 218, minHeight: 66, borderRadius: 13, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "#d7e3ee", borderBottomWidth: 5, borderBottomColor: "#9db1c3", paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 10, shadowColor: "#172b42", shadowOpacity: 0.18, shadowRadius: 7, shadowOffset: { width: 0, height: 5 } },
+  channelCard: { width: 218, minHeight: 66, borderRadius: 13, backgroundColor: "#ffffff", borderWidth: 1, borderColor: "#d7e3ee", paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 10, shadowColor: "#172b42", shadowOpacity: 0.10, shadowRadius: 7, shadowOffset: { width: 0, height: 3 } },
   channelCardPressed: { transform: [{ translateY: 3 }], borderBottomWidth: 2, opacity: 0.9 },
   channelLogo: { width: 38, height: 38, borderRadius: 10, borderWidth: 1, borderColor: "rgba(20,40,60,0.12)", alignItems: "center", justifyContent: "center", overflow: "hidden" },
   channelLogoText: { fontSize: 23, lineHeight: 27, fontWeight: "900" },

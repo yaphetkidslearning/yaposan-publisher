@@ -57,7 +57,10 @@
     "tsx": "^4.20.6",
     "typescript": "~5.9.3",
     "electron-updater": "^6.6.2",
-    "@types/pg": "^8.11.10"
+    "@types/pg": "^8.11.10",
+    "electron": "^37.2.4",
+    "electron-builder": "^26.0.12",
+    "cross-env": "^7.0.3"
   },
   "scripts": {
     "start": "expo start",
@@ -549,8 +552,83 @@
     "deploy:step7:burn-in": "node scripts/deployment-step7-burn-in.mjs",
     "deploy:step7:validate": "node scripts/deployment-step7-validate.mjs",
     "deploy:step8:certify": "node scripts/deployment-step8-certify.mjs",
-    "deploy:step8:validate": "node scripts/deployment-step8-validate.mjs"
+    "deploy:step8:validate": "node scripts/deployment-step8-validate.mjs",
+    "test:phase80": "node --experimental-strip-types --test tests/phase80-paid-subscriptions.test.ts",
+    "verify:phase80": "npm run typecheck && npm run test:phase80",
+    "test:phase81": "node --import tsx --test tests/phase81-commercial-platform.test.ts",
+    "verify:phase81": "npm run typecheck && npm run test:phase81",
+    "test:phase82": "node --import tsx --test tests/phase82-creator-marketplace.test.ts",
+    "verify:phase82": "npm run typecheck && npm run test:phase81 && npm run test:phase82",
+    "test:phase83": "node --import tsx --test tests/phase83-enterprise-operations.test.ts",
+    "verify:phase83": "npm run typecheck && npm run test:phase83",
+    "desktop:dev": "cross-env YAPOSAN_DESKTOP_DEV_URL=http://localhost:8081 electron desktop/main.cjs",
+    "desktop:pack": "npm run build:web && electron-builder --dir",
+    "desktop:dist": "npm run build:web && electron-builder",
+    "test:phase84": "node --experimental-strip-types --test tests/phase84-desktop-offline-sync.test.ts",
+    "verify:phase84": "npm run typecheck && npm run test:phase84",
+    "test:phase85": "node --import tsx --test tests/phase85-mobile-api-ai-automation.test.ts",
+    "test:phase86": "node --test tests/phase86-final-release-certification.test.mjs",
+    "release:phase86:preflight": "node scripts/phase86-release-preflight.mjs",
+    "verify:phase86": "npm run typecheck && npm run test:phase85 && npm run test:phase86",
+    "test:phase88": "node --test tests/phase88-readiness.test.mjs",
+    "verify:phase88": "npm run test:phase88 && node server/phase88Readiness.mjs",
+    "test:phase89": "node --test tests/phase89-launch-verification.test.mjs",
+    "release:phase89:preflight": "node scripts/phase89-launch-verification.mjs",
+    "verify:phase89": "npm run test:phase89 && npm run release:phase89:preflight"
   },
   "private": true,
-  "description": "Yaposan Phase 77 release-candidate baseline with unified four-tier pricing, 4,825 templates, and consolidated Phase 69-76 production services"
+  "description": "Yaposan Publisher v1.0.0 Phase 86 final production release and certification package",
+  "build": {
+    "appId": "com.yaposan.publisher",
+    "productName": "Yaposan Publisher",
+    "asar": true,
+    "files": [
+      "dist/**/*",
+      "desktop/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release/desktop"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "yaphetkidslearning",
+      "repo": "yaposan-publisher",
+      "releaseType": "release"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "Yaposan-Publisher-${version}-${arch}.${ext}"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.graphics-design",
+      "hardenedRuntime": true,
+      "entitlements": "desktop/entitlements.mac.plist",
+      "entitlementsInherit": "desktop/entitlements.mac.plist"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Graphics",
+      "artifactName": "Yaposan-Publisher-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "extraMetadata": {
+      "main": "desktop/main.cjs"
+    }
+  }
 }

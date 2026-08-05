@@ -1,0 +1,7 @@
+import React,{useMemo,useState} from "react";
+type Tab="mobile"|"api"|"automation"|"webhooks";
+export default function DeveloperMobileCenter(){
+ const [tab,setTab]=useState<Tab>("mobile");
+ const title=useMemo(()=>({mobile:"Mobile companion",api:"Public API keys",automation:"AI automation",webhooks:"Webhooks"}[tab]),[tab]);
+ return <main style={{padding:24,color:"var(--text,#0f172a)"}}><header><h1>Developer & Mobile Center</h1><p>Manage mobile devices, API access, signed webhooks, and AI workflows.</p></header><nav style={{display:"flex",gap:10,flexWrap:"wrap",margin:"18px 0"}}>{(["mobile","api","automation","webhooks"] as Tab[]).map(item=><button key={item} onClick={()=>setTab(item)} style={{padding:"10px 14px",borderRadius:10,border:"1px solid #64748b",background:tab===item?"#4f46e5":"transparent",color:tab===item?"white":"inherit"}}>{item}</button>)}</nav><section style={{border:"1px solid rgba(148,163,184,.35)",borderRadius:16,padding:18,background:"var(--panel,#fff)"}}><h2>{title}</h2>{tab==="mobile"&&<p>Register, trust, and revoke iOS and Android companion devices.</p>}{tab==="api"&&<p>Create scoped project, export, AI, and webhook API keys. Secrets are shown once.</p>}{tab==="automation"&&<p>Schedule AI workflows, batch projects, inspect history, retry, and cancel queued work.</p>}{tab==="webhooks"&&<p>Send signed export, project, team, billing, marketplace, and AI events.</p>}</section></main>;
+}

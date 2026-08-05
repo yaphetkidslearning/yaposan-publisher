@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 export type EntityName = "users"|"organizations"|"memberships"|"workspaces"|"projects"|"assets"|"versions"|"subscriptions"|"auditEvents"|"jobs";
 export type RecordBase = { id:string; createdAt:string; updatedAt:string };
 export type UserRecord = RecordBase & { email:string; passwordHash:string; emailVerified:boolean; mfaSecret?:string; status:"active"|"disabled" };
-export type OrganizationRecord = RecordBase & { name:string; ownerUserId:string; plan:"free"|"pro"|"business"|"enterprise" };
+export type OrganizationRecord = RecordBase & { name:string; ownerUserId:string; plan:"free"|"creator"|"pro"|"business" };
 export type MembershipRecord = RecordBase & { organizationId:string; userId:string; role:"owner"|"admin"|"editor"|"viewer" };
 export type WorkspaceRecord = RecordBase & { organizationId:string; name:string; region:string };
 export type ProjectRecord = RecordBase & { workspaceId:string; ownerUserId:string; name:string; revision:number; payload:unknown; deletedAt?:string };

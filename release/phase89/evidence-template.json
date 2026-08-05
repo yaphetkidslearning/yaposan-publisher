@@ -1,0 +1,22 @@
+{
+  "releaseDecision": "fail",
+  "gitCommit": "",
+  "databaseSchemaVersion": "",
+  "testEvidence": {
+    "authentication": "",
+    "authorizationIsolation": "",
+    "cloudSave": "",
+    "exports": "",
+    "billing": "",
+    "ai": "",
+    "backupRestore": "",
+    "security": "",
+    "performance": "",
+    "accessibility": "",
+    "browserDeviceMatrix": "",
+    "monitoringAlerts": ""
+  },
+  "knownIssues": [],
+  "approvedBy": "",
+  "approvedAt": ""
+}

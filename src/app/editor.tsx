@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as DocumentPicker from "expo-document-picker";
 import { File as ExpoFile, Paths } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
@@ -26,6 +27,8 @@ import AiWritingPanel from "../components/publisher/AiWritingPanel";
 import AssetRenameModal from "../components/publisher/AssetRenameModal";
 import EditorSidebar from "../components/publisher/EditorSidebar";
 import EditorToolbar, { type RibbonTab } from "../components/publisher/EditorToolbar";
+import AuthModal from "../components/auth/AuthModal";
+import { useAuth } from "../context/AuthContext";
 import ExportManagerModal from "../components/publisher/ExportManagerModal";
 import FontManagerModal from "../components/publisher/FontManagerModal";
 import CharacterTypographyModal from "../components/publisher/CharacterTypographyModal";
@@ -321,6 +324,14 @@ function makeTemplateProject(template: PublisherTemplate): PublisherProject {
 }
 
 export default function EditorScreen() {
+  const auth = useAuth();
+  const [authModalVisible, setAuthModalVisible] = useState(false);
+  const [authReason, setAuthReason] = useState("");
+  const [pendingProtectedAction, setPendingProtectedAction] = useState<null | (() => void | Promise<void>)>(null);
+  const requestAuthentication = useCallback((reason: string, action: () => void | Promise<void>) => {
+    if (auth.isAuthenticated) return true;
+    setAuthReason(reason); setPendingProtectedAction(() => action); setAuthModalVisible(true); return false;
+  }, [auth.isAuthenticated]);
   const params = useLocalSearchParams<{ projectId?: string; readOnly?: string; fresh?: string }>();
   const readOnly = params.readOnly === "1";
   const freshStart = params.fresh === "1";
@@ -1749,17 +1760,37 @@ showEditorNotice("Last page reset to a blank page");
 
   const saveProject = useCallback(async () => {
     if (readOnly) { Alert.alert("Read-only project", "This project cannot be overwritten. Use Save As to create an editable copy."); return; }
+    if (!auth.isAuthenticated) {
+      requestAuthentication("Sign in to save your project securely and access it from any device.", () => void saveProject());
+      return;
+    }
     if (isSaving) return;
     setIsSaving(true);
     try {
-      await savePublisherProject(projectRef.current);
-      savedSignatureRef.current = projectSignature(projectRef.current);
-      setIsDirty(false);
-      Alert.alert("Publication saved", "Your Yaposan project was saved locally.");
-    } catch {
-      Alert.alert("Unable to save", "The publication could not be saved.");
+      const current = projectRef.current;
+      await savePublisherProject(current); // local recovery copy remains available
+      const workspaceId = auth.session?.workspace?.id;
+      if (!workspaceId) throw new Error("Your workspace is not available. Please sign out and sign in again.");
+      const mapKey = `yaposan.cloud-project.${current.id}`;
+      const stored = await AsyncStorage.getItem(mapKey);
+      let cloudProject: any;
+      if (stored) {
+        const remote = JSON.parse(stored);
+        const response = await auth.authorizedFetch(`/api/v1/projects/${remote.id}`, { method: "PUT", body: JSON.stringify({ name: current.name, payload: current, baseRevision: remote.revision }) });
+        const data = await response.json(); if (!response.ok) throw new Error(data?.error?.message ?? "Cloud save failed"); cloudProject = data.project;
+      } else {
+        const response = await auth.authorizedFetch("/api/v1/projects", { method: "POST", body: JSON.stringify({ workspaceId, name: current.name, payload: current }) });
+        const data = await response.json(); if (!response.ok) throw new Error(data?.error?.message ?? "Cloud save failed"); cloudProject = data.project;
+      }
+      await AsyncStorage.setItem(mapKey, JSON.stringify({ id: cloudProject.id, revision: cloudProject.revision }));
+      savedSignatureRef.current = projectSignature(current); setIsDirty(false);
+      Alert.alert("Saved to cloud", "Your project is now linked to your Yaposan account.");
+    } catch (error) {
+      Alert.alert("Cloud save unavailable", `${error instanceof Error ? error.message : "The project could not be saved to the cloud."}
+
+A local recovery copy is still stored in this browser.`);
     } finally { setIsSaving(false); }
-  }, [isSaving, projectSignature, readOnly]);
+  }, [auth, isSaving, projectSignature, readOnly, requestAuthentication]);
 
 
   const saveProjectAs = useCallback(async () => {
@@ -1846,7 +1877,10 @@ showEditorNotice("Last page reset to a blank page");
   }, [activePage.elements]);
 
   const exportImage = useCallback(async (format: "png" | "jpg") => {
+    if (!auth.isAuthenticated) { requestAuthentication("Create a free account to download your design.", () => void exportImage(format)); return; }
     try {
+      const permission = await auth.authorizedFetch("/api/v1/usage/authorize-export", { method: "POST", body: JSON.stringify({ format, quality: "standard" }) });
+      const permissionData = await permission.json(); if (!permission.ok) { Alert.alert("Export limit reached", permissionData?.error?.message ?? "Upgrade to continue exporting."); return; }
       const uri = await capturePage(format);
       if (Platform.OS === "web" && typeof document !== "undefined") {
         const imageQuality = Math.min(1, ...activePage.elements.filter((element) => element.type === "image").map((element) => Number((element as any).exportQuality ?? 0.95)), 1);
@@ -1862,10 +1896,13 @@ showEditorNotice("Last page reset to a blank page");
     } catch {
       Alert.alert("Export failed", `Could not export ${format.toUpperCase()}.`);
     }
-  }, [activePage.elements, capturePage]);
+  }, [activePage.elements, auth, capturePage, requestAuthentication]);
 
   const exportPdf = useCallback(async () => {
+    if (!auth.isAuthenticated) { requestAuthentication("Create a free account to download your design.", () => void exportPdf()); return; }
     try {
+      const permission = await auth.authorizedFetch("/api/v1/usage/authorize-export", { method: "POST", body: JSON.stringify({ format: "pdf", quality: "standard" }) });
+      const permissionData = await permission.json(); if (!permission.ok) { Alert.alert("Export limit reached", permissionData?.error?.message ?? "Upgrade to continue exporting."); return; }
       const uri = await capturePage("png");
       const html = `<!doctype html><html><body style="margin:0"><img src="${uri}" style="width:100%" /></body></html>`;
       if (Platform.OS === "web" && typeof window !== "undefined") {
@@ -1881,11 +1918,12 @@ showEditorNotice("Last page reset to a blank page");
     } catch {
       Alert.alert("PDF export failed", "The publication could not be exported as PDF.");
     }
-  }, [capturePage]);
+  }, [auth, capturePage, requestAuthentication]);
 
   const exportJson = useCallback(() => {
+    if (!auth.isAuthenticated) { requestAuthentication("Sign in to export a portable Yaposan project file.", () => exportJson()); return; }
     downloadWebFile(JSON.stringify(projectRef.current, null, 2), `${safeFileName(projectRef.current.name)}.yaposan.json`, "application/json");
-  }, []);
+  }, [auth.isAuthenticated, requestAuthentication]);
 
   useEffect(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
@@ -2086,6 +2124,8 @@ showEditorNotice("Last page reset to a blank page");
         showGrid={showGrid}
         snapToGrid={snapToGrid}
         selectedText={selectedElement?.type === "text" ? selectedElement : null}
+        saveStatusLabel={auth.isAuthenticated ? (isDirty ? "Cloud changes pending" : "Saved to cloud") : "Saved locally"}
+        profileInitials={auth.session?.user?.email ? auth.session.user.email.slice(0, 2).toUpperCase() : "GU"}
         onProjectNameChange={(name) => updateProject((current) => ({ ...current, name }), false)}
         onTabChange={(tab) => {
           setActiveTab(tab);
@@ -2131,7 +2171,7 @@ showEditorNotice("Last page reset to a blank page");
         onZoomOut={() => setZoom((value) => Math.max(MIN_ZOOM, value - 0.1))}
         onResetZoom={() => setZoom(DEFAULT_ZOOM)}
         onExportPng={() => void exportImage("png")}
-        onOpenExportManager={() => setShowExportManager(true)}
+        onOpenExportManager={() => { if (auth.isAuthenticated) setShowExportManager(true); else requestAuthentication("Create a free account to access export options.", () => setShowExportManager(true)); }}
         onExportJson={exportJson}
         onChangeSelected={changeSelected}
         onOpenFontManager={() => setShowFontManager(true)}
@@ -2906,9 +2946,10 @@ showEditorNotice("Last page reset to a blank page");
         onRemoveCustom={deleteCustomFont}
       />
 
-      <ExportManagerModal visible={showExportManager} project={project} onClose={() => setShowExportManager(false)} />
+      <ExportManagerModal visible={showExportManager} project={project} onClose={() => setShowExportManager(false)} authorizeExport={async (formats) => { const response = await auth.authorizedFetch("/api/v1/usage/authorize-export", { method: "POST", body: JSON.stringify({ formats, quality: "advanced" }) }); const data = await response.json(); if (!response.ok) throw new Error(data?.error?.message ?? "Upgrade to continue exporting."); }} />
       <AssetGeneratorModal visible={generatorMode !== null} mode={generatorMode ?? "qr"} onClose={() => setGeneratorMode(null)} onGenerate={(value, save) => void completeAssetGeneration(value, save)} />
       <AssetRenameModal asset={renameAsset} onClose={() => setRenameAsset(null)} onSave={completeRenameAsset} />
+      <AuthModal visible={authModalVisible} reason={authReason} onClose={() => { setAuthModalVisible(false); setPendingProtectedAction(null); }} onSuccess={() => { const action = pendingProtectedAction; setPendingProtectedAction(null); if (action) setTimeout(() => void action(), 0); }} />
     </SafeAreaView>
   );
 }
