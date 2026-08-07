@@ -574,7 +574,9 @@
     "verify:phase88": "npm run test:phase88 && node server/phase88Readiness.mjs",
     "test:phase89": "node --test tests/phase89-launch-verification.test.mjs",
     "release:phase89:preflight": "node scripts/phase89-launch-verification.mjs",
-    "verify:phase89": "npm run test:phase89 && npm run release:phase89:preflight"
+    "verify:phase89": "npm run test:phase89 && npm run release:phase89:preflight",
+    "typecheck:full": "tsc --noEmit -p tsconfig.full.json",
+    "verify:phase90.2": "npm run typecheck"
   },
   "private": true,
   "description": "Yaposan Publisher v1.0.0 Phase 86 final production release and certification package",

@@ -1,10 +1,7 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": false,
-    "skipLibCheck": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
+    "strict": true,
     "paths": {
       "@/*": [
         "./src/*"
@@ -18,15 +15,9 @@
     ]
   },
   "include": [
-    "server/**/*.ts",
-    "scripts/export-worker.ts",
-    "scripts/phase75-launch-audit.ts",
+    "**/*.ts",
+    "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-  ],
-  "exclude": [
-    "tests",
-    "src",
-    "node_modules"
   ]
 }
