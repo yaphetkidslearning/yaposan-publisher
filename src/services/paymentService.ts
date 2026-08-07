@@ -1,4 +1,8 @@
-const base=(globalThis as any).process?.env?.EXPO_PUBLIC_API_URL??"http://localhost:4100";
+const base =
+  (globalThis as any).process?.env?.EXPO_PUBLIC_API_URL ??
+  (typeof window !== "undefined" && window.location.hostname !== "localhost"
+    ? "https://yaposan-api.onrender.com"
+    : "http://localhost:4100");
 let token=""; export const configurePaymentService=(accessToken:string)=>{token=accessToken};
 async function post<T>(path:string,body:unknown){const r=await fetch(`${base}${path}`,{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${token}`},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data?.error?.message??"Payment request failed");return data as T}
 export const createSubscriptionCheckout=(args:{customerId:string;priceId:string;successUrl:string;cancelUrl:string;quantity?:number})=>post<{url:string;id:string}>("/api/v1/billing/checkout",args);
