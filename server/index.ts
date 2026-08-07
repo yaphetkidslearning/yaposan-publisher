@@ -125,6 +125,14 @@ const collaborationStoreReady = configureCollaborationStore({
 
 const securityConfig = loadSecurityEnvironment();
 
+const allowedPublicOrigins = Array.from(
+  new Set([
+    ...securityConfig.publicOrigins,
+    "https://yaposan.com",
+    "https://www.yaposan.com",
+  ])
+);
+
 const identityConfig = {
   secret: config.sessionSecret,
   accessTokenMinutes: config.accessTokenMinutes,
@@ -321,25 +329,45 @@ export async function handleRequest(
       );
     }
 
-    if (
-      !isOriginAllowed(
-        String(req.headers.origin ?? "") ||
-          undefined,
-        securityConfig.publicOrigins
-      )
-    ) {
+    const requestOrigin = String(req.headers.origin ?? "");
+    const originAllowed = isOriginAllowed(
+      requestOrigin || undefined,
+      allowedPublicOrigins
+    );
+
+    if (requestOrigin && originAllowed) {
+      res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+      res.setHeader("Vary", "Origin");
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+      );
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, X-CSRF-Token, X-Request-ID, X-Worker-Token, X-Metrics-Token, Stripe-Signature"
+      );
+      res.setHeader("Access-Control-Max-Age", "86400");
+    }
+
+    if (!originAllowed) {
       return json(
         res,
         403,
         {
           error: {
             code: "ORIGIN_NOT_ALLOWED",
-            message:
-              "Request origin is not trusted",
+            message: "Request origin is not trusted",
           },
         },
         requestId
       );
+    }
+
+    if (req.method === "OPTIONS") {
+      res.statusCode = 204;
+      res.end();
+      return;
     }
 
     if (rateLimit(ip)) {
@@ -477,8 +505,8 @@ export async function handleRequest(
 
     if (
       req.method === "POST" &&
-      url.pathname ===
-        "/api/v1/auth/register"
+      (url.pathname === "/api/v1/auth/register" ||
+        url.pathname === "/register")
     ) {
       const b = await bodyJson(req);
 
@@ -585,8 +613,8 @@ export async function handleRequest(
 
     if (
       req.method === "POST" &&
-      url.pathname ===
-        "/api/v1/auth/login"
+      (url.pathname === "/api/v1/auth/login" ||
+        url.pathname === "/login")
     ) {
       const b = await bodyJson(req);
 
@@ -655,8 +683,8 @@ export async function handleRequest(
 
     if (
       req.method === "POST" &&
-      url.pathname ===
-        "/api/v1/auth/refresh"
+      (url.pathname === "/api/v1/auth/refresh" ||
+        url.pathname === "/refresh")
     ) {
       const b = await bodyJson(req);
 
@@ -2683,7 +2711,7 @@ export async function handleRequest(
         if (
           !isOriginAllowed(
             target.origin,
-            securityConfig.publicOrigins
+            allowedPublicOrigins
           )
         ) {
           return json(
@@ -2913,7 +2941,7 @@ export async function handleRequest(
             "localhost") ||
         !isOriginAllowed(
           parsed.origin,
-          securityConfig.publicOrigins
+          allowedPublicOrigins
         )
       ) {
         return json(
