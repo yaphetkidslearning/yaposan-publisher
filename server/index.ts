@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-<<<<<<< HEAD
+
 import { getDatabase } from "./database";
 import { loadCloudConfig, validateProductionConfig } from "./config";
 import { issueSession, provisionAccount, publicUser, verifyPassword, verifyToken } from "./identity";
@@ -150,7 +150,7 @@ const identityConfig = {
   refreshTokenDays: config.refreshTokenDays,
 };
 
-<<<<<<< HEAD
+
 export async function handleRequest(req:IncomingMessage,res:ServerResponse){const targetCheck=validateRequestTarget(req.url??"/",{maxBodyBytes:config.maxRequestBodyBytes,maxJsonDepth:config.maxJsonDepth,maxJsonNodes:config.maxJsonNodes,maxStringLength:config.maxRequestBodyBytes,maxQueryParameters:config.maxQueryParameters,maxPathLength:2048});const requestId=String(req.headers["x-request-id"]??randomUUID());const url=new URL(req.url??"/","http://localhost");const ip=clientIp(req,config.trustProxy);const finishMetric=runtimeMetrics.begin(req.method);res.once("finish",()=>finishMetric(res.statusCode));req.setTimeout(config.requestTimeoutMs,()=>{if(!res.headersSent)json(res,408,{error:{code:"REQUEST_TIMEOUT",message:"Request exceeded the configured time limit"}},requestId);req.destroy()});try{
  if(!targetCheck.valid)return json(res,400,{error:{code:"INVALID_REQUEST_TARGET",message:"Request target failed security validation",details:targetCheck.findings}},requestId);
  if(!isOriginAllowed(String(req.headers.origin??"" )||undefined,securityConfig.publicOrigins))return json(res,403,{error:{code:"ORIGIN_NOT_ALLOWED",message:"Request origin is not trusted"}},requestId);
