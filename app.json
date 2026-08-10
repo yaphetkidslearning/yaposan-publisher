@@ -38,6 +38,7 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "description": "Create, edit, collaborate, and publish professional content with Yaposan Creative Suite."
   }
 }

@@ -576,10 +576,11 @@
     "release:phase89:preflight": "node scripts/phase89-launch-verification.mjs",
     "verify:phase89": "npm run test:phase89 && npm run release:phase89:preflight",
     "typecheck:full": "tsc --noEmit -p tsconfig.full.json",
-    "verify:phase90.2": "npm run typecheck"
+    "verify:phase90.2": "npm run typecheck",
+    "verify:phase90.3": "npm run typecheck && node scripts/phase90.3-open-source-audit.mjs"
   },
   "private": true,
-  "description": "Yaposan Publisher v1.0.0 Phase 86 final production release and certification package",
+  "description": "Open-source creative design and publishing suite for publications, graphics, product images, collaboration, AI-assisted workflows, and professional export.",
   "build": {
     "appId": "com.yaposan.publisher",
     "productName": "Yaposan Publisher",
@@ -632,5 +633,14 @@
     "extraMetadata": {
       "main": "desktop/main.cjs"
     }
+  },
+  "license": "MIT",
+  "homepage": "https://yaposan.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yaphetkidslearning/yaposan-publisher.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yaphetkidslearning/yaposan-publisher/issues"
   }
 }
