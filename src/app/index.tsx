@@ -18,7 +18,7 @@ type IconName = keyof typeof Ionicons.glyphMap;
 type NavItem = { label: string; icon: IconName; href: Href; accent: string };
 type Workspace = { title: string; description: string; icon: IconName; href: Href; accent: string; dark: string; soft: string };
 type PublishChannel = { name: string; short: string; href: Href; accent: string; background: string; kind: "wordmark" | "badge" };
-type PricingPlan = { name: string; price: string; icon: IconName; accent: string; dark: string; features: string[]; current?: boolean };
+type AiAccessOption = { name: string; price: string; icon: IconName; accent: string; dark: string; features: string[]; button: string; href: Href; featured?: boolean };
 
 function darkenHex(hex: string, amount = 0.34): string {
   const value = hex.replace("#", "");
@@ -151,11 +151,11 @@ const workspaces: Workspace[] = [
   },
 ];
 
-const pricingPlans: PricingPlan[] = [
-  { name: "Free", price: "$0", icon: "documents-outline", accent: "#14b8a6", dark: "#087c73", current: true, features: ["Basic templates", "Standard exports", "Community support"] },
-  { name: "Professional", price: "$9.99/month", icon: "briefcase-outline", accent: "#2563eb", dark: "#173fa8", features: ["1,000+ templates", "Premium exports", "AI tools (limited)", "Priority support"] },
-  { name: "Professional Plus", price: "$19.99/month", icon: "star", accent: "#9333ea", dark: "#5f199e", features: ["5,000+ templates", "Advanced AI tools", "Brand kits & custom fonts", "Advanced export options", "Priority support"] },
-  { name: "Enterprise", price: "$39.99/month", icon: "diamond", accent: "#f59e0b", dark: "#9a5700", features: ["Unlimited templates", "Full AI suite", "Team collaboration", "SSO & advanced security", "Dedicated support"] },
+const aiAccessOptions: AiAccessOption[] = [
+  { name: "Yaposan Local", price: "Free", icon: "home-outline", accent: "#14b8a6", dark: "#087c73", button: "Use local AI", href: "/ai", features: ["Run supported AI tools locally", "No cloud API charges", "Your local workflow stays under your control"] },
+  { name: "Community AI", price: "Free · Limited", icon: "globe-outline", accent: "#2563eb", dark: "#173fa8", button: "Try Community AI", href: "/ai", features: ["Cloud AI sponsored by Yaposan", "Subject to monthly community budget", "May pause when the shared budget is reached"] },
+  { name: "Use My AI Provider", price: "Pay provider directly", icon: "key-outline", accent: "#9333ea", dark: "#5f199e", button: "Connect provider", href: "/ai-provider-settings", featured: true, features: ["Connect OpenAI, Gemini, Anthropic, Ollama, LM Studio, or custom providers", "Use your own provider account and limits", "Yaposan adds no subscription fee"] },
+  { name: "Yaposan AI Credits", price: "Pay as you go", icon: "sparkles", accent: "#f59e0b", dark: "#9a5700", button: "View AI credits", href: "/account", features: ["Buy credits only when you need cloud AI", "$2, $5, and $10 purchase options", "Prepaid spending keeps AI costs predictable"] },
 ];
 
 const publicationTypes: Array<{ title: string; icon: IconName; accent: string; soft: string }> = [
@@ -313,16 +313,15 @@ export default function HomeScreen() {
               <Pressable onPress={() => router.push("/editor?fresh=1")} style={styles.tQuickAction}><Ionicons name="add" size={19} color="#d8e6f2" /><Text style={styles.tQuickText}>Create New Project</Text></Pressable>
               <Pressable onPress={() => router.push("/projects")} style={styles.tQuickAction}><Ionicons name="cloud-upload-outline" size={18} color="#d8e6f2" /><Text style={styles.tQuickText}>Import Project</Text></Pressable>
               <View style={styles.tSidebarUpgrade}>
-                <Ionicons name="diamond" size={28} color="#ffd86b" />
-                <Text style={styles.tSidebarUpgradeTitle}>Upgrade Pro</Text>
-                <Text style={styles.tSidebarUpgradeText}>Upgrade to unlock unlimited AI credits, advanced templates, brand tools, and more.</Text>
-                <Pressable onPress={() => router.push("/account")} style={({ pressed }) => [styles.tUpgradeButton, pressed && styles.tPressed]}><Text style={styles.tUpgradeButtonText}>Upgrade Plan</Text></Pressable>
+                <Ionicons name="key" size={28} color="#ffd86b" />
+                <Text style={styles.tSidebarUpgradeTitle}>AI your way</Text>
+                <Text style={styles.tSidebarUpgradeText}>Yaposan stays free. Connect your own AI provider, use local AI, or choose prepaid credits.</Text>
+                <Pressable onPress={() => router.push("/ai-provider-settings")} style={({ pressed }) => [styles.tUpgradeButton, pressed && styles.tPressed]}><Text style={styles.tUpgradeButtonText}>Connect AI Provider</Text></Pressable>
               </View>
               <View style={styles.tPlanCard}>
-                <View style={styles.tPlanIcon}><Ionicons name="add" size={14} color="#ffffff" /></View>
-                <View style={{ flex: 1 }}><Text style={styles.tPlanName}>Free Plan</Text><Text style={styles.tPlanUsage}>0 of 100 AI credits used</Text></View>
+                <View style={styles.tPlanIcon}><Ionicons name="checkmark" size={14} color="#ffffff" /></View>
+                <View style={{ flex: 1 }}><Text style={styles.tPlanName}>Yaposan is free</Text><Text style={styles.tPlanUsage}>AI costs are separate and optional</Text></View>
               </View>
-              <View style={styles.tProgressTrack}><View style={styles.tProgressFill} /></View>
             </ScrollView>
           </View>
         ) : null}
@@ -442,53 +441,60 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.planSection}>
-            <Text style={[styles.planSectionTitle, darkMode && styles.darkSectionTitle]}>Choose a plan</Text>
+            <Text style={[styles.planSectionTitle, darkMode && styles.darkSectionTitle]}>Choose how you use AI</Text>
+            <Text style={[styles.planSectionSubtitle, darkMode && styles.darkSectionSubtitle]}>Yaposan itself is free and open source. AI is optional: run locally, use the shared community budget, connect your own provider, or buy prepaid credits.</Text>
             <View style={styles.planGrid}>
-              {pricingPlans.map((plan) => (
+              {aiAccessOptions.map((option) => (
                 <View
-                  key={plan.name}
+                  key={option.name}
                   style={[
                     styles.planCard3d,
+                    option.featured && styles.planCardFeatured,
                     {
                       width: planWidth,
-                      borderColor: plan.accent,
-                      borderBottomColor: plan.dark,
-                      shadowColor: plan.accent,
-                      backgroundColor: darkMode ? darkenHex(plan.dark, 0.76) : "#ffffff",
+                      borderColor: option.accent,
+                      borderBottomColor: option.dark,
+                      shadowColor: option.accent,
+                      backgroundColor: darkMode ? darkenHex(option.dark, 0.76) : "#ffffff",
                     },
                   ]}
                 >
+                  {option.featured ? <View style={[styles.recommendedBadge, { backgroundColor: option.accent }]}><Text style={styles.recommendedBadgeText}>RECOMMENDED</Text></View> : null}
                   <View style={styles.planHeaderRow}>
-                    <View style={[styles.planIconDepth3d, { backgroundColor: plan.dark }]} />
-                    <View style={[styles.planIcon3d, { backgroundColor: plan.accent, borderBottomColor: plan.dark, shadowColor: plan.accent }]}>
+                    <View style={[styles.planIconDepth3d, { backgroundColor: option.dark }]} />
+                    <View style={[styles.planIcon3d, { backgroundColor: option.accent, borderBottomColor: option.dark, shadowColor: option.accent }]}>
                       <View pointerEvents="none" style={styles.planIconGloss3d} />
-                      <Ionicons name={plan.icon} size={31} color="#ffffff" />
+                      <Ionicons name={option.icon} size={31} color="#ffffff" />
                     </View>
                     <View style={styles.planTitleWrap}>
-                      <Text style={[styles.planName3d, darkMode && styles.darkPlanName3d]}>{plan.name}</Text>
-                      <Text style={[styles.planPrice3d, { color: plan.accent }]}>{plan.price}</Text>
+                      <Text style={[styles.planName3d, darkMode && styles.darkPlanName3d]}>{option.name}</Text>
+                      <Text style={[styles.planPrice3d, { color: option.accent }]}>{option.price}</Text>
                     </View>
                   </View>
                   <View style={styles.planFeatures}>
-                    {plan.features.map((feature) => (
+                    {option.features.map((feature) => (
                       <View key={feature} style={styles.planFeatureRow}>
-                        <Ionicons name="checkmark" size={17} color={darkMode ? "#8be8dc" : plan.accent} />
+                        <Ionicons name="checkmark" size={17} color={darkMode ? "#8be8dc" : option.accent} />
                         <Text style={[styles.planFeatureText, darkMode && styles.darkPlanFeatureText]}>{feature}</Text>
                       </View>
                     ))}
                   </View>
                   <Pressable
-                    onPress={() => router.push("/account")}
+                    onPress={() => router.push(option.href)}
                     style={({ pressed }) => [
                       styles.planButton3d,
-                      { backgroundColor: plan.accent, borderBottomColor: plan.dark, shadowColor: plan.accent },
+                      { backgroundColor: option.accent, borderBottomColor: option.dark, shadowColor: option.accent },
                       pressed && styles.planButtonPressed,
                     ]}
                   >
-                    <Text style={styles.planButtonText3d}>{plan.current ? "Current plan" : "Select plan"}</Text>
+                    <Text style={styles.planButtonText3d}>{option.button}</Text>
                   </Pressable>
                 </View>
               ))}
+            </View>
+            <View style={[styles.aiPolicyNote, darkMode && styles.aiPolicyNoteDark]}>
+              <Ionicons name="shield-checkmark-outline" size={18} color="#14b8a6" />
+              <Text style={[styles.aiPolicyNoteText, darkMode && styles.darkPlanFeatureText]}><Text style={styles.aiPolicyStrong}>No Yaposan subscription fee.</Text> Community AI is funded by Yaposan's shared monthly budget and may be unavailable when that budget is reached.</Text>
             </View>
           </View>
 
@@ -679,9 +685,13 @@ const styles = StyleSheet.create({
   templateTitle: { color: "#ffffff", fontSize: 11, lineHeight: 17, fontWeight: "900", marginTop: 10, textAlign: "center", textShadowColor: "rgba(0,0,0,0.82)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
   cardPressed: { transform: [{ translateY: 4 }, { scale: 0.98 }], borderBottomWidth: 2, shadowOpacity: 0.2, opacity: 0.96 },
   planSection: { marginTop: 10 },
-  planSectionTitle: { color: "#142338", fontSize: 20, lineHeight: 25, fontWeight: "900", marginBottom: 10 },
+  planSectionTitle: { color: "#142338", fontSize: 20, lineHeight: 25, fontWeight: "900", marginBottom: 5 },
+  planSectionSubtitle: { color: "#64748b", fontSize: 12, lineHeight: 18, fontWeight: "600", marginBottom: 12, maxWidth: 980 },
   planGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "stretch", gap: 10 },
-  planCard3d: { minHeight: 264, borderRadius: 16, borderWidth: 1, borderTopWidth: 4, padding: 14, justifyContent: "space-between", shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3, overflow: "hidden" },
+  planCard3d: { minHeight: 292, borderRadius: 16, borderWidth: 1, borderTopWidth: 4, padding: 14, justifyContent: "space-between", shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3, overflow: "hidden" },
+  planCardFeatured: { borderWidth: 2, transform: [{ translateY: -2 }] },
+  recommendedBadge: { alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4, marginBottom: 8 },
+  recommendedBadgeText: { color: "#ffffff", fontSize: 8, lineHeight: 11, fontWeight: "900", letterSpacing: 0.8 },
   planHeaderRow: { minHeight: 62, flexDirection: "row", alignItems: "flex-start", gap: 10 },
   planIconDepth3d: { position: "absolute", left: 3, top: 8, width: 50, height: 50, borderRadius: 16, opacity: 0.76 },
   planIcon3d: { width: 50, height: 50, borderRadius: 16, borderWidth: 2, borderColor: "rgba(255,255,255,0.45)", borderBottomWidth: 8, alignItems: "center", justifyContent: "center", overflow: "hidden", shadowOpacity: 0.75, shadowRadius: 13, shadowOffset: { width: 0, height: 9 }, elevation: 14 },
@@ -695,6 +705,10 @@ const styles = StyleSheet.create({
   planButton3d: { minHeight: 40, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.28)", alignItems: "center", justifyContent: "center", marginTop: 17, shadowOpacity: 0.10, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   planButtonPressed: { transform: [{ translateY: 4 }], borderBottomWidth: 2, shadowOpacity: 0.18 },
   planButtonText3d: { color: "#ffffff", fontSize: 13, lineHeight: 19, fontWeight: "900", textShadowColor: "rgba(0,0,0,0.55)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+  aiPolicyNote: { marginTop: 12, borderRadius: 12, borderWidth: 1, borderColor: "#bfe7df", backgroundColor: "#effcf9", paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  aiPolicyNoteDark: { backgroundColor: "#06231f", borderColor: "#145f55" },
+  aiPolicyNoteText: { flex: 1, color: "#33465d", fontSize: 11, lineHeight: 17, fontWeight: "600" },
+  aiPolicyStrong: { fontWeight: "900" },
   recentSection: { marginTop: 18, borderRadius: 18, padding: 14, backgroundColor: "#f7fbff", borderWidth: 1, borderColor: "#d7e4ef", shadowColor: "#000000", shadowOpacity: 0.10, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
   darkRecentSection: { backgroundColor: "#031220", borderColor: "#102d43", shadowColor: "#00111f", shadowOpacity: 0.65 },
   recentSectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16 },

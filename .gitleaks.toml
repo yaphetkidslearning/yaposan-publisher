@@ -1,0 +1,15 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Verified Yaposan false positives only"
+regexTarget = "match"
+
+regexes = [
+  '''yaposan\.[A-Za-z0-9._-]+''',
+  '''0123456789abcdef0123456789abcdef''',
+  '''PHASE56_CAPABILITIES''',
+  '''REPLACE_WITH_[A-Z0-9_]+''',
+  '''https://app\.yaposan\.com''',
+  '''https://api\.yaposan\.com'''
+]

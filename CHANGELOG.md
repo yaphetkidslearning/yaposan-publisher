@@ -353,3 +353,10 @@
 - Added Phase 40 Packages 40.0–40.12 performance, studio integration, marketplace, production engines, documentation, accessibility, release and commercial-certification controls.
 - Added persistent Enterprise Cloud Completion and Production Certification workspaces.
 - Added evidence-based blockers so production certification cannot be claimed without external services and release artifacts.
+
+## Phase 90.9 — Final Open-Source Security and Public Release Certification
+
+- Tightened Gitleaks allowlist and final security verifier.
+- Added AES-GCM AAD, explicit credential key versions, provider credential audit events, pinned-DNS/redirect-safe provider networking, request/concurrency/fairness limits, and transient-only retries.
+- Removed the frontend public remove.bg API-key path.
+- Added Dependabot and open-source security CI plus adversarial Phase 90.9 tests and public-release checklist.

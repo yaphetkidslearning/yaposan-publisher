@@ -1,14 +1,18 @@
 import type { DatabaseAdapter, DatabaseSchema, EntityName, RecordBase } from "./database";
 
-export type SqlClient = {
+export type SqlConnection = {
   query<T = Record<string, unknown>>(text: string, values?: unknown[]): Promise<{ rows: T[] }>;
+  release?(): void;
+};
+export type SqlClient = SqlConnection & {
+  connect?(): Promise<SqlConnection>;
   end?(): Promise<void>;
 };
 
 const TABLES: Record<EntityName, string> = {
   users: "users", organizations: "organizations", memberships: "memberships", workspaces: "workspaces",
   projects: "projects", assets: "assets", versions: "project_versions", subscriptions: "subscriptions",
-  auditEvents: "audit_events", jobs: "jobs",
+  auditEvents: "audit_events", jobs: "jobs", aiCreditTransactions: "ai_credit_transactions", aiCommunityTransactions: "ai_community_transactions", aiProviderCredentials: "ai_provider_credentials",
 };
 
 const snake = (key: string) => key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
@@ -34,14 +38,23 @@ CREATE INDEX IF NOT EXISTS idx_audit_org_created ON audit_events(organization_id
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS worker_id text;
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS lease_expires_at timestamptz;
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS heartbeat_at timestamptz;
-CREATE INDEX IF NOT EXISTS idx_jobs_claim ON jobs(kind,status,created_at);`
+CREATE INDEX IF NOT EXISTS idx_jobs_claim ON jobs(kind,status,created_at);`,
+`CREATE TABLE IF NOT EXISTS ai_credit_transactions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE, credits integer NOT NULL, kind text NOT NULL, pack_id text, amount_cents integer, currency text, provider_event_id text UNIQUE, provider_checkout_session_id text UNIQUE, metadata jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS idx_ai_credit_org_created ON ai_credit_transactions(organization_id,created_at DESC);`,
+`CREATE TABLE IF NOT EXISTS ai_community_transactions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), organization_id uuid REFERENCES organizations(id) ON DELETE SET NULL, month text NOT NULL, request_id text NOT NULL, amount_micros bigint NOT NULL, kind text NOT NULL, metadata jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS idx_ai_community_month ON ai_community_transactions(month,created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_community_request ON ai_community_transactions(request_id);
+CREATE TABLE IF NOT EXISTS ai_provider_credentials (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE, provider text NOT NULL, endpoint text, model text, encrypted_api_key text NOT NULL, key_last4 text, key_version text, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), UNIQUE(organization_id,provider));
+CREATE INDEX IF NOT EXISTS idx_ai_provider_credentials_org ON ai_provider_credentials(organization_id);
+ALTER TABLE ai_provider_credentials ADD COLUMN IF NOT EXISTS key_version text;`
 ] as const;
 
 export class PostgresDatabase implements DatabaseAdapter {
   private readonly client: SqlClient;
-  constructor(client: SqlClient) { this.client = client; }
+  private readonly ownsClient: boolean;
+  constructor(client: SqlClient, ownsClient=true) { this.client = client; this.ownsClient=ownsClient; }
   async connect() { await this.client.query("SELECT 1"); }
-  async close() { await this.client.end?.(); }
+  async close() { if(this.ownsClient) await this.client.end?.(); }
   async migrate() { for (const migration of POSTGRES_MIGRATIONS) await this.client.query(migration); return POSTGRES_MIGRATIONS.length; }
   async insert<K extends EntityName>(table: K, value: Omit<DatabaseSchema[K], keyof RecordBase> & Partial<RecordBase>) {
     const entries = Object.entries(value).filter(([, v]) => v !== undefined);
@@ -68,7 +81,15 @@ export class PostgresDatabase implements DatabaseAdapter {
   async recoverStaleJobs(kind: import("./database").JobRecord["kind"], now=new Date()) {
     const result=await this.client.query<{id:string}>(`UPDATE jobs SET status='queued',progress=0,worker_id=NULL,heartbeat_at=NULL,lease_expires_at=NULL,error='Recovered after worker lease expired',updated_at=now() WHERE kind=$1 AND status='running' AND lease_expires_at <= $2 RETURNING id`,[kind,now.toISOString()]); return result.rows.length;
   }
-  async transaction<T>(fn: (db: DatabaseAdapter) => Promise<T>) { await this.client.query("BEGIN"); try { const value = await fn(this); await this.client.query("COMMIT"); return value; } catch (error) { await this.client.query("ROLLBACK"); throw error; } }
+  async lock(key:string){ await this.client.query("SELECT pg_advisory_xact_lock(hashtext($1))",[key]); }
+  async transaction<T>(fn: (db: DatabaseAdapter) => Promise<T>) {
+    const connection=this.client.connect?await this.client.connect():this.client;
+    const tx=new PostgresDatabase(connection as SqlClient,false);
+    await connection.query("BEGIN");
+    try { const value = await fn(tx); await connection.query("COMMIT"); return value; }
+    catch (error) { await connection.query("ROLLBACK"); throw error; }
+    finally { connection.release?.(); }
+  }
 }
 
 export async function createPostgresDatabase(databaseUrl: string) {

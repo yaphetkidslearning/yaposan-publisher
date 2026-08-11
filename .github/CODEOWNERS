@@ -1,0 +1,6 @@
+# Replace or extend these owners when the public maintainer team is finalized.
+* @dgebrekidan
+/server/ @dgebrekidan
+/database/ @dgebrekidan
+/.github/ @dgebrekidan
+/SECURITY.md @dgebrekidan

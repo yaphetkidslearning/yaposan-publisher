@@ -1,4 +1,4 @@
-export type AIProviderId = "local" | "openai" | "gemini" | "claude";
+export type AIProviderId = "local" | "openai" | "gemini" | "claude" | "ollama" | "lmstudio" | "custom";
 export type AICapability = "text" | "image" | "design" | "document" | "brand" | "product";
 export type AIProviderStatus = "ready" | "configuration-required" | "offline";
 
@@ -42,6 +42,9 @@ export const AI_PROVIDERS: AIProviderDefinition[] = [
   { id: "openai", name: "OpenAI", models: ["gpt-4.1", "gpt-4.1-mini", "gpt-image-1"], capabilities: ["text","image","design","document","brand","product"], requiresApiKey: true },
   { id: "gemini", name: "Google Gemini", models: ["gemini-2.5-pro", "gemini-2.5-flash"], capabilities: ["text","image","design","document","brand"], requiresApiKey: true },
   { id: "claude", name: "Anthropic Claude", models: ["claude-sonnet-4", "claude-opus-4"], capabilities: ["text","design","document","brand"], requiresApiKey: true },
+  { id: "ollama", name: "Ollama", models: ["llama3.2", "qwen2.5"], capabilities: ["text","design","document"], requiresApiKey: false },
+  { id: "lmstudio", name: "LM Studio", models: ["local-model"], capabilities: ["text","design","document"], requiresApiKey: false },
+  { id: "custom", name: "Custom Provider", models: ["custom-model"], capabilities: ["text","image","design","document","brand","product"], requiresApiKey: true },
 ];
 
 export const DEFAULT_AI_SETTINGS: AISettings = {

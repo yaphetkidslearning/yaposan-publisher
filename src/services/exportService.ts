@@ -1,8 +1,4 @@
-const base =
-  (globalThis as any).process?.env?.EXPO_PUBLIC_API_URL ??
-  (typeof window !== "undefined" && window.location.hostname !== "localhost"
-    ? "https://yaposan-api.onrender.com"
-    : "http://localhost:4100");
+const base=(globalThis as any).process?.env?.EXPO_PUBLIC_API_URL??"http://localhost:4100";
 let token="";export const configureExportService=(value:string)=>{token=value};
 export type ExportJob={id:string;kind:string;status:"queued"|"running"|"succeeded"|"failed"|"cancelled";progress:number;result?:unknown;error?:string};
 export async function queueExport(payload:{projectId:string;format:string;options?:Record<string,unknown>}){const r=await fetch(`${base}/api/v1/jobs`,{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${token}`},body:JSON.stringify({kind:"export",payload})});const data=await r.json();if(!r.ok)throw new Error(data?.error?.message??"Export queue failed");return data.job as ExportJob}

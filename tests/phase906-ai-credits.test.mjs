@@ -1,0 +1,8 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { InMemoryDatabase } from "../server/database.ts";
+import { AI_CREDIT_PACKS, creditBalance, grantPurchasedCredits, spendCredits } from "../server/aiCredits.ts";
+
+test("90.6 defines prepaid packs without subscriptions",()=>{assert.deepEqual(Object.values(AI_CREDIT_PACKS).map(x=>x.priceCents),[200,500,1000]);assert.ok(Object.values(AI_CREDIT_PACKS).every(x=>x.credits>0));});
+test("paid Stripe checkout grants credits once and ledger spends atomically",async()=>{const db=new InMemoryDatabase();await db.connect();const u=await db.insert("users",{email:"a@example.com",passwordHash:"x",emailVerified:true,status:"active"});const org=await db.insert("organizations",{name:"Test",ownerUserId:u.id,plan:"free"});const event={id:"evt_1",type:"checkout.session.completed",data:{object:{id:"cs_1",payment_status:"paid",currency:"usd",client_reference_id:org.id,metadata:{purpose:"ai_credits",organizationId:org.id,pack:"small"}}}};await grantPurchasedCredits(db,event);await grantPurchasedCredits(db,event);assert.equal(await creditBalance(db,org.id),200);assert.equal(await spendCredits(db,org.id,25),175);await assert.rejects(()=>spendCredits(db,org.id,1000),/AI_CREDITS_INSUFFICIENT/);assert.equal(await creditBalance(db,org.id),175);});
+test("unpaid or unrelated Stripe sessions never grant credits",async()=>{const db=new InMemoryDatabase();await db.connect();assert.equal(await grantPurchasedCredits(db,{id:"evt_x",type:"checkout.session.completed",data:{object:{id:"cs_x",payment_status:"unpaid",metadata:{purpose:"ai_credits",pack:"more"}}}}),undefined);});

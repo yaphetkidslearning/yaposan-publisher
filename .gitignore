@@ -7,3 +7,5 @@ dist/
 !.env.deploy.example
 *.log
 coverage/
+gitleaks-report.json
+gitleaks-full-report.json

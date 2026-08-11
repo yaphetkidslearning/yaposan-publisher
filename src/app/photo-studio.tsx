@@ -7,7 +7,7 @@ import { usePhotoStudioHistory } from "../hooks/usePhotoStudioHistory";
 import { addPhotoAssets, createPhotoAsset, createPhotoStudioProject, removePhotoAsset, reorderPhotoAsset, updateActivePhotoAsset } from "../utils/photoStudioCore";
 import { loadPhotoStudioProject, savePhotoStudioProject } from "../utils/photoStudioStorage";
 import type { AiImageJob, AiImageTool } from "../types/aiImageStudio";
-import { DEFAULT_AI_IMAGE_SETTINGS, LocalPreviewImageProvider, RemoveBgApiProvider, createAiImageJob, executeAiImageJob, updateAiImageJob } from "../utils/aiImageStudioEngine";
+import { DEFAULT_AI_IMAGE_SETTINGS, LocalPreviewImageProvider, createAiImageJob, executeAiImageJob, updateAiImageJob } from "../utils/aiImageStudioEngine";
 
 
 const AI_TOOLS: { tool: AiImageTool; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -39,8 +39,7 @@ export default function PhotoStudioScreen() {
   const [aiPrompt, setAiPrompt] = useState(DEFAULT_AI_IMAGE_SETTINGS.prompt);
   const [aiRunning, setAiRunning] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  const removeBgKey = typeof process !== "undefined" ? process.env.EXPO_PUBLIC_REMOVE_BG_API_KEY ?? "" : "";
-  const providers = useMemo(() => [ ...(removeBgKey ? [new RemoveBgApiProvider(removeBgKey)] : []), new LocalPreviewImageProvider() ], [removeBgKey]);
+  const providers = useMemo(() => [new LocalPreviewImageProvider()], []);
 
   useEffect(() => { loadPhotoStudioProject().then((saved) => { if (saved) history.replace(saved); setReady(true); }); }, []);
   useEffect(() => { if (!ready) return; const timer = setTimeout(() => savePhotoStudioProject(project), 350); return () => clearTimeout(timer); }, [project, ready]);

@@ -1,0 +1,70 @@
+{
+  "phase": "90.11",
+  "generatedAt": "2026-08-11T00:48:08.962Z",
+  "source": "full-certification.json",
+  "gates": [
+    {
+      "id": "03-supply-chain",
+      "title": "Supply-chain security",
+      "status": "PASS WITH DOCUMENTED LIMITATION",
+      "evidence": "lockfile=true, Dependabot=true, CodeQL=true, SBOM=true; npm audit must run locally.",
+      "critical": true
+    },
+    {
+      "id": "26-clean-clone",
+      "title": "Open-source clean-clone test",
+      "status": "PASS WITH DOCUMENTED LIMITATION",
+      "evidence": "Checklist exists; must be executed on a clean machine.",
+      "critical": true
+    },
+    {
+      "id": "27-contributor-security",
+      "title": "Contributor security boundary",
+      "status": "PASS WITH DOCUMENTED LIMITATION",
+      "evidence": "SECURITY.md and CONTRIBUTING.md exist; maintainers must confirm private disclosure path and test-credential guidance.",
+      "critical": true
+    },
+    {
+      "id": "28-repo-governance",
+      "title": "Repository governance",
+      "status": "PASS WITH DOCUMENTED LIMITATION",
+      "evidence": "Repository governance files exist; branch protection, PR requirement, force-push policy, secret scanning and push protection require GitHub verification.",
+      "critical": true
+    },
+    {
+      "id": "29-license-assets",
+      "title": "License and third-party asset audit",
+      "status": "PASS WITH DOCUMENTED LIMITATION",
+      "evidence": "Audit document exists; actual redistribution rights must be completed before public release.",
+      "critical": true
+    },
+    {
+      "id": "30-legal",
+      "title": "Legal/public-site baseline",
+      "status": "PASS WITH DOCUMENTED LIMITATION",
+      "evidence": "Legal-text references detected; production URLs and applicability require review.",
+      "critical": false
+    },
+    {
+      "id": "32-reproducibility",
+      "title": "Release artifact reproducibility",
+      "status": "PASS WITH DOCUMENTED LIMITATION",
+      "evidence": "Release manifest generation exists; real Git SHA/deployment ID/migration state must be captured from the release environment.",
+      "critical": true
+    },
+    {
+      "id": "33-feature-inventory",
+      "title": "Feature inventory certification",
+      "status": "PASS WITH DOCUMENTED LIMITATION",
+      "evidence": "Feature inventory document exists; production-verified statuses must be maintained.",
+      "critical": true
+    },
+    {
+      "id": "34-launch-runbook",
+      "title": "Launch-day runbook",
+      "status": "PASS",
+      "evidence": "Launch-day runbook is committed.",
+      "critical": true
+    }
+  ]
+}

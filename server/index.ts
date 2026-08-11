@@ -8,6 +8,9 @@ import {
   requireProjectAccess,
   requireWorkspaceAccess,
 } from "./authorization";
+import { AI_CREDIT_PACKS, applyStripeCreditReversal, creditBalance, getCreditPack, grantPurchasedCredits } from "./aiCredits";
+import { communityBudgetStatus } from "./aiCostControls";
+import { deleteProviderCredential, listProviderCredentials, loadProviderCredential, rotateProviderCredentials, saveProviderCredential, testProviderCredential } from "./providerVault";
 import {
   PLAN_CATALOG,
   resolveEntitlements,
@@ -84,6 +87,7 @@ import {
 import {
   createBillingPortal,
   createCheckoutSession,
+  createAICreditCheckoutSession,
   createCustomer,
   verifyStripeWebhook,
 } from "./payments";
@@ -124,14 +128,6 @@ const collaborationStoreReady = configureCollaborationStore({
 });
 
 const securityConfig = loadSecurityEnvironment();
-
-const allowedPublicOrigins = Array.from(
-  new Set([
-    ...securityConfig.publicOrigins,
-    "https://yaposan.com",
-    "https://www.yaposan.com",
-  ])
-);
 
 const identityConfig = {
   secret: config.sessionSecret,
@@ -329,45 +325,25 @@ export async function handleRequest(
       );
     }
 
-    const requestOrigin = String(req.headers.origin ?? "");
-    const originAllowed = isOriginAllowed(
-      requestOrigin || undefined,
-      allowedPublicOrigins
-    );
-
-    if (requestOrigin && originAllowed) {
-      res.setHeader("Access-Control-Allow-Origin", requestOrigin);
-      res.setHeader("Vary", "Origin");
-      res.setHeader("Access-Control-Allow-Credentials", "true");
-      res.setHeader(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-      );
-      res.setHeader(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Authorization, X-CSRF-Token, X-Request-ID, X-Worker-Token, X-Metrics-Token, Stripe-Signature"
-      );
-      res.setHeader("Access-Control-Max-Age", "86400");
-    }
-
-    if (!originAllowed) {
+    if (
+      !isOriginAllowed(
+        String(req.headers.origin ?? "") ||
+          undefined,
+        securityConfig.publicOrigins
+      )
+    ) {
       return json(
         res,
         403,
         {
           error: {
             code: "ORIGIN_NOT_ALLOWED",
-            message: "Request origin is not trusted",
+            message:
+              "Request origin is not trusted",
           },
         },
         requestId
       );
-    }
-
-    if (req.method === "OPTIONS") {
-      res.statusCode = 204;
-      res.end();
-      return;
     }
 
     if (rateLimit(ip)) {
@@ -505,8 +481,8 @@ export async function handleRequest(
 
     if (
       req.method === "POST" &&
-      (url.pathname === "/api/v1/auth/register" ||
-        url.pathname === "/register")
+      url.pathname ===
+        "/api/v1/auth/register"
     ) {
       const b = await bodyJson(req);
 
@@ -613,8 +589,8 @@ export async function handleRequest(
 
     if (
       req.method === "POST" &&
-      (url.pathname === "/api/v1/auth/login" ||
-        url.pathname === "/login")
+      url.pathname ===
+        "/api/v1/auth/login"
     ) {
       const b = await bodyJson(req);
 
@@ -683,8 +659,8 @@ export async function handleRequest(
 
     if (
       req.method === "POST" &&
-      (url.pathname === "/api/v1/auth/refresh" ||
-        url.pathname === "/refresh")
+      url.pathname ===
+        "/api/v1/auth/refresh"
     ) {
       const b = await bodyJson(req);
 
@@ -761,7 +737,9 @@ export async function handleRequest(
       const event =
         JSON.parse(raw);
 
-      await syncStripeSubscription(
+      const creditGrant = await grantPurchasedCredits(db,event);
+      const creditReversal = creditGrant ? undefined : await applyStripeCreditReversal(db,event);
+      if (!creditGrant && !creditReversal && process.env.YAPOSAN_ENABLE_LEGACY_SUBSCRIPTIONS === "true") await syncStripeSubscription(
         db,
         event
       );
@@ -2428,6 +2406,10 @@ export async function handleRequest(
       );
     }
 
+    if (url.pathname.startsWith("/api/v1/billing/") && process.env.YAPOSAN_ENABLE_LEGACY_SUBSCRIPTIONS !== "true") {
+      return json(res,410,{error:{code:"LEGACY_SUBSCRIPTIONS_DISABLED",message:"Yaposan subscriptions are disabled. Yaposan is free; use AI credits or your own AI provider."}},requestId);
+    }
+
     if (
       req.method === "GET" &&
       url.pathname ===
@@ -2591,24 +2573,6 @@ export async function handleRequest(
       url.pathname ===
         "/api/v1/ai/generate"
     ) {
-      if (
-        dailyAiCount >=
-        usageLimits.dailyAi
-      ) {
-        return json(
-          res,
-          402,
-          {
-            error: {
-              code:
-                "AI_LIMIT_REACHED",
-              message: `You have reached your ${usageLimits.dailyAi} daily AI generations. Upgrade or try again tomorrow.`,
-            },
-          },
-          requestId
-        );
-      }
-
       const b = await bodyJson(req);
 
       const membership = (
@@ -2656,6 +2620,13 @@ export async function handleRequest(
           sub
         );
 
+      let requestProviders;
+      if (String(b.accessMode ?? "") === "provider") {
+        const credential = await loadProviderCredential(db, membership.organizationId, String(b.provider ?? ""));
+        if (!credential || !credential.endpoint) return json(res,400,{error:{code:"AI_PROVIDER_NOT_CONNECTED",message:"Connect this AI provider with an endpoint and API key first."}},requestId);
+        requestProviders=[{name:credential.provider,endpoint:credential.endpoint,apiKey:credential.apiKey,models:credential.model?{[String(b.task ?? "write")]:credential.model}:undefined}];
+      }
+
       const result =
         await runAiGateway(
           db,
@@ -2665,7 +2636,8 @@ export async function handleRequest(
             organizationId:
               membership.organizationId,
             plan: ent.plan,
-          }
+          },
+          requestProviders
         );
 
       await db.insert(
@@ -2690,6 +2662,73 @@ export async function handleRequest(
       );
     }
 
+    if (req.method === "GET" && url.pathname === "/api/v1/ai-credits/packs") {
+      return json(res,200,{items:Object.values(AI_CREDIT_PACKS).map(({stripePriceEnv,...pack})=>pack)},requestId);
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/v1/ai/community-budget") {
+      const status=await communityBudgetStatus(db);
+      return json(res,200,{month:status.month,limitUsd:status.limitMicros/1_000_000,usedUsd:status.usedMicros/1_000_000,remainingUsd:status.remainingMicros/1_000_000,available:status.available},requestId);
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/v1/ai/providers/credentials") {
+      if(!membershipForUser)return json(res,404,{error:{code:"NO_ORGANIZATION",message:"Organization not found"}},requestId);
+      return json(res,200,{items:await listProviderCredentials(db,membershipForUser.organizationId)},requestId);
+    }
+
+    if (req.method === "POST" && url.pathname.startsWith("/api/v1/ai/providers/test/")) {
+      if(!membershipForUser)return json(res,404,{error:{code:"NO_ORGANIZATION",message:"Organization not found"}},requestId);
+      if(!["owner","admin"].includes(membershipForUser.role))return json(res,403,{error:{code:"FORBIDDEN",message:"Owner or admin access is required."}},requestId);
+      const provider=decodeURIComponent(url.pathname.slice("/api/v1/ai/providers/test/".length));
+      try{return json(res,200,await testProviderCredential(db,membershipForUser.organizationId,provider,userId),requestId)}catch(error){return json(res,400,{error:{code:"AI_PROVIDER_TEST_FAILED",message:error instanceof Error?error.message:"Provider test failed"}},requestId)}
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/v1/ai/providers/rotate-key") {
+      if(!membershipForUser)return json(res,404,{error:{code:"NO_ORGANIZATION",message:"Organization not found"}},requestId);
+      if(!["owner","admin"].includes(membershipForUser.role))return json(res,403,{error:{code:"FORBIDDEN",message:"Owner or admin access is required."}},requestId);
+      try{const rotated=await rotateProviderCredentials(db,membershipForUser.organizationId,userId);return json(res,200,{rotated},requestId)}catch(error){return json(res,400,{error:{code:"AI_PROVIDER_KEY_ROTATION_FAILED",message:error instanceof Error?error.message:"Credential rotation failed"}},requestId)}
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/v1/ai/usage") {
+      if(!membershipForUser)return json(res,404,{error:{code:"NO_ORGANIZATION",message:"Organization not found"}},requestId);
+      const organizationId=membershipForUser.organizationId;
+      const [credits,community,providers]=await Promise.all([db.find("aiCreditTransactions",x=>x.organizationId===organizationId),db.find("aiCommunityTransactions",x=>x.organizationId===organizationId),listProviderCredentials(db,organizationId)]);
+      const status=await communityBudgetStatus(db);
+      return json(res,200,{creditBalance:credits.reduce((n,x)=>n+x.credits,0),creditTransactions:credits.slice(-100).reverse(),communityBudget:{month:status.month,limitUsd:status.limitMicros/1_000_000,usedUsd:status.usedMicros/1_000_000,remainingUsd:status.remainingMicros/1_000_000},communityTransactions:community.slice(-100).reverse().map(x=>({...x,metadata:{...x.metadata,prompt:undefined}})),providers},requestId);
+    }
+
+    if (req.method === "PUT" && url.pathname === "/api/v1/ai/providers/credentials") {
+      if(!membershipForUser)return json(res,404,{error:{code:"NO_ORGANIZATION",message:"Organization not found"}},requestId);
+      if(!["owner","admin"].includes(membershipForUser.role))return json(res,403,{error:{code:"FORBIDDEN",message:"Owner or admin access is required to manage provider credentials."}},requestId);
+      const b=await bodyJson(req);
+      try{const saved=await saveProviderCredential(db,{organizationId:membershipForUser.organizationId,actorUserId:userId,provider:String(b.provider??""),apiKey:String(b.apiKey??""),endpoint:String(b.endpoint??""),model:String(b.model??"")});return json(res,200,{provider:saved.provider,endpoint:saved.endpoint,model:saved.model,keyLast4:saved.keyLast4},requestId)}catch(error){return json(res,400,{error:{code:"AI_PROVIDER_CREDENTIAL_REJECTED",message:error instanceof Error?error.message:"Credential could not be saved"}},requestId)}
+    }
+
+    if (req.method === "DELETE" && url.pathname.startsWith("/api/v1/ai/providers/credentials/")) {
+      if(!membershipForUser)return json(res,404,{error:{code:"NO_ORGANIZATION",message:"Organization not found"}},requestId);
+      if(!["owner","admin"].includes(membershipForUser.role))return json(res,403,{error:{code:"FORBIDDEN",message:"Owner or admin access is required to manage provider credentials."}},requestId);
+      const provider=decodeURIComponent(url.pathname.slice("/api/v1/ai/providers/credentials/".length));
+      return json(res,200,{deleted:await deleteProviderCredential(db,membershipForUser.organizationId,provider,userId)},requestId);
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/v1/ai-credits/balance") {
+      const membership=(await db.find("memberships",m=>m.userId===userId))[0];
+      if(!membership)return json(res,404,{error:{code:"NO_ORGANIZATION",message:"Organization not found"}},requestId);
+      return json(res,200,{balance:await creditBalance(db,membership.organizationId)},requestId);
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/v1/ai-credits/checkout") {
+      const b=await bodyJson(req); const pack=getCreditPack(String(b.pack??""));
+      if(!pack)return json(res,400,{error:{code:"INVALID_CREDIT_PACK",message:"Choose a valid AI credit pack."}},requestId);
+      for(const candidate of [String(b.successUrl??""),String(b.cancelUrl??"")]){let target:URL;try{target=new URL(candidate)}catch{return json(res,400,{error:{code:"INVALID_RETURN_URL",message:"A valid checkout return URL is required."}},requestId)}if(!isOriginAllowed(target.origin,securityConfig.publicOrigins))return json(res,400,{error:{code:"UNTRUSTED_RETURN_URL",message:"Checkout return URL is not allowed."}},requestId)}
+      const membership=(await db.find("memberships",m=>m.userId===userId))[0];
+      if(!membership)return json(res,404,{error:{code:"NO_ORGANIZATION",message:"Organization not found"}},requestId);
+      const priceId=process.env[pack.stripePriceEnv]; if(!priceId)return json(res,503,{error:{code:"AI_CREDITS_NOT_CONFIGURED",message:"AI credit checkout is not configured on this deployment."}},requestId);
+      const sub=(await db.find("subscriptions",x=>x.organizationId===membership.organizationId))[0];
+      const session=await createAICreditCheckoutSession({customerId:sub?.providerCustomerId,priceId,successUrl:String(b.successUrl),cancelUrl:String(b.cancelUrl),organizationId:membership.organizationId,pack:pack.id});
+      return json(res,200,{id:session.id,url:session.url},requestId);
+    }
+
     if (
       req.method === "POST" &&
       url.pathname ===
@@ -2711,7 +2750,7 @@ export async function handleRequest(
         if (
           !isOriginAllowed(
             target.origin,
-            allowedPublicOrigins
+            securityConfig.publicOrigins
           )
         ) {
           return json(
@@ -2941,7 +2980,7 @@ export async function handleRequest(
             "localhost") ||
         !isOriginAllowed(
           parsed.origin,
-          allowedPublicOrigins
+          securityConfig.publicOrigins
         )
       ) {
         return json(

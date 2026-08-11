@@ -1,11 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-const API_URL =
-  (globalThis as any).process?.env?.EXPO_PUBLIC_API_URL ??
-  (typeof window !== "undefined" && window.location.hostname !== "localhost"
-    ? "https://yaposan-api.onrender.com"
-    : "http://localhost:4100");
+const API_URL=(globalThis as any).process?.env?.EXPO_PUBLIC_API_URL??"http://localhost:4100";
 const SESSION_KEY="yaposan.auth.session.v1";
 
 export type AuthUser={id:string;email:string;emailVerified?:boolean;status?:string};

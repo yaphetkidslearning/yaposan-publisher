@@ -1,0 +1,77 @@
+{
+  "phase": "90.11",
+  "generatedAt": "2026-08-11T00:48:08.962Z",
+  "source": "full-certification.json",
+  "gates": [
+    {
+      "id": "01-dns-tls-domain",
+      "title": "DNS/TLS/domain certification",
+      "status": "PASS WITH DOCUMENTED LIMITATION",
+      "evidence": "Read-only HTTPS production verifier exists; live DNS, certificate renewal, HSTS and CORS still require production execution.",
+      "critical": true
+    },
+    {
+      "id": "08-email",
+      "title": "Email production certification",
+      "status": "BLOCKED",
+      "evidence": "SPF/DKIM/DMARC, bounce behavior and production-link delivery require external evidence.",
+      "critical": false
+    },
+    {
+      "id": "14-observability",
+      "title": "Observability certification",
+      "status": "PASS WITH DOCUMENTED LIMITATION",
+      "evidence": "Observability/redaction signals detected; live dashboards and failure telemetry require production evidence.",
+      "critical": true
+    },
+    {
+      "id": "15-alerting",
+      "title": "Operational alerting",
+      "status": "PASS WITH DOCUMENTED LIMITATION",
+      "evidence": "Alerting references detected; actual notification delivery must be tested.",
+      "critical": true
+    },
+    {
+      "id": "16-graceful-degradation",
+      "title": "Graceful degradation",
+      "status": "BLOCKED",
+      "evidence": "Requires failure injection for AI, Redis, object storage and Stripe.",
+      "critical": true
+    },
+    {
+      "id": "20-rollback",
+      "title": "Deployment rollback drill",
+      "status": "BLOCKED",
+      "evidence": "Requires non-production bad-deploy rollback evidence.",
+      "critical": true
+    },
+    {
+      "id": "21-zero-downtime",
+      "title": "Zero-downtime/restart behavior",
+      "status": "BLOCKED",
+      "evidence": "Requires deployment/restart fault testing.",
+      "critical": true
+    },
+    {
+      "id": "30-legal",
+      "title": "Legal/public-site baseline",
+      "status": "PASS WITH DOCUMENTED LIMITATION",
+      "evidence": "Legal-text references detected; production URLs and applicability require review.",
+      "critical": false
+    },
+    {
+      "id": "31-seo",
+      "title": "SEO final verification",
+      "status": "PASS WITH DOCUMENTED LIMITATION",
+      "evidence": "robots.txt and sitemap.xml are committed; rendered production title/canonical and Search Console recrawl require live evidence.",
+      "critical": false
+    },
+    {
+      "id": "35-production-smoke",
+      "title": "Post-launch smoke automation",
+      "status": "PASS WITH DOCUMENTED LIMITATION",
+      "evidence": "Read-only production smoke command exists; must be executed against production.",
+      "critical": true
+    }
+  ]
+}

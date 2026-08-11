@@ -55,29 +55,11 @@ export class LocalPreviewImageProvider implements AiImageStudioProvider {
   }
 }
 
-export class RemoveBgApiProvider implements AiImageStudioProvider {
-  id = "remove-bg";
-  label = "remove.bg";
-  constructor(private readonly apiKey: string) {}
+export class HostedImageProviderUnavailable implements AiImageStudioProvider {
+  id = "hosted-image-provider-unavailable";
+  label = "Hosted AI (server configuration required)";
   supports(tool: AiImageTool) { return tool === "remove-background" || tool === "transparent-png" || tool === "white-background"; }
-  async run(request: Parameters<AiImageStudioProvider["run"]>[0]) {
-    if (!this.apiKey) throw new Error("Missing EXPO_PUBLIC_REMOVE_BG_API_KEY.");
-    if (!request.imageUri.startsWith("http") && !request.imageUri.startsWith("data:")) throw new Error("remove.bg web integration requires an accessible image URL or data URI.");
-    request.onProgress?.(10);
-    const form = new FormData();
-    if (request.imageUri.startsWith("http")) form.append("image_url", request.imageUri);
-    else {
-      const response = await fetch(request.imageUri);
-      form.append("image_file", await response.blob(), "image.png");
-    }
-    form.append("size", "auto");
-    if (request.tool === "white-background") form.append("bg_color", "ffffff");
-    const response = await fetch("https://api.remove.bg/v1.0/removebg", { method: "POST", headers: { "X-Api-Key": this.apiKey }, body: form, signal: request.signal });
-    if (!response.ok) throw new Error(`remove.bg failed (${response.status}).`);
-    request.onProgress?.(85);
-    const blob = await response.blob();
-    const uri = typeof URL !== "undefined" ? URL.createObjectURL(blob) : request.imageUri;
-    request.onProgress?.(100);
-    return { uri, providerId: this.id };
+  async run(_request: Parameters<AiImageStudioProvider["run"]>[0]) {
+    throw new Error("Hosted image AI is not configured. Provider credentials must stay on the server; use Yaposan Local or connect an AI provider from AI Access.");
   }
 }
