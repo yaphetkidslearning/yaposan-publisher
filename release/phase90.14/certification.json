@@ -1,0 +1,23 @@
+{
+  "phase": "90.14",
+  "title": "Static SEO Head and Production Web Startup Repair",
+  "status": "READY_FOR_LOCAL_EXPORT_VERIFICATION",
+  "fixed": [
+    "Expo static export empty title regression",
+    "Build pipeline now post-processes all exported HTML metadata",
+    "Production verifier accepts title attributes and validates non-empty Yaposan title",
+    "External sitemap URL can be supplied for app.yaposan.com deployments"
+  ],
+  "preserved": [
+    "Phase 90.2 Render static deployment architecture",
+    "Phase 90.4 Gitleaks defaults and allowlist",
+    "Phase 90.5-90.13 AI, security, certification, and Windows packaging controls"
+  ],
+  "requiredLocalProof": [
+    "npm run typecheck",
+    "npm run test:phase90.14",
+    "npm run build:web",
+    "npm run check:phase90.14",
+    "dist/index.html contains non-empty Yaposan title"
+  ]
+}

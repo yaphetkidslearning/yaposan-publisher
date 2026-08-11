@@ -510,7 +510,7 @@
     "test:phase77": "node --experimental-strip-types --test tests/phase77-release-candidate-audit.test.ts",
     "verify:phase77": "npm run test:phase69 && npm run test:phase71 && npm run test:phase73 && npm run test:phase75 && npm run test:phase76 && npm run test:phase77",
     "test:all": "node --import tsx --test tests/*.test.ts tests/*.test.mjs",
-    "build:web": "expo export --platform web",
+    "build:web": "expo export --platform web && node scripts/postprocess-phase90.14-web-export.mjs",
     "audit:rc1": "npm run typecheck && npm run test:all && npm run build:web",
     "test:rc2": "node --experimental-strip-types --test tests/rc2-production-backend-hardening.test.ts",
     "audit:rc2": "npm run typecheck && npm run test:rc2 && npm run test:phase69 && npm run test:phase71 && npm run test:phase73 && npm run test:phase75 && npm run build:web",
@@ -612,7 +612,10 @@
     "repair:phase90.13": "node scripts/ensure-phase90.11-canonical-doc.mjs",
     "check:phase90.13": "node scripts/verify-phase90.13.mjs",
     "test:phase90.13": "node --test tests/phase9013-windows-packaging.test.mjs",
-    "verify:phase90.13": "npm run repair:phase90.13 && npm run typecheck && npm run check:phase90.9 && npm run check:phase90.11 && npm run check:phase90.11:full && npm run check:phase90.13 && npm test && npm run test:phase90.13"
+    "verify:phase90.13": "npm run repair:phase90.13 && npm run typecheck && npm run check:phase90.9 && npm run check:phase90.11 && npm run check:phase90.11:full && npm run check:phase90.13 && npm test && npm run test:phase90.13",
+    "check:phase90.14": "node scripts/verify-phase90.14.mjs",
+    "test:phase90.14": "node --test tests/phase9014-static-seo-production.test.mjs",
+    "verify:phase90.14": "npm run typecheck && npm run check:phase90.9 && npm run check:phase90.13 && npm run test:phase90.14 && npm run build:web && npm run check:phase90.14"
   },
   "private": true,
   "description": "Open-source creative design and publishing suite for publications, graphics, product images, collaboration, AI-assisted workflows, and professional export.",
