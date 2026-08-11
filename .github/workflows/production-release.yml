@@ -33,7 +33,7 @@ jobs:
         env:
           EXPO_PUBLIC_API_URL: https://api.yaposan.com
       - name: Upload web build evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: yaposan-web-${{ github.sha }}
           path: dist

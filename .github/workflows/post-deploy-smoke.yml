@@ -30,7 +30,7 @@ jobs:
           METRICS_TOKEN: ${{ secrets.METRICS_TOKEN }}
           POST_CUTOVER_REPORT: deployment-step5-live-report.json
         run: node scripts/post-cutover-verify.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: production-verification-report

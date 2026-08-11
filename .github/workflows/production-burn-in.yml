@@ -26,7 +26,7 @@ jobs:
           BURN_IN_INTERVAL_SECONDS: '60'
           BURN_IN_MAX_FAILURES: '0'
           METRICS_TOKEN: ${{ secrets.METRICS_TOKEN }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: production-burn-in-report
