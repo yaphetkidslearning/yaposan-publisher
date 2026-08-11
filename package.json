@@ -30,7 +30,7 @@
     "pdfkit": "0.17.2",
     "qrcode": "^1.5.4",
     "react": "19.2.3",
-    "react-dom": "19.2.3",
+    "react-dom": "19.2.8",
     "react-native": "0.86.0",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-reanimated": "4.5.0",
