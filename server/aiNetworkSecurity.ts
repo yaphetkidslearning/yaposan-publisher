@@ -55,7 +55,10 @@ async function requestPinned(url:URL,init:RequestInit,provider:string,timeoutMs:
 export async function fetchJsonLimited(rawUrl:string,init:RequestInit={},options:LimitedFetchOptions):Promise<{response:Response;data:any}> {
   const timeoutMs=Math.max(1000,Math.min(120000,options.timeoutMs??Number(process.env.AI_PROVIDER_TIMEOUT_MS??30000)));
   const maxBytes=Math.max(1024,Math.min(10*1024*1024,options.maxBytes??Number(process.env.AI_PROVIDER_MAX_RESPONSE_BYTES??1048576)));
-  const maxRedirects=Math.max(0,Math.min(5,options.maxRedirects??2));let current=new URL(rawUrl);const origin=current.origin;
+  const maxRedirects=Math.max(0,Math.min(5,options.maxRedirects??2));
+  let current:URL;
+  try{current=new URL(rawUrl)}catch{throw new Error('AI_PROVIDER_ENDPOINT_INVALID')}
+  const origin=current.origin;
   for(let redirects=0;;redirects++){
     await assertSafeProviderEndpoint(options.provider,current.toString());const result=await requestPinned(current,init,options.provider,timeoutMs,maxBytes);
     if(![301,302,303,307,308].includes(result.response.status))return result;

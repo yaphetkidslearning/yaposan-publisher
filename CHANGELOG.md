@@ -492,3 +492,7 @@
 ## 92.16 - Release integrity recertification
 - Synchronized package, lockfile, and release phase metadata.
 - Added 92.15 and 92.16 regression gates and made the 92.14 baseline forward-compatible.
+
+## 92.17 - CI AI Gateway Hardening
+- Fixed Phase 71 CI provider-fallback testing after the pinned AI network transport replaced `globalThis.fetch`.
+- Added stable invalid-provider-URL handling and Phase 92.17 regression coverage.

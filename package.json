@@ -1,7 +1,7 @@
 {
   "name": "yaposan",
   "main": "expo-router/entry",
-  "version": "92.16",
+  "version": "92.17",
   "dependencies": {
     "@expo/ui": "~57.0.4",
     "@expo/vector-icons": "^15.0.2",
@@ -745,7 +745,9 @@
     "test:phase92.15": "node --test tests/phase9215-word-style-font-flyout.test.mjs",
     "verify:phase92.15": "npm run typecheck && npm run lint && npm run test:phase92.7.1 && npm run test:phase92.10 && npm run test:phase92.11 && npm run test:phase92.12 && npm run test:phase92.13 && npm run test:phase92.14 && npm run test:phase92.15 && npm run build:web",
     "test:phase92.16": "node --test tests/phase9216-release-integrity-certification.test.mjs",
-    "verify:phase92.16": "npm run typecheck && npm run lint && npm run test:phase92.7.1 && npm run test:phase92.10 && npm run test:phase92.11 && npm run test:phase92.12 && npm run test:phase92.13 && npm run test:phase92.14 && npm run test:phase92.15 && npm run test:phase92.16 && npm run build:web"
+    "verify:phase92.16": "npm run typecheck && npm run lint && npm run test:phase92.7.1 && npm run test:phase92.10 && npm run test:phase92.11 && npm run test:phase92.12 && npm run test:phase92.13 && npm run test:phase92.14 && npm run test:phase92.15 && npm run test:phase92.16 && npm run build:web",
+    "test:phase92.17": "node --test tests/phase9217-ci-ai-gateway-hardening.test.mjs",
+    "verify:phase92.17": "npm run typecheck && npm run lint && npm run test:phase71 && npm run test:phase92.7.1 && npm run test:phase92.10 && npm run test:phase92.11 && npm run test:phase92.12 && npm run test:phase92.13 && npm run test:phase92.14 && npm run test:phase92.15 && npm run test:phase92.16 && npm run test:phase92.17 && npm run build:web"
   },
   "private": true,
   "description": "Open-source creative design and publishing suite for publications, graphics, product images, collaboration, AI-assisted workflows, and professional export.",
