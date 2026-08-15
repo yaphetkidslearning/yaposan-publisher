@@ -1,0 +1,35 @@
+name: Accessibility issue
+description: Report an accessibility or keyboard-navigation problem
+title: "[Accessibility]: "
+labels: ["accessibility"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Accessibility problem
+      description: Describe what is difficult or impossible to use.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include keyboard, screen reader, zoom, contrast, or other relevant details.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser / platform / assistive technology
+      placeholder: Firefox on Windows 11 with NVDA
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Remove secrets, private data, and customer data before posting.

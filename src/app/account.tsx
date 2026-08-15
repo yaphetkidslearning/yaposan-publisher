@@ -12,6 +12,8 @@ type Panel = "profile"|"plan"|"usage"|"billing"|"devices"|"security"|"email"|"pr
 type Activity = { id:string; text:string; at:string };
 const KEY="yaposan:account:z4";
 const now=()=>new Date().toLocaleString();
+let activitySequence=0;
+const nextActivityId=()=>`activity-${++activitySequence}`;
 
 export default function Account(){
  const auth=useAuth();
@@ -21,11 +23,11 @@ export default function Account(){
  const [billingNotices,setBillingNotices]=useState(true); const [productUpdates,setProductUpdates]=useState(true); const [securityAlerts,setSecurityAlerts]=useState(true); const [telemetry,setTelemetry]=useState(false); const [twoFactor,setTwoFactor]=useState(false); const [recoveryEmail,setRecoveryEmail]=useState("");
  const [activities,setActivities]=useState<Activity[]>([]); const [loaded,setLoaded]=useState(false);
  useEffect(()=>{if(auth.ready&&!auth.isAuthenticated)router.replace("/sign-in")},[auth.ready,auth.isAuthenticated]);
- useEffect(()=>{if(auth.session?.user?.email)setEmail(auth.session.user.email)},[auth.session?.user?.email]);
+ useEffect(()=>{if(auth.session?.user?.email)queueMicrotask(()=>setEmail(auth.session!.user!.email))},[auth.session?.user?.email]);
  const [devices,setDevices]=useState([{id:"current",name:"Windows desktop",detail:"Current session • Baltimore, MD",current:true},{id:"web",name:"Web browser",detail:"Last active today",current:false}]);
  useEffect(()=>{AsyncStorage.getItem(KEY).then(raw=>{if(raw){try{const s=JSON.parse(raw);setName(s.name==="Dawit"?"":(s.name||""));setEmail(s.email||"");setLanguage(s.language||"English");setTimezone(s.timezone||"America/New_York");setPhoto(s.photo||"");setPlan(s.plan||"Free");setProvider(s.provider||"");setPayment(s.payment||"");setRenewal(s.renewal||"Not scheduled");setBillingNotices(s.billingNotices!==false);setProductUpdates(s.productUpdates!==false);setSecurityAlerts(s.securityAlerts!==false);setTelemetry(Boolean(s.telemetry));setTwoFactor(Boolean(s.twoFactor));setRecoveryEmail(s.recoveryEmail||"");setActivities(Array.isArray(s.activities)?s.activities:[]);setDevices(Array.isArray(s.devices)&&s.devices.length?s.devices:[{id:"current",name:"Windows desktop",detail:"Current session",current:true}]);}catch{}}setLoaded(true)});},[]);
  useEffect(()=>{if(!loaded)return;AsyncStorage.setItem(KEY,JSON.stringify({name,email,language,timezone,photo,plan,provider,payment,renewal,billingNotices,productUpdates,securityAlerts,telemetry,twoFactor,recoveryEmail,activities,devices}));},[loaded,name,email,language,timezone,photo,plan,provider,payment,renewal,billingNotices,productUpdates,securityAlerts,telemetry,twoFactor,recoveryEmail,activities,devices]);
- const log=(text:string)=>setActivities(v=>[{id:`${Date.now()}-${Math.random()}`,text,at:now()},...v].slice(0,20));
+ const log=(text:string)=>setActivities(v=>[{id:nextActivityId(),text,at:now()},...v].slice(0,20));
  const used=plan==="Free"?12:plan==="Professional"?184:plan==="Professional Plus"?520:1240, monthly=plan==="Free"?100:plan==="Professional"?1000:plan==="Professional Plus"?5000:25000;
  const tabs=useMemo(()=>[
   ["profile","Profile","person-circle-outline"],["plan","AI Access","ribbon-outline"],["usage","AI Usage","sparkles-outline"],["billing","AI Credits","card-outline"],["devices","Devices","desktop-outline"],["security","Security","lock-closed-outline"],["email","Email preferences","mail-outline"],["privacy","Data & privacy","shield-checkmark-outline"]

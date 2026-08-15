@@ -1,0 +1,33 @@
+{
+  "phase": "91.3",
+  "purpose": "Prevent incomplete source releases and regressions in the organization-neutral Product Photo Platform.",
+  "requiredSourceAreas": [
+    "src/app",
+    "server",
+    "services/background-removal",
+    "scripts",
+    "tests",
+    "release"
+  ],
+  "requiredProductPhotoFiles": [
+    "src/app/product-photo-studio.tsx",
+    "src/components/ProductPhotoMaskTouchup.web.tsx",
+    "server/backgroundRemoval.ts",
+    "services/background-removal/app.py",
+    "services/background-removal/Dockerfile",
+    "release/phase91.0/quality-targets.json",
+    "release/phase91.0/cost-policy.json",
+    "release/phase91.1/benchmark-schema.json",
+    "release/phase91.1/benchmark-template.csv",
+    "release/phase91.1/pilot-readiness.json"
+  ],
+  "releaseRequirements": {
+    "packageLockSynchronized": true,
+    "safeEnvExampleRequired": true,
+    "customerNeutralBranding": true,
+    "paidProviderAutoFallbackAllowed": false,
+    "unexpectedPaidApiBudgetUsd": 0,
+    "sourceArchiveMustContainApplication": true,
+    "benchmarkEvidenceRequiredBeforeCompetitiveQualityClaim": true
+  }
+}

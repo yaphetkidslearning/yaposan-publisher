@@ -4,13 +4,14 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, Text
 import type { PublisherProject } from "../../types/publisher";
 import { DEFAULT_MERGE_BATCH_SETTINGS, executeMergeBatch, getBatchRecords, type MergeBatchFormat, type MergeBatchHistoryItem, type MergeBatchSettings } from "../../utils/mailMergeBatchEngine";
 
+const eventTimestamp = () => Date.now();
 type Props={visible:boolean;project:PublisherProject;onChange:(project:PublisherProject)=>void;onClose:()=>void};
 export default function MailMergeBatchModal({visible,project,onChange,onClose}:Props){
  const data=project.mailMergeData; const saved=data?.batchSettings;
  const [settings,setSettings]=useState<MergeBatchSettings>(saved??DEFAULT_MERGE_BATCH_SETTINGS); const [busy,setBusy]=useState(false); const [progress,setProgress]=useState(0); const [step,setStep]=useState(""); const [error,setError]=useState(""); const cancelled=useRef(false);
  const records=data?getBatchRecords(data,settings.includeDuplicates):[]; const history=data?.batchHistory??[];
- const patch=(next:Partial<MergeBatchSettings>)=>{const value={...settings,...next};setSettings(value);if(data)onChange({...project,updatedAt:Date.now(),mailMergeData:{...data,batchSettings:value}});};
- const addHistory=(item:MergeBatchHistoryItem)=>{if(data)onChange({...project,updatedAt:Date.now(),mailMergeData:{...data,batchSettings:settings,batchHistory:[item,...history].slice(0,50)}});};
+ const patch=(next:Partial<MergeBatchSettings>)=>{const value={...settings,...next};setSettings(value);if(data)onChange({...project,updatedAt:eventTimestamp(),mailMergeData:{...data,batchSettings:value}});};
+ const addHistory=(item:MergeBatchHistoryItem)=>{if(data)onChange({...project,updatedAt:eventTimestamp(),mailMergeData:{...data,batchSettings:settings,batchHistory:[item,...history].slice(0,50)}});};
  const run=async()=>{setBusy(true);setError("");setProgress(0);cancelled.current=false;try{const result=await executeMergeBatch(project,settings,(p,s)=>{setProgress(p);setStep(s)},()=>cancelled.current);addHistory(result.history);}catch(reason){const err=reason as Error&{history?:MergeBatchHistoryItem};setError(err.message);if(err.history)addHistory(err.history);}finally{setBusy(false)}};
  const toggle=(format:MergeBatchFormat)=>patch({formats:settings.formats.includes(format)?settings.formats.filter(x=>x!==format):[...settings.formats,format]});
  return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={s.backdrop}><View style={s.modal}><View style={s.header}><View><Text style={s.title}>Batch Merge & Export</Text><Text style={s.sub}>Generate individual publications or one combined document</Text></View><Pressable onPress={onClose}><Ionicons name="close" size={24}/></Pressable></View><ScrollView contentContainerStyle={s.body}>

@@ -1,0 +1,14 @@
+import {existsSync,readFileSync} from "node:fs";
+const R=p=>readFileSync(p,"utf8"), fail=m=>{throw new Error("Phase 91.7: "+m)};
+for(const f of ["release/phase91.7/pure-white-batch-policy.json","release/phase91.7/white-background-certification.md","PHASE91.7-PURE-WHITE-LARGE-BATCH-PRODUCT-PHOTO.md","tests/phase917-pure-white-batch.test.mjs"])if(!existsSync(f))fail("missing "+f);
+const app=R("services/background-removal/app.py");
+for(const t of ["pure_white_audit","force_pure_white_background","strict_white","white_background_audit","pure-white-catalog","engine_version\":\"91.7"])if(!app.includes(t))fail("engine missing "+t);
+const ui=R("src/app/product-photo-studio.tsx");
+for(const t of ["Select up to 500 photos","Pure White Guarantee ON","Download {counts.done} as ZIP","batchConcurrency","whiteCompliance","pure-white-catalog"])if(!ui.includes(t))fail("UI missing "+t);
+const server=R("server/backgroundRemoval.ts");
+for(const t of ["strictWhite","whiteAuditThreshold","whiteBackgroundAudit","pure-white-catalog"])if(!server.includes(t))fail("server contract missing "+t);
+const p=JSON.parse(R("release/phase91.7/pure-white-batch-policy.json"));
+if(p.pureWhite.requiredCompliance!==1||p.batch.maxSelectedImages<500||p.batch.supportsMoreThan50ImagesPerBatch!==true)fail("policy weakened");
+const cost=JSON.parse(R("release/phase91.0/cost-policy.json"));
+if(cost.paidPerImageProviderEnabled!==false||cost.paidProviderMonthlyBudgetUsd!==0||cost.autoOverage!==false)fail("paid API firewall changed");
+console.log("Phase 91.7 pure-white large-batch gate passed.");

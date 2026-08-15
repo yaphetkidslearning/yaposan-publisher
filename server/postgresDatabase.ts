@@ -12,7 +12,7 @@ export type SqlClient = SqlConnection & {
 const TABLES: Record<EntityName, string> = {
   users: "users", organizations: "organizations", memberships: "memberships", workspaces: "workspaces",
   projects: "projects", assets: "assets", versions: "project_versions", subscriptions: "subscriptions",
-  auditEvents: "audit_events", jobs: "jobs", aiCreditTransactions: "ai_credit_transactions", aiCommunityTransactions: "ai_community_transactions", aiProviderCredentials: "ai_provider_credentials",
+  auditEvents: "audit_events", jobs: "jobs", aiCreditTransactions: "ai_credit_transactions", aiCommunityTransactions: "ai_community_transactions", aiProviderCredentials: "ai_provider_credentials", supportTickets: "support_tickets", supportTicketMessages: "support_ticket_messages", helpFeedback: "help_feedback",
 };
 
 const snake = (key: string) => key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
@@ -46,7 +46,14 @@ CREATE INDEX IF NOT EXISTS idx_ai_community_month ON ai_community_transactions(m
 CREATE INDEX IF NOT EXISTS idx_ai_community_request ON ai_community_transactions(request_id);
 CREATE TABLE IF NOT EXISTS ai_provider_credentials (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE, provider text NOT NULL, endpoint text, model text, encrypted_api_key text NOT NULL, key_last4 text, key_version text, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), UNIQUE(organization_id,provider));
 CREATE INDEX IF NOT EXISTS idx_ai_provider_credentials_org ON ai_provider_credentials(organization_id);
-ALTER TABLE ai_provider_credentials ADD COLUMN IF NOT EXISTS key_version text;`
+ALTER TABLE ai_provider_credentials ADD COLUMN IF NOT EXISTS key_version text;`,
+`CREATE TABLE IF NOT EXISTS support_tickets (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid REFERENCES users(id) ON DELETE SET NULL, email text NOT NULL, name text NOT NULL, category text NOT NULL, priority text NOT NULL DEFAULT 'normal', subject text NOT NULL, message text NOT NULL, status text NOT NULL DEFAULT 'open', source text, page text, action text, diagnostics jsonb, attachment_name text, attachment_mime_type text, attachment_size bigint, attachment_storage_key text, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS idx_support_tickets_created ON support_tickets(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status,created_at DESC);
+CREATE TABLE IF NOT EXISTS support_ticket_messages (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ticket_id uuid NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE, author_user_id uuid REFERENCES users(id) ON DELETE SET NULL, author_type text NOT NULL, body text NOT NULL, attachment_name text, attachment_mime_type text, attachment_size bigint, attachment_storage_key text, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS idx_support_ticket_messages_ticket ON support_ticket_messages(ticket_id,created_at);
+CREATE TABLE IF NOT EXISTS help_feedback (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid REFERENCES users(id) ON DELETE SET NULL, content_type text NOT NULL, content_id text NOT NULL, helpful boolean NOT NULL, page text, metadata jsonb, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS idx_help_feedback_content ON help_feedback(content_type,content_id,created_at DESC);`
 ] as const;
 
 export class PostgresDatabase implements DatabaseAdapter {

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useAuth } from "../context/AuthContext";
 
@@ -8,8 +8,8 @@ type Product={id:string;name:string;description:string;kind:"template"|"asset"|"
 type Dashboard={products:Product[];metrics:{totalProducts:number;approvedProducts:number;sales:number;grossCents:number;payoutCents:number}};
 export default function CreatorMarketplace(){
  const auth=useAuth();const [catalog,setCatalog]=useState<Product[]>([]);const [dashboard,setDashboard]=useState<Dashboard|null>(null);const [loading,setLoading]=useState(true);const [name,setName]=useState("");const [description,setDescription]=useState("");const [price,setPrice]=useState("0");const [kind,setKind]=useState<Product["kind"]>("template");const [referral,setReferral]=useState("");
- const load=async()=>{if(!auth.isAuthenticated)return;setLoading(true);try{const [a,b]=await Promise.all([auth.authorizedFetch("/api/v1/creator-marketplace/products"),auth.authorizedFetch("/api/v1/creator-marketplace/dashboard")]);if(a.ok)setCatalog((await a.json()).items??[]);if(b.ok)setDashboard(await b.json())}finally{setLoading(false)}};
- useEffect(()=>{if(auth.ready&&!auth.isAuthenticated)router.replace("/sign-in");else void load()},[auth.ready,auth.isAuthenticated]);
+ const load=useCallback(async()=>{if(!auth.isAuthenticated)return;setLoading(true);try{const [a,b]=await Promise.all([auth.authorizedFetch("/api/v1/creator-marketplace/products"),auth.authorizedFetch("/api/v1/creator-marketplace/dashboard")]);if(a.ok)setCatalog((await a.json()).items??[]);if(b.ok)setDashboard(await b.json())}finally{setLoading(false)}},[auth]);
+ useEffect(()=>{if(auth.ready&&!auth.isAuthenticated){router.replace("/sign-in");return;}queueMicrotask(()=>{void load()})},[auth.ready,auth.isAuthenticated,load]);
  const submit=async()=>{const response=await auth.authorizedFetch("/api/v1/creator-marketplace/products",{method:"POST",body:JSON.stringify({name,description,priceCents:Math.round((Number(price)||0)*100),kind,license:"commercial",payload:`${name}:${description}`})});const data=await response.json();if(!response.ok)return Alert.alert("Submission failed",data?.error?.message??"Please try again.");setName("");setDescription("");setPrice("0");await load();Alert.alert("Submitted","Your product is now in marketplace review.")};
  const buy=async(product:Product)=>{const response=await auth.authorizedFetch(`/api/v1/creator-marketplace/products/${product.id}/purchase`,{method:"POST"});const data=await response.json();if(!response.ok)return Alert.alert("Purchase unavailable",data?.error?.message??"Please try again.");Alert.alert(data.alreadyOwned?"Already owned":"Added to library",`${product.name} is now available in your account.`)};
  const createCode=async()=>{const response=await auth.authorizedFetch("/api/v1/referrals/code",{method:"POST"});const data=await response.json();if(response.ok)Alert.alert("Referral code",data.code)};

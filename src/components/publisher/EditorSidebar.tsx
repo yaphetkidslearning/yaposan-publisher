@@ -202,7 +202,7 @@ export default function EditorSidebar({
   const [mode, setMode] = useState<SidebarMode>("pages");
 
   useEffect(() => {
-    if (assetLibraryRequest > 0) setMode("assets");
+    if (assetLibraryRequest > 0) queueMicrotask(() => setMode("assets"));
   }, [assetLibraryRequest]);
 
   const pageItems = useMemo(() => pages, [pages]);

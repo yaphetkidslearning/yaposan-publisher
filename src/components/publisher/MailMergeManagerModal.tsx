@@ -8,6 +8,7 @@ import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, 
 import type { PublisherProject } from "../../types/publisher";
 import { importTextDataSource, importWorkbookDataSource, mergeFieldToken, navigateMergeRecord, queryMergeRecords, type MailMergeDataSource, type MailMergeProjectData, type MergeFieldProperty, type MergeSourceFormat } from "../../utils/mailMergeEngine";
 
+const eventTimestamp = () => Date.now();
 type Props = { visible: boolean; project: PublisherProject; onChange: (project: PublisherProject) => void; onInsertField: (token: string) => void; onClose: () => void };
 
 async function readAsset(uri: string, format: MergeSourceFormat): Promise<string | ArrayBuffer> {
@@ -30,7 +31,7 @@ export default function MailMergeManagerModal({ visible, project, onChange, onIn
   const selectedField = activeSource?.fields.find((field) => field.key === selectedFieldKey) ?? activeSource?.fields[0];
   const selectedProperty: MergeFieldProperty | undefined = selectedField ? data.fieldProperties?.[selectedField.key] : undefined;
 
-  const commit = (next: MailMergeProjectData) => onChange({ ...project, updatedAt: Date.now(), mailMergeData: next });
+  const commit = (next: MailMergeProjectData) => onChange({ ...project, updatedAt: eventTimestamp(), mailMergeData: next });
   const patch = (updates: Partial<MailMergeProjectData>) => commit({ ...data, ...updates });
   const updateFieldProperty = (updates: Partial<MergeFieldProperty>) => {
     if (!selectedField) return;

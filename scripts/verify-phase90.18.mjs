@@ -1,0 +1,10 @@
+import { existsSync, readFileSync } from "node:fs";
+const required = ["package.json","package-lock.json","src/app/_layout.tsx","src/app/+html.tsx","server/database.ts","scripts/create-source-release.mjs","scripts/verify-phase90.17.mjs","scripts/verify-phase90.18.mjs","tests/phase9017-open-source-finalization.test.mjs","tests/phase9018-source-package-integrity.test.mjs","PHASE90.18-COMPLETE-SOURCE-AND-RELEASE-FINALIZATION.md","release/phase90.18/release-finalization-evidence.json"];
+for (const f of required) if (!existsSync(f)) throw new Error(`Missing Phase 90.18 core source path: ${f}`);
+const pkg = JSON.parse(readFileSync("package.json","utf8"));
+if (!pkg.scripts?.test?.includes("test:phase90.18")) throw new Error("Top-level npm test must include Phase 90.18");
+const verify = pkg.scripts?.["verify:phase90.18"] ?? "";
+for (const token of ["typecheck","npm test","build:web","check:phase90.14","check:phase90.15","check:phase90.16","check:phase90.17","check:phase90.18"]) if (!verify.includes(token)) throw new Error(`Phase 90.18 verifier missing ${token}`);
+const evidence = JSON.parse(readFileSync("release/phase90.18/release-finalization-evidence.json","utf8"));
+if (Object.values(evidence.externalProductionEvidence ?? {}).some(Boolean)) throw new Error("External production evidence must remain unclaimed until tested");
+console.log("Phase 90.18 complete-source and release-finalization automated baseline passed; external production evidence remains required.");

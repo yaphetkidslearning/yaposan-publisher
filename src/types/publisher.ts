@@ -328,6 +328,7 @@ export type PublisherProject = {
   dpi?: number;
   colorMode?: "RGB" | "CMYK";
   embeddedFonts?: Record<string, string>;
+  embeddedFontMetadata?: Record<string, import("../utils/fontFileInspector").FontFileMetadata>;
   typographyStyles?: Record<string, { name: string; updates: Partial<PublisherElement> }>;
   typographyThreads?: Record<string, { name: string; frameIds: string[] }>;
   mergeData?: import("./aiWriting").ProjectMergeData;

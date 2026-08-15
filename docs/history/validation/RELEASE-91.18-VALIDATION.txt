@@ -1,0 +1,16 @@
+Yaposan 91.18 validation
+==========================
+
+Static/regression validation performed in packaging environment:
+- Phase 91.11 through 91.18 Node regression tests: 40/40 PASS
+- Phase 91.18 dedicated tests: 8/8 PASS
+- Phase 91.18 static guidance gate: PASS
+- FAQ entries: 45
+
+Local full gate (requires installed dependencies):
+  npm ci
+  npm run verify:phase91.18
+
+The full gate includes TypeScript checking, Phase 91.11-91.18 regressions, static gates, and Expo web export.
+
+Support delivery remains intentionally unconnected until a real email/helpdesk/CRM endpoint is configured. 91.18 does not fake successful ticket submission.

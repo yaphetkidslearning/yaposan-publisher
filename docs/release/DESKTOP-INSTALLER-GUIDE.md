@@ -1,6 +1,6 @@
 # Yaposan Desktop Installer Guide
 
-1. Install project dependencies with `npm install`.
+1. Install project dependencies with `npm ci`.
 2. Produce the production desktop web payload with `npm run desktop:web`.
 3. On Windows, run `npm run desktop:build:win`.
 4. On macOS, run `npm run desktop:build:mac`.

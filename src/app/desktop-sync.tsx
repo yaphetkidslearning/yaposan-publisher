@@ -9,7 +9,7 @@ const size=(n:number)=>n<1024?`${n} B`:n<1024*1024?`${(n/1024).toFixed(1)} KB`:`
 export default function DesktopSync(){
  const [snapshot,setSnapshot]=useState(empty); const [loading,setLoading]=useState(true);
  const refresh=()=>getDesktopOfflineSnapshot().then(setSnapshot).finally(()=>setLoading(false));
- useEffect(()=>{void refresh();return subscribeDesktopOffline(setSnapshot)},[]);
+ useEffect(()=>{queueMicrotask(()=>{void refresh()});return subscribeDesktopOffline(setSnapshot)},[]);
  const exportBackup=async()=>{const api=typeof window!=="undefined"?window.yaposanDesktop?.offline:undefined;if(!api)return Alert.alert("Desktop required","Install and open the Yaposan desktop app to export an offline backup.");const result=await api.exportBackup();if(!result.canceled)Alert.alert("Backup exported",result.filePath||"The offline backup was created.")};
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.page}>
   <View style={s.top}><Pressable style={s.icon} onPress={()=>router.canGoBack()?router.back():router.replace("/account" as never)}><Ionicons name="arrow-back" size={20} color="#fff"/></Pressable><View><Text style={s.brand}>Desktop & Offline Sync</Text><Text style={s.sub}>Local-first projects, recovery copies, and reconnect synchronization.</Text></View><View style={{flex:1}}/><Pressable style={s.button} onPress={()=>void refresh()}><Ionicons name="refresh" size={18} color="#fff"/><Text style={s.buttonText}>Refresh</Text></Pressable></View>

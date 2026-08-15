@@ -1,0 +1,27 @@
+Yaposan Phase 91.19 validation
+================================
+
+PASS  npm run test:phase91.19
+      7/7 tests passed.
+
+PASS  npm run check:phase91.19
+      Required community/open-source files and package scripts passed the static gate.
+
+PASS  npm run test:phase91.18
+      8/8 Phase 91.18 regression tests passed.
+
+PASS  npm run check:phase91.18
+      45 FAQ items and required 91.18 guidance/help files passed the static gate.
+
+NOT CERTIFIED IN THIS ZIP ENVIRONMENT
+      npm run typecheck requires installed npm dependencies. The extracted source archive did not include node_modules, and dependency installation did not complete within the validation environment timeout. Run `npm install` or `npm ci` and then `npm run typecheck` on a normal development machine/CI runner.
+
+PUBLIC RELEASE STILL REQUIRES REAL REPOSITORY CHECKS
+      - full Git-history Gitleaks scan
+      - GitHub branch protection and required status checks
+      - secret scanning / push protection where supported
+      - Dependabot alerts and security updates
+      - private vulnerability reporting
+      - production secret-manager boundary confirmation
+
+Phase 91.19 does not mark those external checks complete.

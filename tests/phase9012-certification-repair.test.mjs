@@ -10,7 +10,7 @@ const canonical = 'PHASE90.11-FINAL-PRODUCTION-CERTIFICATION-OPEN-SOURCE-LAUNCH-
 test('top-level npm test aggregates release security suites', () => {
   const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
   assert.ok(pkg.scripts.test);
-  for (const phase of ['90.5','90.6','90.7','90.8','90.9','90.11','90.12']) {
+  for (const phase of ['90.5','90.6','90.7','90.8','90.9','90.11','90.12','90.13','90.14','90.15']) {
     assert.match(pkg.scripts.test, new RegExp(`test:phase${phase.replace('.', '\\.')}`));
   }
 });

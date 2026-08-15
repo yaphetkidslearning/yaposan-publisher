@@ -1,0 +1,10 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync, existsSync } from "node:fs";
+const read=p=>readFileSync(p,"utf8");
+test("91.14 verification gate includes typecheck, previous regressions and web build",()=>{const p=JSON.parse(read("package.json"));const v=p.scripts["verify:phase91.14"];assert.match(v,/typecheck/);assert.match(v,/phase91\.13/);assert.match(v,/build:web/);});
+test("server exposes non-secret media capability readiness",()=>{const i=read("server/index.ts"),m=read("server/mediaGeneration.ts");assert.match(i,/\/api\/v1\/ai\/media\/capabilities/);assert.match(m,/mediaProviderCapabilities/);assert.match(m,/statusPollingConfigured/);});
+test("Photo Studio exposes professional tool-specific controls",()=>{const s=read("src/app/photo-studio.tsx");for(const x of ["Import mask","Edit strength","Expand / scene aspect ratio","Upscale","Relight direction","Product scene","Runtime readiness"])assert.match(s,new RegExp(x.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));assert.match(s,/type: "color"/);});
+test("Magic Eraser transports a real mask and cannot silently run without one",()=>{const p=read("src/utils/photoStudioProviders.ts"),e=read("src/utils/aiImageStudioEngine.ts");assert.match(p,/maskBase64/);assert.match(p,/Magic Eraser needs a mask/);assert.match(e,/maskUri: job\.maskUri/);});
+test("What will you create today is provider aware",()=>{const a=read("src/app/ai.tsx");assert.match(a,/Media provider readiness/);assert.match(a,/will not fake generated media/);assert.match(a,/provider is not configured/);});
+test("local runtime certification script and difficult-image checklist exist",()=>{assert.equal(existsSync("scripts/certify-local-runtime-91.14.mjs"),true);assert.equal(existsSync("docs/PHASE91.14-PHOTO-QUALITY-ACCEPTANCE.md"),true);});

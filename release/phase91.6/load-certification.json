@@ -1,0 +1,14 @@
+{
+  "targetConcurrentUsers": 50,
+  "engineConcurrencyDefault": 4,
+  "queueRequired": true,
+  "warmPoolRequired": true,
+  "retryBackoffRequired": true,
+  "cpuFallbackRequired": true,
+  "targets": {
+    "batchCompletionPercent": 99,
+    "criticalDataLoss": 0,
+    "unexpectedPaidApiSpendUsd": 0
+  },
+  "status": "LOAD_TEST_REQUIRED_IN_DEPLOYMENT_ENVIRONMENT"
+}

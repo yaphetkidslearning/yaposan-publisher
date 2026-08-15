@@ -12,7 +12,7 @@ export default function AssetGeneratorModal({ visible, mode, onClose, onGenerate
   const [value, setValue] = useState("");
   const [saveToLibrary, setSaveToLibrary] = useState(true);
   useEffect(() => {
-    if (visible) setValue(mode === "qr" ? "https://yaposan.com" : "1234567890");
+    if (visible) queueMicrotask(() => setValue(mode === "qr" ? "https://yaposan.com" : "1234567890"));
   }, [mode, visible]);
   const label = mode === "qr" ? "QR code" : "Code 128 barcode";
   const valid = value.trim().length > 0;

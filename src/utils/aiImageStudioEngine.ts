@@ -8,6 +8,8 @@ export const DEFAULT_AI_IMAGE_SETTINGS: AiImageToolSettings = {
   aspectRatio: "original",
   preserveShadow: true,
   refineEdges: true,
+  relightDirection: "soft",
+  scenePreset: "studio",
 };
 
 const uid = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -33,7 +35,7 @@ export function chooseAiImageProvider(providers: AiImageStudioProvider[], tool: 
 export async function executeAiImageJob(job: AiImageJob, providers: AiImageStudioProvider[], onProgress?: (progress: number) => void, signal?: AbortSignal): Promise<AiImageJob> {
   const provider = chooseAiImageProvider(providers, job.tool);
   try {
-    const result = await provider.run({ tool: job.tool, imageUri: job.inputUri, settings: job.settings, signal, onProgress });
+    const result = await provider.run({ tool: job.tool, imageUri: job.inputUri, maskUri: job.maskUri, settings: job.settings, signal, onProgress });
     return { ...job, providerId: result.providerId, outputUri: result.uri, status: "completed", progress: 100, completedAt: Date.now() };
   } catch (error) {
     if (signal?.aborted) return { ...job, providerId: provider.id, status: "cancelled", progress: 0, completedAt: Date.now() };

@@ -4,6 +4,7 @@ import { hasOversetText, openTypeFeatureSettings } from "../../utils/professiona
 import { SvgXml } from "react-native-svg";
 import {
     forwardRef,
+    useCallback,
     useEffect,
     useMemo,
     useRef,
@@ -34,6 +35,7 @@ import { buildWebImageFilter, cropTransform, imageMaskWebStyle, maskStyle } from
 import { evaluateFormula, resizeColumn, resizeRow, selectWholeColumn, selectWholeRow, tableAccessibilityLabel, visibleRowsAdvanced } from "../../utils/professionalTableEngine";
 import { getLayoutSettings } from "../../utils/layoutGuideEngine";
 import { vectorElementToSvg } from "../../utils/professionalVectorEngine";
+import { detectTextDirection, fontCssStack } from "../../utils/typographyManager";
 
 type ExtendedElement = PublisherElement & Record<string, any>;
 type ResizeDirection =
@@ -249,15 +251,19 @@ function editableMaskClipStyle(item: any) {
 
 
 function TableBoundaryHandle({ vertical, left, top, onDelta, onCommit }: { vertical?: boolean; left?: number; top?: number; onDelta: (delta:number)=>void; onCommit:()=>void }) {
-  const start = useRef(0);
+  const [lastOffset, setLastOffset] = useState(0);
   const responder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => { start.current = 0; },
-    onPanResponderMove: (_, gesture) => { const current = vertical ? gesture.dx : gesture.dy; const delta = current - start.current; start.current = current; onDelta(delta); },
+    onPanResponderGrant: () => setLastOffset(0),
+    onPanResponderMove: (_, gesture) => {
+      const current = vertical ? gesture.dx : gesture.dy;
+      onDelta(current - lastOffset);
+      setLastOffset(current);
+    },
     onPanResponderRelease: onCommit,
     onPanResponderTerminate: onCommit,
-  }), [onCommit, onDelta, vertical]);
+  }), [lastOffset, onCommit, onDelta, vertical]);
   return <View {...responder.panHandlers} style={[vertical ? styles.tableColumnResize : styles.tableRowResize, vertical ? { left } : { top }]} />;
 }
 
@@ -411,60 +417,48 @@ function CanvasElement({
     return () => window.removeEventListener("yaposan:edit-text", beginKeyboardEditing as EventListener);
   }, [element.id, element.type, item.locked]);
   const lastPressRef = useRef(0);
-  const rasterPointsRef = useRef<Point[]>([]);
   const [rasterPreviewPoints, setRasterPreviewPoints] = useState<Point[]>([]);
-  const start = useRef({
-    x: element.x,
-    y: element.y,
-    width: element.width,
-    height: element.height,
-    rotation: element.rotation,
-  });
 
   const rasterCanvasResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => selected && element.type === "image" && !!item.rasterCanvasTool && item.rasterCanvasTool !== "none",
-    onMoveShouldSetPanResponder: () => selected && element.type === "image" && !!item.rasterCanvasTool && item.rasterCanvasTool !== "none",
-    onPanResponderGrant: (event) => {
-      onInteractionStart();
-      const point = { x: clamp(Number(event.nativeEvent.locationX ?? 0), 0, element.width), y: clamp(Number(event.nativeEvent.locationY ?? 0), 0, element.height) };
-      rasterPointsRef.current = [point]; setRasterPreviewPoints([point]);
-    },
-    onPanResponderMove: (event) => {
-      const point = { x: clamp(Number(event.nativeEvent.locationX ?? 0), 0, element.width), y: clamp(Number(event.nativeEvent.locationY ?? 0), 0, element.height) };
-      const last = rasterPointsRef.current.at(-1);
-      if (!last || distance(last, point) >= 2) { rasterPointsRef.current.push(point); setRasterPreviewPoints([...rasterPointsRef.current]); }
-    },
-    onPanResponderRelease: (event) => {
-      const point = { x: clamp(Number(event.nativeEvent.locationX ?? 0), 0, element.width), y: clamp(Number(event.nativeEvent.locationY ?? 0), 0, element.height) };
-      const points = [...rasterPointsRef.current, point].map((p) => ({ x: clamp(p.x / Math.max(1, element.width), 0, 1), y: clamp(p.y / Math.max(1, element.height), 0, 1) }));
-      const tool = item.rasterCanvasTool as string;
-      if (tool.startsWith("select-")) {
-        const kind = tool === "select-rectangle" ? "rectangle" : tool === "select-ellipse" ? "ellipse" : "lasso";
-        const selectionPoints = kind === "lasso" ? points : [points[0], points.at(-1)!];
-        const created = { id: `selection-${Date.now()}`, kind, name: `${kind} canvas selection`, enabled: true, inverted: false, feather: 0, expand: 0, antialias: true, points: selectionPoints };
-        const mode = item.rasterRuntime?.selection?.mode ?? "replace";
-        const existing = item.rasterSelections ?? [];
-        onChange({ rasterSelections: mode === "replace" ? [created] : [...existing, created], rasterEditedAt: Date.now(), phase17Version: "17.13" } as any, true);
-      } else {
-        const mapped = tool === "eraser" ? "erase" : tool;
-        onChange({ rasterRetouchStrokes: [...(item.rasterRetouchStrokes ?? []), { id: `stroke-${Date.now()}`, tool: mapped, points, size: item.rasterRetouch?.brushSize ?? 40, strength: (item.rasterRetouch?.strength ?? 50) / 100, hardness: item.rasterRuntime?.brush?.hardness ?? .75, color: item.rasterCanvasBrushColor ?? [1,1,1,1], source: tool === "clone" ? (item.rasterCloneSource ?? {x: clamp(points[0].x - .12, 0, 1), y: points[0].y}) : undefined }], rasterEditedAt: Date.now(), phase17Version: "17.13" } as any, true);
-      }
-      rasterPointsRef.current = []; setRasterPreviewPoints([]);
-    },
-    onPanResponderTerminate: () => { rasterPointsRef.current = []; setRasterPreviewPoints([]); },
-  }), [element.height, element.type, element.width, item.rasterCanvasBrushColor, item.rasterCanvasTool, item.rasterCloneSource, item.rasterRetouch, item.rasterRetouchStrokes, item.rasterRuntime, item.rasterSelections, onChange, onInteractionStart, selected]);
+      onStartShouldSetPanResponder: () => selected && element.type === "image" && !!item.rasterCanvasTool && item.rasterCanvasTool !== "none",
+      onMoveShouldSetPanResponder: () => selected && element.type === "image" && !!item.rasterCanvasTool && item.rasterCanvasTool !== "none",
+      onPanResponderGrant: (event) => {
+        onInteractionStart();
+        const point = { x: clamp(Number(event.nativeEvent.locationX ?? 0), 0, element.width), y: clamp(Number(event.nativeEvent.locationY ?? 0), 0, element.height) };
+        setRasterPreviewPoints([point]);
+      },
+      onPanResponderMove: (event) => {
+        const point = { x: clamp(Number(event.nativeEvent.locationX ?? 0), 0, element.width), y: clamp(Number(event.nativeEvent.locationY ?? 0), 0, element.height) };
+        const last = rasterPreviewPoints.at(-1);
+        if (!last || distance(last, point) >= 2) {
+          setRasterPreviewPoints([...rasterPreviewPoints, point]);
+        }
+      },
+      onPanResponderRelease: (event) => {
+        const point = { x: clamp(Number(event.nativeEvent.locationX ?? 0), 0, element.width), y: clamp(Number(event.nativeEvent.locationY ?? 0), 0, element.height) };
+        const points = [...rasterPreviewPoints, point].map((value) => ({ x: clamp(value.x / Math.max(1, element.width), 0, 1), y: clamp(value.y / Math.max(1, element.height), 0, 1) }));
+        const tool = item.rasterCanvasTool as string;
+        const eventTime = Math.trunc(Number(event.nativeEvent.timestamp ?? 0));
+        const interactionId = `${element.id}-${eventTime}`;
+        if (tool.startsWith("select-")) {
+          const kind = tool === "select-rectangle" ? "rectangle" : tool === "select-ellipse" ? "ellipse" : "lasso";
+          const selectionPoints = kind === "lasso" ? points : [points[0], points.at(-1)!];
+          const created = { id: `selection-${interactionId}`, kind, name: `${kind} canvas selection`, enabled: true, inverted: false, feather: 0, expand: 0, antialias: true, points: selectionPoints };
+          const mode = item.rasterRuntime?.selection?.mode ?? "replace";
+          const existing = item.rasterSelections ?? [];
+          onChange({ rasterSelections: mode === "replace" ? [created] : [...existing, created], rasterEditedAt: eventTime, phase17Version: "17.13" } as any, true);
+        } else {
+          const mapped = tool === "eraser" ? "erase" : tool;
+          onChange({ rasterRetouchStrokes: [...(item.rasterRetouchStrokes ?? []), { id: `stroke-${interactionId}`, tool: mapped, points, size: item.rasterRetouch?.brushSize ?? 40, strength: (item.rasterRetouch?.strength ?? 50) / 100, hardness: item.rasterRuntime?.brush?.hardness ?? .75, color: item.rasterCanvasBrushColor ?? [1,1,1,1], source: tool === "clone" ? (item.rasterCloneSource ?? {x: clamp(points[0].x - .12, 0, 1), y: points[0].y}) : undefined }], rasterEditedAt: eventTime, phase17Version: "17.13" } as any, true);
+        }
+        setRasterPreviewPoints([]);
+      },
+      onPanResponderTerminate: () => {
+        setRasterPreviewPoints([]);
+      },
+  }), [element.height, element.id, element.type, element.width, item.rasterCanvasBrushColor, item.rasterCanvasTool, item.rasterCloneSource, item.rasterRetouch, item.rasterRetouchStrokes, item.rasterRuntime, item.rasterSelections, onChange, onInteractionStart, rasterPreviewPoints, selected]);
 
-  const begin = () => {
-    start.current = {
-      x: element.x,
-      y: element.y,
-      width: element.width,
-      height: element.height,
-      rotation: element.rotation,
-    };
-  };
-
-  const smartSnapPosition = (x: number, y: number) => {
+  const smartSnapPosition = useCallback((x: number, y: number) => {
     if (snapDisabled) { onGuideChange(null); return { x, y }; }
     const threshold = Math.max(1, snapTolerance);
     const centerX = x + element.width / 2;
@@ -514,75 +508,81 @@ function CanvasElement({
 
     onGuideChange(Object.keys(guides).length ? guides : null);
     return { x: nextX, y: nextY };
-  };
+  }, [element.height, element.width, onGuideChange, pageHeight, pageMargin, pageWidth, snapDisabled, snapTargetsX, snapTargetsY, snapTolerance]);
 
-  const moveResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => !item.locked && !editing,
-        onMoveShouldSetPanResponder: () => !item.locked && !editing,
-        onPanResponderGrant: () => {
-          onInteractionStart();
-          begin();
-          onSelect(false);
-        },
-        onPanResponderMove: (_, gesture) => {
-          const rawX = snapValue(start.current.x + gesture.dx / zoom, snapToGrid, gridSize);
-          const rawY = snapValue(start.current.y + gesture.dy / zoom, snapToGrid, gridSize);
-          const snapped = smartSnapPosition(rawX, rawY);
-          onChange({
-            x: clamp(snapped.x, -pasteboardSize, Math.max(0, pageWidth - element.width) + pasteboardSize),
-            y: clamp(snapped.y, -pasteboardSize, Math.max(0, pageHeight - element.height) + pasteboardSize),
-          });
-        },
-        onPanResponderRelease: () => {
-          onGuideChange(null);
-          onChange({}, true);
-        },
-        onPanResponderTerminate: () => onGuideChange(null),
-      }),
-    [
-      editing,
-      element.height,
-      element.width,
-      gridSize,
-      item.locked,
-      onChange,
-      onGuideChange,
-      onSelect,
-      pageHeight,
-      pageMargin,
-      pageWidth,
-      pasteboardSize,
-      snapDisabled,
-      snapTargetsX,
-      snapTargetsY,
-      snapTolerance,
-      snapToGrid,
-      zoom,
-    ],
-  );
+  const moveResponder = useMemo(() => {
+    let startPosition = { x: element.x, y: element.y };
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => !item.locked && !editing,
+      onMoveShouldSetPanResponder: () => !item.locked && !editing,
+      onPanResponderGrant: () => {
+        onInteractionStart();
+        onSelect(false);
+      },
+      onPanResponderMove: (_, gesture) => {
+        const rawX = snapValue(startPosition.x + gesture.dx / zoom, snapToGrid, gridSize);
+        const rawY = snapValue(startPosition.y + gesture.dy / zoom, snapToGrid, gridSize);
+        const snapped = smartSnapPosition(rawX, rawY);
+        onChange({
+          x: clamp(snapped.x, -pasteboardSize, Math.max(0, pageWidth - element.width) + pasteboardSize),
+          y: clamp(snapped.y, -pasteboardSize, Math.max(0, pageHeight - element.height) + pasteboardSize),
+        });
+      },
+      onPanResponderRelease: () => {
+        onGuideChange(null);
+        onChange({}, true);
+      },
+      onPanResponderTerminate: () => onGuideChange(null),
+    });
+  }, [
+    editing,
+    element.height,
+    element.width,
+    element.x,
+    element.y,
+    gridSize,
+    item.locked,
+    onChange,
+    onGuideChange,
+    onInteractionStart,
+    onSelect,
+    pageHeight,
+    pageWidth,
+    pasteboardSize,
+    smartSnapPosition,
+    snapToGrid,
+    zoom,
+  ]);
 
   const resizeResponders = useMemo(() => {
-    const create = (direction: ResizeDirection) =>
-      PanResponder.create({
+    const create = (direction: ResizeDirection) => {
+      let startBox = {
+        x: element.x,
+        y: element.y,
+        width: element.width,
+        height: element.height,
+      };
+      return PanResponder.create({
         onStartShouldSetPanResponder: () => !item.locked,
         onMoveShouldSetPanResponder: () => !item.locked,
-        onPanResponderGrant: () => { onInteractionStart(); begin(); },
+        onPanResponderGrant: () => {
+          onInteractionStart();
+          startBox = { x: element.x, y: element.y, width: element.width, height: element.height };
+        },
         onPanResponderMove: (_, gesture) => {
           const dx = gesture.dx / zoom;
           const dy = gesture.dy / zoom;
-          let { x, y, width, height } = start.current;
+          let { x, y, width, height } = startBox;
 
-          if (direction.includes("e")) width = Math.max(MIN_ELEMENT_WIDTH, start.current.width + dx);
-          if (direction.includes("s")) height = Math.max(MIN_ELEMENT_HEIGHT, start.current.height + dy);
+          if (direction.includes("e")) width = Math.max(MIN_ELEMENT_WIDTH, startBox.width + dx);
+          if (direction.includes("s")) height = Math.max(MIN_ELEMENT_HEIGHT, startBox.height + dy);
           if (direction.includes("w")) {
-            width = Math.max(MIN_ELEMENT_WIDTH, start.current.width - dx);
-            x = start.current.x + (start.current.width - width);
+            width = Math.max(MIN_ELEMENT_WIDTH, startBox.width - dx);
+            x = startBox.x + (startBox.width - width);
           }
           if (direction.includes("n")) {
-            height = Math.max(MIN_ELEMENT_HEIGHT, start.current.height - dy);
-            y = start.current.y + (start.current.height - height);
+            height = Math.max(MIN_ELEMENT_HEIGHT, startBox.height - dy);
+            y = startBox.y + (startBox.height - height);
           }
 
           width = snapValue(width, snapToGrid, gridSize);
@@ -597,6 +597,7 @@ function CanvasElement({
         },
         onPanResponderRelease: () => onChange({}, true),
       });
+    };
 
     return {
       nw: create("nw"),
@@ -608,46 +609,60 @@ function CanvasElement({
       sw: create("sw"),
       w: create("w"),
     };
-  }, [gridSize, item.locked, onChange, pageHeight, pageWidth, snapToGrid, zoom]);
+  }, [element.height, element.width, element.x, element.y, gridSize, item.locked, onChange, onInteractionStart, pageHeight, pageWidth, snapToGrid, zoom]);
 
-  const rotateResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => !item.locked,
-        onMoveShouldSetPanResponder: () => !item.locked,
-        onPanResponderGrant: () => { onInteractionStart(); begin(); },
-        onPanResponderMove: (_, gesture) => {
-          const delta = (gesture.dx + gesture.dy) / 2;
-          let rotation = Math.round(start.current.rotation + delta);
-          if (Math.abs(rotation % 15) <= 2) rotation = Math.round(rotation / 15) * 15;
-          onChange({ rotation });
-        },
-        onPanResponderRelease: () => onChange({}, true),
-      }),
-    [item.locked, onChange],
-  );
+  const rotateResponder = useMemo(() => {
+    const startRotation = element.rotation;
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => !item.locked,
+      onMoveShouldSetPanResponder: () => !item.locked,
+      onPanResponderGrant: () => {
+        onInteractionStart();
+      },
+      onPanResponderMove: (_, gesture) => {
+        const delta = (gesture.dx + gesture.dy) / 2;
+        let rotation = Math.round(startRotation + delta);
+        if (Math.abs(rotation % 15) <= 2) rotation = Math.round(rotation / 15) * 15;
+        onChange({ rotation });
+      },
+      onPanResponderRelease: () => onChange({}, true),
+    });
+  }, [element.rotation, item.locked, onChange, onInteractionStart]);
 
-  const cropStart = useRef({ x: Number(item.cropX ?? 0), y: Number(item.cropY ?? 0), scale: Number(item.cropScale ?? 1) });
-  const cropResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => Boolean(item.cropMode && element.type === "image"),
-    onMoveShouldSetPanResponder: () => Boolean(item.cropMode && element.type === "image"),
-    onPanResponderGrant: () => { cropStart.current = { x: Number(item.cropX ?? 0), y: Number(item.cropY ?? 0), scale: Number(item.cropScale ?? 1) }; onInteractionStart(); },
-    onPanResponderMove: (_, gesture) => onChange({ cropX: cropStart.current.x + gesture.dx / zoom, cropY: cropStart.current.y + gesture.dy / zoom } as any),
-    onPanResponderRelease: () => onChange({}, true),
-  }), [element.type, item.cropMode, item.cropX, item.cropY, item.cropScale, onChange, onInteractionStart, zoom]);
-  const cropZoomResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => Boolean(item.cropMode && element.type === "image"),
-    onMoveShouldSetPanResponder: () => Boolean(item.cropMode && element.type === "image"),
-    onPanResponderGrant: () => { cropStart.current = { x: Number(item.cropX ?? 0), y: Number(item.cropY ?? 0), scale: Number(item.cropScale ?? 1) }; onInteractionStart(); },
-    onPanResponderMove: (_, gesture) => onChange({ cropScale: clamp(cropStart.current.scale + (gesture.dx + gesture.dy) / 240, 0.1, 5) } as any),
-    onPanResponderRelease: () => onChange({}, true),
-  }), [element.type, item.cropMode, item.cropScale, onChange, onInteractionStart]);
+  const cropResponder = useMemo(() => {
+    const cropStart = { x: Number(item.cropX ?? 0), y: Number(item.cropY ?? 0) };
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => Boolean(item.cropMode && element.type === "image"),
+      onMoveShouldSetPanResponder: () => Boolean(item.cropMode && element.type === "image"),
+      onPanResponderGrant: () => {
+        onInteractionStart();
+      },
+      onPanResponderMove: (_, gesture) => onChange({ cropX: cropStart.x + gesture.dx / zoom, cropY: cropStart.y + gesture.dy / zoom } as any),
+      onPanResponderRelease: () => onChange({}, true),
+    });
+  }, [element.type, item.cropMode, item.cropX, item.cropY, onChange, onInteractionStart, zoom]);
+
+  const cropZoomResponder = useMemo(() => {
+    const cropScale = Number(item.cropScale ?? 1);
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => Boolean(item.cropMode && element.type === "image"),
+      onMoveShouldSetPanResponder: () => Boolean(item.cropMode && element.type === "image"),
+      onPanResponderGrant: () => {
+        onInteractionStart();
+      },
+      onPanResponderMove: (_, gesture) => onChange({ cropScale: clamp(cropScale + (gesture.dx + gesture.dy) / 240, 0.1, 5) } as any),
+      onPanResponderRelease: () => onChange({}, true),
+    });
+  }, [element.type, item.cropMode, item.cropScale, onChange, onInteractionStart]);
 
   if (item.hidden) return null;
 
   const safeFontFamily = typeof item.fontFamily === "string" && item.fontFamily.trim()
     ? item.fontFamily.trim()
     : undefined;
+  const textDirection = detectTextDirection(item.text ?? "");
+  const resolvedFontFamily = Platform.OS === "web" ? fontCssStack(safeFontFamily ?? "Arial", item.text ?? "") : safeFontFamily;
+  const resolvedTextAlign = textDirection === "rtl" && (!item.textAlign || item.textAlign === "left") ? "right" : (item.textAlign ?? "left");
   const safeTextPathMode = item.textPathMode === "arc-up" || item.textPathMode === "arc-down" || item.textPathMode === "wave"
     ? item.textPathMode
     : "none";
@@ -655,13 +670,15 @@ function CanvasElement({
   const textStyle = {
     flex: 1,
     color: item.textColor ?? item.fill ?? "#172033",
-    fontFamily: safeFontFamily,
+    fontFamily: resolvedFontFamily,
     fontSize: item.fontSize ?? 28,
     fontWeight: item.fontWeight ?? "700",
     fontStyle: item.italic ? "italic" as const : "normal" as const,
     textDecorationLine: item.underline && item.strikethrough ? "underline line-through" as const : item.underline ? "underline" as const : item.strikethrough ? "line-through" as const : "none" as const,
     textDecorationStyle: item.underlineStyle === "wavy" ? "solid" as const : item.underlineStyle ?? "solid" as const,
-    textAlign: item.textAlign ?? "left",
+    textAlign: resolvedTextAlign,
+    writingDirection: textDirection,
+    ...(Platform.OS === "web" ? ({ direction: textDirection, unicodeBidi: "plaintext" } as any) : {}),
     ...(item.opticalAlignment ? ({ hangingPunctuation: "first last" } as any) : {}),
     paddingTop: item.paragraphSpacingBefore ?? 0,
     paddingBottom: item.paragraphSpacingAfter ?? 0,
@@ -927,48 +944,78 @@ const PublisherCanvas = forwardRef<View, Props>(
       window.addEventListener("keydown", down); window.addEventListener("keyup", up);
       return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
     }, [altDisablesSnap]);
-    const drawStart = useRef({x:0,y:0});
-    const drawPoints = useRef<Point[]>([]);
-    const penNodes = useRef<VectorNode[]>([]);
-    const lastPenTap = useRef(0);
     const [penPreview, setPenPreview] = useState<VectorNode[]>([]);
     const [selectionBox,setSelectionBox] = useState<{x:number;y:number;width:number;height:number}|null>(null);
+    const [drawStart,setDrawStart] = useState<Point>({x:0,y:0});
+    const [drawPoints,setDrawPoints] = useState<Point[]>([]);
+    const [penNodes,setPenNodes] = useState<VectorNode[]>([]);
+    const [lastPenTap,setLastPenTap] = useState(0);
     const pageResponder = useMemo(() => PanResponder.create({
-      onStartShouldSetPanResponder: () => drawingTool !== "select" && drawingTool !== "node",
-      onStartShouldSetPanResponderCapture: () => false,
-      onMoveShouldSetPanResponder: (_,g) => drawingTool !== "pen" && Math.abs(g.dx)+Math.abs(g.dy) > 4,
-      onMoveShouldSetPanResponderCapture: (_,g) => drawingTool === "select" && Math.abs(g.dx)+Math.abs(g.dy) > 6,
-      onPanResponderGrant: (e) => {
-        const {locationX:x,locationY:y}=e.nativeEvent; drawStart.current={x,y}; drawPoints.current=[{x,y}];
-        if (drawingTool === "select") setSelectionBox({x,y,width:1,height:1});
-      },
-      onPanResponderMove: (e) => {
-        const {locationX:x,locationY:y}=e.nativeEvent;
-        if (drawingTool === "select") setSelectionBox({x:Math.min(drawStart.current.x,x),y:Math.min(drawStart.current.y,y),width:Math.abs(x-drawStart.current.x),height:Math.abs(y-drawStart.current.y)});
-        else if (drawingTool !== "pen") { const last=drawPoints.current.at(-1); if(!last || distance(last,{x,y})>=2) drawPoints.current.push({x,y}); }
-      },
-      onPanResponderRelease: (e) => {
-        const {locationX:x,locationY:y}=e.nativeEvent;
-        if(drawingTool==="select") { const box=selectionBox ?? {x,y,width:1,height:1}; setSelectionBox(null); const ids=page.elements.filter(el=>el.x < box.x+box.width && el.x+el.width > box.x && el.y < box.y+box.height && el.y+el.height > box.y).map(el=>el.id); onSelectMany(ids); return; }
-        if(drawingTool==="eraser") { drawPoints.current.push({x,y}); onErasePath(drawPoints.current, 14); drawPoints.current=[]; return; }
-        if(drawingTool==="pen") {
-          const now=Date.now(); const dx=x-drawStart.current.x, dy=y-drawStart.current.y; const dragged=Math.hypot(dx,dy)>4;
-          const node:VectorNode={x,y,kind:dragged?"smooth":"corner"}; if(dragged){node.inX=x-dx;node.inY=y-dy;node.outX=x+dx;node.outY=y+dy;}
-          penNodes.current=[...penNodes.current,node]; setPenPreview(penNodes.current);
-          if(now-lastPenTap.current<360 && penNodes.current.length>=2){
-            const norm=normalizedPath(penNodes.current); const nodes=penNodes.current.map(n=>({...n,x:n.x-norm.x,y:n.y-norm.y,inX:n.inX===undefined?undefined:n.inX-norm.x,inY:n.inY===undefined?undefined:n.inY-norm.y,outX:n.outX===undefined?undefined:n.outX-norm.x,outY:n.outY===undefined?undefined:n.outY-norm.y}));
-            onAddDrawnElement(({id:`pen-${Date.now()}`,name:"Pen Path",type:"line",x:norm.x,y:norm.y,width:norm.width,height:norm.height,rotation:0,zIndex:Math.max(0,...page.elements.map(e=>e.zIndex))+1,opacity:1,fillColor:"#172033",borderColor:"#172033",borderWidth:3,shapeKind:"bezier-path",vectorNodes:nodes,vectorPoints:nodes} as any)); penNodes.current=[];setPenPreview([]);
+        onStartShouldSetPanResponder: () => drawingTool !== "select" && drawingTool !== "node",
+        onStartShouldSetPanResponderCapture: () => false,
+        onMoveShouldSetPanResponder: (_,g) => drawingTool !== "pen" && Math.abs(g.dx)+Math.abs(g.dy) > 4,
+        onMoveShouldSetPanResponderCapture: (_,g) => drawingTool === "select" && Math.abs(g.dx)+Math.abs(g.dy) > 6,
+        onPanResponderGrant: (e) => {
+          const {locationX:x,locationY:y}=e.nativeEvent;
+          setDrawStart({x,y});
+          setDrawPoints([{x,y}]);
+          if (drawingTool === "select") {
+            setSelectionBox({x,y,width:1,height:1});
           }
-          lastPenTap.current=now; return;
-        }
-        const points=drawPoints.current.length>1?drawPoints.current:[drawStart.current,{x,y}]; const norm=normalizedPath(points);
-        const paint=normalizePaintingSettings(paintingSettings);
-        const predicted=predictPaintEndpoint(norm.points,paint.strokePrediction);
-        const smoothed=smoothPaintPoints(predicted.map((point,index)=>({...point,pressure:paint.pressureSize?(drawingTool==="calligraphy"?0.5+0.5*Math.abs(Math.sin(index/3)):undefined):1})),paint.smoothing);
-        const local=applyBrushDynamics(smoothed,paint);
-        onAddDrawnElement(({id:`paint-${Date.now()}`,name:`${paint.presetId} stroke`,type:"line",x:norm.x,y:norm.y,width:norm.width,height:norm.height,rotation:0,zIndex:Math.max(0,...page.elements.map(e=>e.zIndex))+1,shapeKind:"freehand",points:local,vectorNodes:local,vectorPoints:local,brushKind:drawingTool,paintCreatedAt:Date.now(),phase18Version:"18.1",...paintingElementPatch(paint)} as any)); drawPoints.current=[];
-      },
-    }), [drawingTool,paintingSettings,onAddDrawnElement,onErasePath,onSelectMany,page.elements,selectionBox]);
+        },
+        onPanResponderMove: (e) => {
+          const {locationX:x,locationY:y}=e.nativeEvent;
+          if (drawingTool === "select") {
+            setSelectionBox({x:Math.min(drawStart.x,x),y:Math.min(drawStart.y,y),width:Math.abs(x-drawStart.x),height:Math.abs(y-drawStart.y)});
+          } else if (drawingTool !== "pen") {
+            setDrawPoints(current=>{const last=current.at(-1);return !last||distance(last,{x,y})>=2?[...current,{x,y}]:current;});
+          }
+        },
+        onPanResponderRelease: (e) => {
+          const {locationX:x,locationY:y}=e.nativeEvent;
+          const eventTime = Math.trunc(Number(e.nativeEvent.timestamp ?? 0));
+          if(drawingTool==="select") {
+            const box=selectionBox ?? {x,y,width:1,height:1};
+            setSelectionBox(null);
+            const ids=page.elements.filter(el=>el.x < box.x+box.width && el.x+el.width > box.x && el.y < box.y+box.height && el.y+el.height > box.y).map(el=>el.id);
+            onSelectMany(ids);
+            return;
+          }
+          if(drawingTool==="eraser") {
+            const points=[...drawPoints,{x,y}];
+            onErasePath(points, 14);
+            setDrawPoints([]);
+            return;
+          }
+          if(drawingTool==="pen") {
+            const dx=x-drawStart.x, dy=y-drawStart.y;
+            const dragged=Math.hypot(dx,dy)>4;
+            const node:VectorNode={x,y,kind:dragged?"smooth":"corner"};
+            if(dragged){node.inX=x-dx;node.inY=y-dy;node.outX=x+dx;node.outY=y+dy;}
+            const nextPenNodes=[...penNodes,node];
+            setPenNodes(nextPenNodes);
+            setPenPreview(nextPenNodes);
+            if(eventTime-lastPenTap<360 && nextPenNodes.length>=2){
+              const norm=normalizedPath(nextPenNodes);
+              const nodes=nextPenNodes.map(n=>({...n,x:n.x-norm.x,y:n.y-norm.y,inX:n.inX===undefined?undefined:n.inX-norm.x,inY:n.inY===undefined?undefined:n.inY-norm.y,outX:n.outX===undefined?undefined:n.outX-norm.x,outY:n.outY===undefined?undefined:n.outY-norm.y}));
+              onAddDrawnElement(({id:`pen-${page.id}-${eventTime}`,name:"Pen Path",type:"line",x:norm.x,y:norm.y,width:norm.width,height:norm.height,rotation:0,zIndex:Math.max(0,...page.elements.map(element=>element.zIndex))+1,opacity:1,fillColor:"#172033",borderColor:"#172033",borderWidth:3,shapeKind:"bezier-path",vectorNodes:nodes,vectorPoints:nodes} as any));
+              setPenNodes([]);
+              setPenPreview([]);
+            }
+            setLastPenTap(eventTime);
+            return;
+          }
+          const points=drawPoints.length>1?drawPoints:[drawStart,{x,y}];
+          const norm=normalizedPath(points);
+          if(norm.width<1&&norm.height<1)return;
+          const paint=normalizePaintingSettings(paintingSettings,drawingTool);
+          const predicted=predictStrokePoints(points,paint.prediction);
+          const smoothed=smoothPaintPoints(predicted.map((point,index)=>({...point,pressure:paint.pressureSize?(drawingTool==="calligraphy"?0.5+0.5*Math.abs(Math.sin(index/3)):undefined):1})),paint.smoothing);
+          const local=applyBrushDynamics(smoothed,paint);
+          onAddDrawnElement(({id:`paint-${page.id}-${eventTime}`,name:`${paint.presetId} stroke`,type:"line",x:norm.x,y:norm.y,width:norm.width,height:norm.height,rotation:0,zIndex:Math.max(0,...page.elements.map(element=>element.zIndex))+1,shapeKind:"freehand",points:local,vectorNodes:local,vectorPoints:local,brushKind:drawingTool,paintCreatedAt:eventTime,phase18Version:"18.1",...paintingElementPatch(paint)} as any));
+          setDrawPoints([]);
+        },
+      }), [drawPoints,drawStart,drawingTool,lastPenTap,onAddDrawnElement,onErasePath,onSelectMany,page.elements,page.id,paintingSettings,penNodes,selectionBox]);
     const extendedPage = page as PublisherPage & Record<string, any>;
     const margin = Number(extendedPage.margin ?? 36);
     const bleed = Number(extendedPage.bleed ?? 12);

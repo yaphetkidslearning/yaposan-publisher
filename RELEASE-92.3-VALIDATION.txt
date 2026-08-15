@@ -1,0 +1,24 @@
+Yaposan 92.3 - Full Runtime and Production Certification
+Validation date: 2026-08-14
+
+PASS
+- npm ci --ignore-scripts --dry-run (committed lockfile resolves; 1007 packages)
+- npm run test:phase91.15 (5/5)
+- npm run check:phase91.15
+- npm run test:phase92.1 (8/8)
+- npm run check:phase92.1
+- npm run test:phase92.2 (4/4)
+- npm run check:phase92.2
+- npm run test:phase92.3 (5/5)
+- npm run check:phase92.3
+- node syntax checks for Phase 92.3 verifier/tests
+
+92.3 FIXES
+- Active release workflows use npm ci --ignore-scripts.
+- Current architecture/install/testing guidance uses deterministic npm ci where the committed lockfile is authoritative.
+- Server storage configuration advertises implemented drivers only: local and r2.
+- Unsupported STORAGE_DRIVER values fail immediately with a clear error.
+- Production certification now has separate source/CI and live-production gates.
+
+ENVIRONMENT NOTE
+A complete dependency installation exceeded the packaging runner's execution window, so the full TypeScript/lint/web-build chain was not rerun in this packaging session. The clean-install dry run succeeds and the 92.3 package exposes `npm run verify:phase92.3` / `npm run certify:production` for a normal Node 22 CI runner. Live external services require `npm run certify:production:live` plus real production endpoints and environment credentials.

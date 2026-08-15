@@ -1,15 +1,15 @@
 import { Stack } from "expo-router";
 import Head from "expo-router/head";
-import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { Platform } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import { AuthProvider } from "../context/AuthContext";
 import { UsageProvider } from "../context/UsageContext";
 
 const SITE_URL = "https://yaposan.com";
-const SITE_TITLE = "Yaposan — Creative Design & Publishing Suite";
+const SITE_TITLE = "Yaposan — AI Creative Design & Productivity Suite";
 const SITE_DESCRIPTION =
-  "Create publications, edit product photos, collaborate, publish professional content, and create with AI in one powerful workspace.";
+  "Create designs, edit photos, build websites, generate content with AI, and manage creative projects in one powerful Yaposan workspace.";
 
 export default function RootLayout() {
   useEffect(() => {
@@ -70,34 +70,70 @@ export default function RootLayout() {
         <meta name="application-name" content="Yaposan" />
         <meta name="theme-color" content="#071725" />
         <link rel="canonical" href={`${SITE_URL}/`} />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
+        <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/site.webmanifest" />
 
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Yaposan" />
         <meta property="og:title" content={SITE_TITLE} />
         <meta property="og:description" content={SITE_DESCRIPTION} />
         <meta property="og:url" content={`${SITE_URL}/`} />
+        <meta property="og:image" content={`${SITE_URL}/yaposan-social-card.png`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="Yaposan — AI Creative Design & Productivity Suite" />
 
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={SITE_TITLE} />
         <meta name="twitter:description" content={SITE_DESCRIPTION} />
+        <meta name="twitter:image" content={`${SITE_URL}/yaposan-social-card.png`} />
 
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "SoftwareApplication",
-              name: "Yaposan",
-              applicationCategory: "DesignApplication",
-              operatingSystem: "Web, Windows, macOS, iOS, Android",
-              url: SITE_URL,
-              description: SITE_DESCRIPTION,
-              softwareVersion: "1.0.0",
-              offers: {
-                "@type": "Offer",
-                price: "0",
-                priceCurrency: "USD",
-              },
+              "@graph": [
+                {
+                  "@type": "Organization",
+                  "@id": `${SITE_URL}/#organization`,
+                  name: "Yaposan",
+                  url: `${SITE_URL}/`,
+                  logo: {
+                    "@type": "ImageObject",
+                    url: `${SITE_URL}/yaposan-logo-512.png`,
+                    width: 512,
+                    height: 512,
+                  },
+                },
+                {
+                  "@type": "WebSite",
+                  "@id": `${SITE_URL}/#website`,
+                  url: `${SITE_URL}/`,
+                  name: "Yaposan",
+                  description: SITE_DESCRIPTION,
+                  publisher: { "@id": `${SITE_URL}/#organization` },
+                },
+                {
+                  "@type": "SoftwareApplication",
+                  "@id": `${SITE_URL}/#software`,
+                  name: "Yaposan",
+                  applicationCategory: "DesignApplication",
+                  operatingSystem: "Web, Windows, macOS, iOS, Android",
+                  url: `${SITE_URL}/`,
+                  description: SITE_DESCRIPTION,
+                  softwareVersion: "1.0.0",
+                  publisher: { "@id": `${SITE_URL}/#organization` },
+                  offers: {
+                    "@type": "Offer",
+                    price: "0",
+                    priceCurrency: "USD",
+                  },
+                },
+              ],
             }),
           }}
         />

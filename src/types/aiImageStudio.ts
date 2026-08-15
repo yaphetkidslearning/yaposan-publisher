@@ -2,6 +2,7 @@ export type AiImageTool =
   | "remove-background"
   | "white-background"
   | "transparent-png"
+  | "custom-background"
   | "magic-eraser"
   | "expand"
   | "relight"
@@ -16,6 +17,8 @@ export type AiImageToolSettings = {
   aspectRatio: "original" | "1:1" | "4:5" | "16:9";
   preserveShadow: boolean;
   refineEdges: boolean;
+  relightDirection: "front" | "left" | "right" | "top" | "soft";
+  scenePreset: "studio" | "lifestyle" | "outdoor" | "luxury" | "minimal";
 };
 
 export type AiImageJobStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
@@ -33,6 +36,7 @@ export type AiImageJob = {
   createdAt: number;
   completedAt?: number;
   error?: string;
+  maskUri?: string;
 };
 
 export type AiImageProviderRequest = {

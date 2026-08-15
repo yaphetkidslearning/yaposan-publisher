@@ -1,0 +1,37 @@
+Yaposan 91.20 validation
+========================
+
+Completed in build workspace
+----------------------------
+- Phase 91.11 through 91.20 focused regression suite: 61/61 PASS
+- Phase 91.18 static guidance gate: PASS
+- Phase 91.19 open-source/community static gate: PASS
+- Phase 91.20 static completion gate: PASS
+- FAQ/Q&A entries: 59
+- TypeScript/TSX syntax transpilation on all 91.20 modified runtime files: PASS
+- Support ticket route count: 1
+- PostgreSQL + in-memory support-ticket persistence definitions: present
+
+Environment limitation
+----------------------
+A complete `npm run typecheck` could not be completed in this workspace because the dependency install was incomplete: `expo/tsconfig.base` and `@types/node` were unavailable. The release package intentionally does not include node_modules.
+
+Required local final gate
+-------------------------
+  npm ci
+  npm run verify:phase91.20
+
+Manual browser acceptance
+-------------------------
+1. Help -> Restart guided tour -> Home opens first-time guide.
+2. Settings -> Help & Learning -> Restart guided tour.
+3. FAQ search + category + /faq?question=<id> deep link.
+4. FAQ/guide "Was this helpful?" controls work with keyboard/touch.
+5. Troubleshooting -> Refresh status -> Configure/Open actions.
+6. Any shared-shell studio -> Report -> Contact receives source/page/action.
+7. Contact validates name/email/subject/description.
+8. Attach <=10 MB PNG/JPEG/WebP/GIF/PDF/TXT/JSON/ZIP; unsupported or oversized file is rejected.
+9. Submit support request -> backend returns a real Open ticket ID.
+10. If an attachment is included, verify attachmentStored=true from the API response / object storage.
+11. Photo Studio failed AI job -> Troubleshoot / Report this error links.
+12. Test Help/FAQ/Contact/Troubleshoot on phone-width and desktop-width browser layouts.

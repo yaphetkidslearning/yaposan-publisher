@@ -1,24 +1,17 @@
+import { FONT_FAMILIES } from "../constants/publisher";
+
 export interface TextFontOption {
   label: string;
   value: string;
 }
 
-export const TEXT_FONTS: TextFontOption[] = [
-  { label: 'Arial', value: 'Arial' },
-  { label: 'System', value: 'System' },
-  { label: 'Roboto', value: 'Roboto' },
-  { label: 'Inter', value: 'Inter' },
-  { label: 'Lato', value: 'Lato' },
-  { label: 'Montserrat', value: 'Montserrat' },
-  { label: 'Poppins', value: 'Poppins' },
-  { label: 'Open Sans', value: 'Open Sans' },
-  { label: 'Nunito', value: 'Nunito' },
-  { label: 'Playfair Display', value: 'Playfair Display' },
-  { label: 'Merriweather', value: 'Merriweather' },
-  { label: 'Oswald', value: 'Oswald' },
-  { label: 'Anton', value: 'Anton' },
-  { label: 'Pacifico', value: 'Pacifico' },
-];
+// Keep every text surface synchronized with Publisher's single font catalog.
+// This prevents small legacy pickers from exposing only a subset of the fonts
+// available in the Publisher toolbar and Font Manager.
+export const TEXT_FONTS: TextFontOption[] = FONT_FAMILIES.map((family) => ({
+  label: family,
+  value: family,
+}));
 
 export const TEXT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 64, 72, 96, 120];
 

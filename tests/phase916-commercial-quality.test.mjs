@@ -1,0 +1,10 @@
+import test from "node:test";import assert from "node:assert/strict";import fs from "node:fs";
+const r=p=>fs.readFileSync(p,"utf8");
+test("91.6 has dedicated matting and finished-result scoring",()=>{const a=r("services/background-removal/app.py");for(const x of ["specialized_matte","finished_candidate_rank","final_output_score","preserve_product_guard"])assert.ok(a.includes(x))});
+test("91.6 exposes warm-pool readiness",()=>assert.ok(r("services/background-removal/app.py").includes('/readiness')));
+test("91.6 protects merchandise pixels",()=>assert.ok(r("services/background-removal/app.py").includes("never-generate-or-replace-product-pixels")));
+test("91.6 requires 500-image certification",()=>assert.equal(JSON.parse(r("release/phase91.6/quality-certification-policy.json")).minimumImages,500));
+test("91.6 permits zero critical product loss",()=>assert.equal(JSON.parse(r("release/phase91.6/quality-certification-policy.json")).criticalProductLossAllowed,0));
+test("91.6 keeps unexpected paid API spend at zero",()=>assert.equal(JSON.parse(r("release/phase91.6/quality-certification-policy.json")).maximumUnexpectedPaidApiSpendUsd,0));
+test("91.6 requires visual regression evidence",()=>assert.equal(JSON.parse(r("release/phase91.6/visual-regression-manifest.json")).status,"REFERENCE_IMAGES_REQUIRED"));
+test("91.6 defines 50-user load target",()=>assert.equal(JSON.parse(r("release/phase91.6/load-certification.json")).targetConcurrentUsers,50));

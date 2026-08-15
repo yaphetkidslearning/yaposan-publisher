@@ -1,0 +1,22 @@
+Yaposan Phase 92.4 Validation
+================================
+
+Source base:
+- User-provided Yaposan 92.3.1 full project archive.
+
+Applied hardening:
+- Phase 92.3.1 baseline lint fixes.
+- Follow-up current error-file fixes.
+- Phase 92.4 release metadata and verification gate.
+
+Validated in this environment:
+- Phase 92.3 tests: PASS (5/5)
+- Phase 92.3.1 tests: PASS (3/3)
+- Phase 92.4 tests: PASS (3/3)
+
+Required final production gate on the real repository:
+  npm run verify:phase92.4
+
+That command must exit 0 before production certification or push.
+This archive's bundled node_modules is incomplete for ESLint/typecheck execution,
+so lint/typecheck/web-build are intentionally not claimed as passed here.

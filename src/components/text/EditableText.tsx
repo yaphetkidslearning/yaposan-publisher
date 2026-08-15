@@ -30,52 +30,45 @@ export function EditableText({
   onCaptureHistory,
 }: EditableTextProps) {
   const [editing, setEditing] = useState(false);
-  const startPosition = useRef({ x: item.x, y: item.y });
-  const startSize = useRef({ width: item.width, height: item.height });
   const lastPressAt = useRef(0);
 
-  const dragResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => !item.locked && !editing,
-        onMoveShouldSetPanResponder: (_, gesture) =>
-          !item.locked && !editing && (Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2),
-        onPanResponderGrant: () => {
-          onSelect(item.id);
-          startPosition.current = { x: item.x, y: item.y };
-          onCaptureHistory?.();
-        },
-        onPanResponderMove: (_, gesture) => {
-          onMove(
-            item.id,
-            Math.max(0, startPosition.current.x + gesture.dx),
-            Math.max(0, startPosition.current.y + gesture.dy),
-            false,
-          );
-        },
-      }),
-    [editing, item.id, item.locked, item.x, item.y, onCaptureHistory, onMove, onSelect],
-  );
+  const [startPosition, setStartPosition] = useState({ x: item.x, y: item.y });
+  const dragResponder = useMemo(() => PanResponder.create({
+      onStartShouldSetPanResponder: () => !item.locked && !editing,
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        !item.locked && !editing && (Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2),
+      onPanResponderGrant: () => {
+        onSelect(item.id);
+        setStartPosition({ x: item.x, y: item.y });
+        onCaptureHistory?.();
+      },
+      onPanResponderMove: (_, gesture) => {
+        onMove(
+          item.id,
+          Math.max(0, startPosition.x + gesture.dx),
+          Math.max(0, startPosition.y + gesture.dy),
+          false,
+        );
+      },
+    }), [editing, item.id, item.locked, item.x, item.y, onCaptureHistory, onMove, onSelect, startPosition]);
 
-  const resizeResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => !item.locked,
-        onPanResponderGrant: () => {
-          startSize.current = { width: item.width, height: item.height };
-          onCaptureHistory?.();
-        },
-        onPanResponderMove: (_, gesture) => {
-          onResize(
-            item.id,
-            startSize.current.width + gesture.dx,
-            startSize.current.height + gesture.dy,
-            false,
-          );
-        },
-      }),
-    [item.height, item.id, item.locked, item.width, onCaptureHistory, onResize],
-  );
+  const resizeResponder = useMemo(() => {
+    let startSize = { width: item.width, height: item.height };
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => !item.locked,
+      onPanResponderGrant: () => {
+        onCaptureHistory?.();
+      },
+      onPanResponderMove: (_, gesture) => {
+        onResize(
+          item.id,
+          startSize.width + gesture.dx,
+          startSize.height + gesture.dy,
+          false,
+        );
+      },
+    });
+  }, [item.height, item.id, item.locked, item.width, onCaptureHistory, onResize]);
 
   if (!item.visible) return null;
 

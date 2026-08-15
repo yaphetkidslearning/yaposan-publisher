@@ -4,14 +4,15 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import type { PublisherProject } from "../../types/publisher";
 import { buildPrintMergeProject, createContactGroup, DEFAULT_MERGE_PRINT_SETTINGS, estimatePrintJob, importContactsFromSource, LABEL_TEMPLATES, validateAddressBook, type MergePrintSettings } from "../../utils/mailMergePrintEngine";
 
+const eventTimestamp = () => Date.now();
 type Props={visible:boolean;project:PublisherProject;onChange:(project:PublisherProject)=>void;onClose:()=>void};
 export default function MailMergePrintModal({visible,project,onChange,onClose}:Props){
  const data=project.mailMergeData; const [tab,setTab]=useState<"layouts"|"recipients"|"print">("layouts"); const [groupName,setGroupName]=useState("Mailing List");
  const settings:MergePrintSettings={...DEFAULT_MERGE_PRINT_SETTINGS,...data?.printSettings}; const source=data?.sources.find((item)=>item.id===data.activeSourceId)??data?.sources[0]; const book=data?.addressBook??{contacts:[],groups:[],validationIssues:[]};
  const template=LABEL_TEMPLATES.find((item)=>item.id===settings.templateId)??LABEL_TEMPLATES[0]; const estimate=useMemo(()=>data?estimatePrintJob(data,settings):undefined,[data,settings]);
- const patch=(updates:Partial<MergePrintSettings>)=>{if(!data)return;onChange({...project,updatedAt:Date.now(),mailMergeData:{...data,printSettings:{...settings,...updates}}});};
- const importRecipients=()=>{if(!data||!source)return;const contacts=importContactsFromSource(source,book.contacts);onChange({...project,updatedAt:Date.now(),mailMergeData:{...data,addressBook:{...book,contacts,validationIssues:validateAddressBook(contacts)}}});};
- const makeGroup=()=>{if(!data||!book.contacts.length)return;const created=createContactGroup(groupName,book.contacts,book.contacts.map((item)=>item.id));onChange({...project,updatedAt:Date.now(),mailMergeData:{...data,addressBook:{contacts:created.contacts,groups:[...book.groups,created.group],validationIssues:validateAddressBook(created.contacts)}}});};
+ const patch=(updates:Partial<MergePrintSettings>)=>{if(!data)return;onChange({...project,updatedAt:eventTimestamp(),mailMergeData:{...data,printSettings:{...settings,...updates}}});};
+ const importRecipients=()=>{if(!data||!source)return;const contacts=importContactsFromSource(source,book.contacts);onChange({...project,updatedAt:eventTimestamp(),mailMergeData:{...data,addressBook:{...book,contacts,validationIssues:validateAddressBook(contacts)}}});};
+ const makeGroup=()=>{if(!data||!book.contacts.length)return;const created=createContactGroup(groupName,book.contacts,book.contacts.map((item)=>item.id));onChange({...project,updatedAt:eventTimestamp(),mailMergeData:{...data,addressBook:{contacts:created.contacts,groups:[...book.groups,created.group],validationIssues:validateAddressBook(created.contacts)}}});};
  const prepare=()=>{try{onChange(buildPrintMergeProject(project,settings));onClose();}catch{}}
  return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={st.back}><View style={st.modal}>
   <View style={st.header}><View><Text style={st.title}>Labels, Cards & Mail Merge Printing</Text><Text style={st.sub}>Avery layouts, recipient groups, imposition and print sequencing</Text></View><Pressable onPress={onClose}><Ionicons name="close" size={24}/></Pressable></View>

@@ -1,3 +1,113 @@
+## 92.15 - Word-style font flyout
+
+- Re-anchored the Home ribbon font family menu beneath the font control instead of centering it on the workspace.
+- Removed the dimmed modal backdrop and made the font chooser denser and more desktop-like.
+- Preserved font search, categories, previews, selection highlighting, and Font Manager access.
+
+# Changelog
+
+## 92.14 - Final Render Purity Cleanup
+
+- Removed the last render-time nondeterminism from the commercial release modal.
+- Replaced lazy `Math.random()` device identity generation with React `useId()` so the component remains deterministic during render.
+- Added explicit Phase 92.13 and 92.14 test/verification scripts and synchronized release metadata.
+- Preserved all Phase 92.13 font-integrity and runtime-hardening behavior.
+
+## 92.13 - Font Integrity & Runtime Hardening
+
+- Fixed same-name runtime fonts being hidden by catalog placeholders; imported and installed records now take precedence.
+- Tightened missing-font replacement so suggested replacements must pass text compatibility checks.
+- Hardened TrueType/OpenType cmap format 4 parsing to honor actual glyph mappings and exclude `.notdef` entries.
+- Hardened cmap format 12 coverage and TrueType Collection offset validation.
+- Made UTF-16BE font-name decoding resilient on JavaScript runtimes without that TextDecoder encoding.
+- Excluded Unicode layout controls, joiners, bidi controls, and variation selectors from visible-glyph coverage requirements.
+- Added Phase 92.13 regression coverage.
+
+## 92.12 - Font Reliability & Prepress Completion
+
+- Added dependency-free OpenType/TrueType inspection for imported TTF/OTF/TTC font files.
+- Persisted real font family, face, weight, Unicode cmap coverage, embedding permission, and variable-axis metadata.
+- Made imported fonts durable project assets instead of temporary picker/cache references.
+- Fixed Missing Fonts so unknown document families remain visible and can be replaced throughout a publication.
+- Added runtime status badges separating catalog-only fonts from installed/embedded fonts.
+- Added exact glyph compatibility for inspected fonts and safer multilingual compatibility fallback behavior.
+- Added PDF font-substitution/restricted-embedding preflight diagnostics.
+- Fixed the Font Manager footer separator styling.
+
+## 92.10 — Font Runtime & International Typography
+
+- Added local installed-font discovery on supported desktop web browsers.
+- Added script-aware multilingual previews, compatibility filtering, RTL detection, and fallback stacks.
+- Added local/custom families to the font workflow and quick dropdown.
+- Improved embedded-font diagnostics and multilingual SVG/web export behavior.
+- Added Phase 92.10 regression coverage and release documentation.
+
+## Phase 92.7.1 — Publisher Font Family Expansion
+
+- Expanded the Publisher font catalog from 9 to 142 font families across sans serif, serif, display, monospace, and handwriting categories.
+- Rebuilt the Home ribbon font dropdown into a Word-style searchable font browser with category filters, live font previews, selected-font highlighting, and result counts.
+- Kept the full Professional Font Manager synchronized with the same 142-family catalog and custom embedded-font workflow.
+- Added a Phase 92.7.1 regression test and release verification command.
+
+## Phase 92.7 — Zero Lint Error Hardening
+
+- Consolidated the final 14 lint-error fixes reported by the 92.6 Windows run.
+- Added a regression test covering those error classes.
+- Production certification command: `npm run verify:phase92.7`.
+
+## 92.5 - Final Lint Hardening
+
+## Phase 92.6 — Complete Lint Hardening
+
+- Consolidated the remaining React Compiler / ESLint blockers into one repository-wide hardening pass.
+- Repaired editor callback purity, effect state synchronization, duplicate style keys, JSX escaping, Photo Studio hydration, Professional File Tools timestamps, and PublisherCanvas captured state.
+- Added `test:phase92.6` and `verify:phase92.6`.
+
+
+- Fixed the remaining reported React effect cascade, render-purity, captured-variable immutability, and duplicate-style-key blockers from the 92.4 lint run.
+- Hardened support, team, enterprise operations, billing, AI access, templates, troubleshooting, editor, product-photo, desktop sync, account hydration, and Publisher canvas interactions.
+- Added the Phase 92.5 regression and production verification gate.
+
+## 92.4 - Lint & Production Hardening
+
+- Consolidated the Phase 92.3.1 lint-hardening fixes into the full project snapshot.
+- Added the Phase 92.4 production verification gate.
+- Added Phase 92.4 regression checks for the repaired lint blockers.
+- Kept production certification gated on typecheck, lint, release tests, and web export.
+
+
+## 92.3.1 - QA & Guides Quick Access
+
+- Added always-visible Publisher **QA / Quality** quick access to the existing Prepress/Preflight manager.
+- Added an always-visible **Guides** toggle wired to the existing layout-guide overlay.
+- Preserved existing grid, snap, ruler, margins, bleed, safe-area, and smart-guide behavior.
+
+
+## Phase 92.1 — Support Lifecycle & Help Hardening
+
+- Added My Support Requests with ticket history, conversation replies, status tracking, and protected attachment download.
+- Added administrator Support Inbox with search/filtering, staff replies, attachments, and Open/In Progress/Waiting for User/Resolved/Closed lifecycle.
+- Added persisted support ticket messages and persisted FAQ/guide helpfulness feedback.
+- Added stricter public support throttling, honeypot abuse protection, and server-side attachment signature validation.
+- Added authenticated direct web attachment upload with guest/native compatibility fallback.
+- Added richer safe support diagnostics and stricter Contact form disabled-state validation.
+- Preserved Phase 92.0 open-source/community ecosystem completion and restored historical 91.18-91.20 release-note verification artifacts.
+# Phase 91.13 - Real Photo Studio image tools
+
+- Replaced Photo Studio's preview-only image provider with the secured Yaposan Photo Runtime.
+- Connected Remove Background/Transparent/White/Custom Color to the self-hosted rembg U2Net/BiRefNet service.
+- Added exact white and arbitrary six-digit HEX background output while preserving the untouched original.
+- Changed Photo Studio AI buttons from selection-only controls to immediate executable actions with progress/error feedback.
+- Connected Magic Eraser, AI Expand, Relight, Upscale, and Product Scene to the dedicated image-media provider contract; unconfigured providers now fail explicitly instead of returning the original image as fake success.
+- Added local Docker Compose wiring for the background-removal service.
+
+# Phase 90.14 — Static SEO Head and Production Web Startup Repair
+
+- Fixed Expo static exports that produced an empty `<title data-rh="true"></title>`.
+- Added a static `+html.tsx` SEO shell and deterministic post-export metadata repair.
+- Preserved the Phase 90.2 Render static-site deployment model and Phase 90.4+ security controls.
+- Strengthened production SEO verification and added Phase 90.14 regression tests.
+
 ## 1.0.0-rc.10
 
 - Added bounded request complexity, rate limiting, file signature verification, and performance certification controls.
@@ -360,3 +470,25 @@
 - Added AES-GCM AAD, explicit credential key versions, provider credential audit events, pinned-DNS/redirect-safe provider networking, request/concurrency/fairness limits, and transient-only retries.
 - Removed the frontend public remove.bg API-key path.
 - Added Dependabot and open-source security CI plus adversarial Phase 90.9 tests and public-release checklist.
+
+## Phase 91.15 — 99–100% production certification
+- Added real Photo Studio edited-image export on web and native runtimes.
+- Hardened media-provider option merging so untrusted provider options cannot override trusted prompt/model fields.
+- Added final 91.15 static/regression gate and local runtime certification report.
+- Added acceptance coverage for difficult foregrounds, provider failures, save/reload, undo/redo, exports, security, and every universal creation route.
+
+## 92.11 - Professional Font Completion
+
+- Unified legacy text font pickers with the Publisher font catalog.
+- Added Document Fonts and Missing views to Font Manager.
+- Added Catalog / Installed / Embedded / Document / Missing badges.
+- Added style metadata and variable-font indicators for common families.
+- Added language aliases for multilingual font search.
+- Added missing-document-font detection and ranked replacement candidates.
+- Added browser runtime text-support checks for local/installed fonts.
+
+- 92.14 certification follow-up: fixed final react-hooks/set-state-in-effect error in AI Provider Settings by moving hydration/connection state updates behind asynchronous completions.
+
+## 92.16 - Release integrity recertification
+- Synchronized package, lockfile, and release phase metadata.
+- Added 92.15 and 92.16 regression gates and made the 92.14 baseline forward-compatible.

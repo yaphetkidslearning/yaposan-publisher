@@ -1,0 +1,33 @@
+{
+  "phase": "90.16",
+  "scope": "accessibility-and-browser-readiness",
+  "certificationStatus": "EXTERNAL_EVIDENCE_REQUIRED",
+  "automatedBaseline": {
+    "htmlLanguage": true,
+    "mainLandmark": true,
+    "visibleKeyboardFocus": true,
+    "reducedMotionPreference": true,
+    "forcedColorsFocus": true,
+    "hydrationSafeProductionShell": true
+  },
+  "manualAccessibilityEvidence": {
+    "keyboardOnly": false,
+    "screenReader": false,
+    "contrast": false,
+    "zoom200Percent": false,
+    "reflow400Percent": false,
+    "touchTargets": false
+  },
+  "browserMatrixEvidence": {
+    "chromeDesktop": false,
+    "edgeDesktop": false,
+    "firefoxDesktop": false,
+    "safariDesktop": false,
+    "iosSafari": false,
+    "androidChrome": false,
+    "touch": false,
+    "highDpi": false,
+    "resizeAndOrientation": false
+  },
+  "note": "Automated code safeguards do not replace manual WCAG 2.2 AA or cross-browser certification evidence."
+}

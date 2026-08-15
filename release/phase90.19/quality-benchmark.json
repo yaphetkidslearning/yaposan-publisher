@@ -1,0 +1,18 @@
+{
+  "phase": "90.19",
+  "status": "NOT_YET_BENCHMARKED",
+  "minimumSampleImages": 100,
+  "recommendedSampleImages": 200,
+  "targetWorkload": ["shoes", "clothing", "electronics", "housewares", "furniture", "toys", "glass", "reflective-items", "fine-edges"],
+  "blindComparison": true,
+  "referenceSystems": ["current organization workflow", "PhotoRoom or Removal.AI if legally/contractually available for benchmarking"],
+  "acceptance": {
+    "staffAcceptableRateMinimum": 0.95,
+    "criticalCutoutFailureRateMaximum": 0.02,
+    "manualRepairRateMaximum": 0.05,
+    "paidFallbackRequiredRateMaximum": 0.03
+  },
+  "measures": ["foreground edge quality", "holes/internal transparency", "white-on-white", "glass/transparent objects", "hair/fur/fine detail", "shadow handling", "processing time", "staff preference"],
+  "certifiedEquivalentToPhotoRoom": false,
+  "certifiedEquivalentToRemovalAI": false
+}

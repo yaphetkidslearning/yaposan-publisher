@@ -18,8 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Verify public production services
@@ -30,7 +30,7 @@ jobs:
           METRICS_TOKEN: ${{ secrets.METRICS_TOKEN }}
           POST_CUTOVER_REPORT: deployment-step5-live-report.json
         run: node scripts/post-cutover-verify.mjs
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: production-verification-report

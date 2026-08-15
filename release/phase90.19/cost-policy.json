@@ -1,0 +1,8 @@
+{
+  "phase": "90.19",
+  "defaultEngine": "yaposan-self-hosted",
+  "paidPerImageProviderEnabled": false,
+  "paidProviderMonthlyBudgetUsd": 0,
+  "perImagePaidApiCostUsd": 0,
+  "note": "Self-hosted compute, bandwidth, storage and operations can still have infrastructure cost. Paid fallback must require a future explicit administrator opt-in and hard budget cap."
+}

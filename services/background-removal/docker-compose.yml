@@ -1,0 +1,46 @@
+services:
+  background-removal:
+    build: .
+    ports:
+      - "8090:8090"
+    environment:
+      YAPOSAN_BG_STANDARD_MODEL: u2net
+      YAPOSAN_BG_DETAIL_MODEL: birefnet-general
+      YAPOSAN_BG_MAX_BYTES: "50000000"
+      YAPOSAN_BG_MAX_PIXELS: "50000000"
+      YAPOSAN_BG_REVIEW_SCORE: "0.93"
+      YAPOSAN_BG_RETRY_SCORE: "0.90"
+      YAPOSAN_BG_AGREEMENT_IOU: "0.91"
+      YAPOSAN_BG_MAX_CONCURRENCY: "4"
+      YAPOSAN_BG_RETRY_ATTEMPTS: "3"
+      YAPOSAN_BG_CACHE_SIZE: "256"
+      YAPOSAN_BG_CATALOG_OCCUPANCY: "0.78"
+    volumes:
+      - yaposan-bg-models:/root/.u2net
+
+  background-removal-gpu:
+    profiles: ["gpu"]
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    ports:
+      - "8091:8090"
+    environment:
+      YAPOSAN_BG_STANDARD_MODEL: u2net
+      YAPOSAN_BG_DETAIL_MODEL: birefnet-general
+      YAPOSAN_BG_MAX_BYTES: "50000000"
+      YAPOSAN_BG_MAX_PIXELS: "50000000"
+      YAPOSAN_BG_MAX_CONCURRENCY: "8"
+      YAPOSAN_BG_RETRY_ATTEMPTS: "3"
+      YAPOSAN_BG_CACHE_SIZE: "512"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - yaposan-bg-models:/root/.u2net
+volumes:
+  yaposan-bg-models:

@@ -31,6 +31,40 @@ The public repository is intended for people who want to:
 - strengthen testing and security
 - contribute platform integrations
 
+## Community quick start
+
+If you want to help build Yaposan, start here:
+
+```bash
+git clone https://github.com/yaphetkidslearning/yaposan-publisher.git
+cd yaposan-publisher
+npm ci
+npm run dev:web
+```
+
+Then, before opening a pull request:
+
+```bash
+npm run typecheck
+npm run test:community
+```
+
+Contributor map and priorities:
+
+- [Architecture guide](docs/ARCHITECTURE.md)
+- [Governance](GOVERNANCE.md)
+- [Community support](docs/COMMUNITY-SUPPORT.md)
+- [Open-source boundary](docs/OPEN-SOURCE-BOUNDARY.md)
+- [Public launch checklist](docs/GITHUB-LAUNCH-CHECKLIST.md)
+- [Public release certification](docs/PUBLIC-RELEASE-CERTIFICATION.md)
+- [Maintainer playbook](docs/MAINTAINER-PLAYBOOK.md)
+- [Third-party notices](THIRD_PARTY_NOTICES.md)
+- [Community roadmap](docs/ROADMAP.md)
+- [Good first issue seeds](docs/GOOD-FIRST-ISSUES.md)
+- [Contributing guide](CONTRIBUTING.md)
+
+![Yaposan preview](public/yaposan-social-card.png)
+
 ## Quick start
 
 Requirements:
@@ -41,9 +75,9 @@ Requirements:
 ```bash
 git clone https://github.com/yaphetkidslearning/yaposan-publisher.git
 cd yaposan-publisher
-npm install
+npm ci
 npm run typecheck
-npm start
+npm run dev:web
 ```
 
 For web development, Expo prints the local web URL after startup.

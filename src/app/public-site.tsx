@@ -16,6 +16,8 @@ export default function PublicSite() {
         <View style={styles.nav}>
           <Link href="/templates" style={styles.link}>Templates</Link>
           <Link href="/help" style={styles.link}>Help</Link>
+          <Link href="/faq" style={styles.link}>FAQ</Link>
+          <Link href="/contact" style={styles.link}>Contact</Link>
           <Link href="/sign-in" style={styles.signIn}>Sign in</Link>
           <Link href="/register" style={styles.cta}>Get started</Link>
         </View>

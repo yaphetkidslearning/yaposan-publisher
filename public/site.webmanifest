@@ -1,0 +1,21 @@
+{
+  "name": "Yaposan \u2014 AI Creative Design & Productivity Suite",
+  "short_name": "Yaposan",
+  "description": "Create designs, edit photos, build websites, generate content with AI, and manage creative projects in one Yaposan workspace.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#071725",
+  "theme_color": "#071725",
+  "icons": [
+    {
+      "src": "/yaposan-logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/yaposan-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

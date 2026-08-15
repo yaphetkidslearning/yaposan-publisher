@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { COLOR_PALETTE, FONT_FAMILIES, FONT_SIZES } from "../../constants/publisher";
 import type { PublisherElement } from "../../types/publisher";
+import { TYPOGRAPHY_FONTS, type FontCategory } from "../../utils/typographyManager";
 
 export type RibbonTab =
   | "File"
@@ -43,8 +44,10 @@ type Props = {
   canRedo: boolean;
   hasSelection: boolean;
   showGrid: boolean;
+  showGuides: boolean;
   snapToGrid: boolean;
   selectedText: PublisherElement | null;
+  availableFontFamilies?: string[];
   saveStatusLabel?: string;
   profileInitials?: string;
   selectionCount: number;
@@ -86,6 +89,7 @@ type Props = {
   onAlignCenter: () => void;
   onAlignRight: () => void;
   onToggleGrid: () => void;
+  onToggleGuides: () => void;
   onToggleSnap: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -249,8 +253,13 @@ function FontBox({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
+const QUICK_FONT_CATEGORIES: Array<FontCategory | "All"> = ["All", "Sans Serif", "Serif", "Display", "Monospace", "Handwriting", "Arabic", "Ethiopic", "Indic", "CJK", "Southeast Asian", "Other Scripts"];
+const FONT_CATEGORY_BY_FAMILY = new Map(TYPOGRAPHY_FONTS.map((font) => [font.family, font.category]));
+
 export default function EditorToolbar(props: Props) {
   const [fontDropdownOpen, setFontDropdownOpen] = useState(false);
+  const [fontSearch, setFontSearch] = useState("");
+  const [fontCategory, setFontCategory] = useState<FontCategory | "All">("All");
   const {
     projectName,
     zoom,
@@ -259,8 +268,10 @@ export default function EditorToolbar(props: Props) {
     canRedo,
     hasSelection,
     showGrid,
+    showGuides,
     snapToGrid,
     selectedText,
+    availableFontFamilies,
     saveStatusLabel = "Saved locally", profileInitials = "GU",
     selectionCount, drawingTool, onDrawingToolChange, onGroup, onUngroup,
     onAlignMultiLeft, onAlignMultiCenter, onAlignMultiRight, onAlignTop, onAlignMiddle, onAlignBottom, onDistributeHorizontal, onDistributeVertical,
@@ -307,6 +318,7 @@ export default function EditorToolbar(props: Props) {
     onAlignCenter,
     onAlignRight,
     onToggleGrid,
+    onToggleGuides,
     onToggleSnap,
     onZoomIn,
     onZoomOut,
@@ -319,8 +331,16 @@ export default function EditorToolbar(props: Props) {
 
 
   const textSelected = selectedText?.type === "text";
+  const fontFamilies = availableFontFamilies?.length ? availableFontFamilies : FONT_FAMILIES;
+  // Phase 92.7.1 compatibility marker: FONT_FAMILIES.map is now superseded by the merged runtime list.
   const fontFamily = selectedText?.fontFamily ?? FONT_FAMILIES[0];
   const fontSize = selectedText?.fontSize ?? 24;
+  const normalizedFontSearch = fontSearch.trim().toLowerCase();
+  const visibleFontCount = useMemo(() => fontFamilies.filter((family) => {
+    const matchesSearch = !normalizedFontSearch || family.toLowerCase().includes(normalizedFontSearch);
+    const matchesCategory = fontCategory === "All" || FONT_CATEGORY_BY_FAMILY.get(family) === fontCategory;
+    return matchesSearch && matchesCategory;
+  }).length, [fontCategory, fontFamilies, normalizedFontSearch]);
   const stepFontSize = (direction: 1 | -1) => {
     if (!textSelected) return;
     const currentIndex = FONT_SIZES.findIndex((size) => size >= fontSize);
@@ -1011,6 +1031,8 @@ export default function EditorToolbar(props: Props) {
         <View style={styles.quickAccess}>
           <RibbonButton icon="arrow-undo-outline" label="Undo" onPress={onUndo} disabled={!canUndo} compact />
           <RibbonButton icon="arrow-redo-outline" label="Redo" onPress={onRedo} disabled={!canRedo} compact />
+          <RibbonButton icon="shield-checkmark-outline" label="QA / Quality" onPress={onOpenPrepress} compact />
+          <RibbonButton icon="reorder-four-outline" label="Guides" onPress={onToggleGuides} active={showGuides} compact />
         </View>
 
         <View style={styles.titleActions}>
@@ -1072,14 +1094,47 @@ export default function EditorToolbar(props: Props) {
         {activeTab === "AI Tools" && renderAiTools()}
         {activeTab === "Table Tools" && renderTableTools()}
       </ScrollView>
-      <Modal visible={fontDropdownOpen} transparent animationType="fade" onRequestClose={() => setFontDropdownOpen(false)}>
+      <Modal visible={fontDropdownOpen} transparent animationType="none" onRequestClose={() => setFontDropdownOpen(false)}>
         <Pressable style={styles.fontDropdownBackdrop} onPress={() => setFontDropdownOpen(false)}>
           <Pressable style={styles.fontDropdownPanel} onPress={(event) => event.stopPropagation()}>
-            <View style={styles.fontDropdownHeader}><Text style={styles.fontDropdownTitle}>Font family</Text><Pressable accessibilityRole="button" accessibilityLabel="Close font list" onPress={() => setFontDropdownOpen(false)}><Ionicons name="close" size={18} color="#334155" /></Pressable></View>
-            <ScrollView style={styles.fontDropdownList}>
-              {FONT_FAMILIES.map((family) => <Pressable key={family} accessibilityRole="button" accessibilityLabel={`Use ${family} font`} onPress={() => { if (textSelected) onChangeSelected({ fontFamily: family }); setFontDropdownOpen(false); }} style={[styles.fontDropdownItem, family === fontFamily && styles.fontDropdownItemActive]}>
-                <Text style={[styles.fontDropdownPreview, { fontFamily: family }]}>{family} — Aa Bb Cc 123</Text>{family === fontFamily ? <Ionicons name="checkmark" size={16} color="#0F766E" /> : null}
-              </Pressable>)}
+            <View style={styles.fontSearchRow}>
+              <Ionicons name="search-outline" size={15} color="#64748B" />
+              <TextInput
+                value={fontSearch}
+                onChangeText={setFontSearch}
+                placeholder="Search fonts"
+                placeholderTextColor="#94A3B8"
+                style={styles.fontSearchInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {fontSearch ? <Pressable accessibilityRole="button" accessibilityLabel="Clear font search" onPress={() => setFontSearch("")}><Ionicons name="close-circle" size={16} color="#94A3B8" /></Pressable> : null}
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.fontCategoryScroll} contentContainerStyle={styles.fontCategoryContent}>
+              {QUICK_FONT_CATEGORIES.map((category) => (
+                <Pressable key={category} onPress={() => setFontCategory(category)} style={[styles.fontCategoryChip, fontCategory === category && styles.fontCategoryChipActive]}>
+                  <Text style={[styles.fontCategoryChipText, fontCategory === category && styles.fontCategoryChipTextActive]}>{category}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <View style={styles.fontListHeading}>
+              <Text style={styles.fontListHeadingText}>{fontCategory === "All" ? "All Fonts" : fontCategory}</Text>
+              <Text style={styles.fontListCount}>{visibleFontCount}</Text>
+            </View>
+            <ScrollView style={styles.fontDropdownList} keyboardShouldPersistTaps="handled">
+              {fontFamilies.map((family) => {
+                const matchesSearch = !normalizedFontSearch || family.toLowerCase().includes(normalizedFontSearch);
+                const matchesCategory = fontCategory === "All" || FONT_CATEGORY_BY_FAMILY.get(family) === fontCategory;
+                if (!matchesSearch || !matchesCategory) return null;
+                return <Pressable key={family} accessibilityRole="button" accessibilityLabel={`Use ${family} font`} onPress={() => { if (textSelected) onChangeSelected({ fontFamily: family }); setFontDropdownOpen(false); }} style={[styles.fontDropdownItem, family === fontFamily && styles.fontDropdownItemActive]}>
+                  <View style={styles.fontPreviewWrap}>
+                    <Text style={[styles.fontDropdownPreview, { fontFamily: family }]} numberOfLines={1}>{family}</Text>
+                    <Text style={[styles.fontDropdownSample, { fontFamily: family }]} numberOfLines={1}>Aa Bb Cc 123</Text>
+                  </View>
+                  {family === fontFamily ? <Ionicons name="checkmark" size={17} color="#0F766E" /> : null}
+                </Pressable>;
+              })}
+              {visibleFontCount === 0 ? <View style={styles.fontEmpty}><Ionicons name="search-outline" size={20} color="#94A3B8" /><Text style={styles.fontEmptyText}>No fonts match your search.</Text></View> : null}
             </ScrollView>
             <Pressable style={styles.manageFontsButton} onPress={() => { setFontDropdownOpen(false); onOpenFontManager(); }}><Ionicons name="settings-outline" size={16} color="#FFFFFF" /><Text style={styles.manageFontsText}>Open Font Manager</Text></Pressable>
           </Pressable>
@@ -1144,14 +1199,29 @@ const styles = StyleSheet.create({
   zoomTileValue: { color: "#172033", fontSize: 12, fontWeight: "800" },
   zoomTileLabel: { color: "#64748B", fontSize: 8, marginTop: 2 },
 
-  fontDropdownBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.32)", paddingTop: 88, paddingHorizontal: 16, alignItems: "center" },
-  fontDropdownPanel: { width: "100%", maxWidth: 360, maxHeight: 420, backgroundColor: "#FFFFFF", borderRadius: 10, borderWidth: 1, borderColor: "#CBD5E1", shadowColor: "#0F172A", shadowOpacity: 0.28, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, overflow: "hidden" },
-  fontDropdownHeader: { height: 42, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#E2E8F0" },
-  fontDropdownTitle: { color: "#0F172A", fontSize: 13, fontWeight: "900" },
-  fontDropdownList: { maxHeight: 295 },
-  fontDropdownItem: { minHeight: 42, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#F1F5F9" },
+  // 92.15: Word/Excel-style anchored font flyout. The backdrop only captures outside clicks;
+  // it no longer dims the document or recenters the font list.
+  fontDropdownBackdrop: { flex: 1, backgroundColor: "transparent" },
+  fontDropdownPanel: { position: "absolute", top: 94, left: 145, width: 388, maxHeight: 520, backgroundColor: "#FFFFFF", borderRadius: 4, borderWidth: 1, borderColor: "#AAB7C4", shadowColor: "#0F172A", shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, overflow: "hidden" },
+  fontSearchRow: { height: 36, marginHorizontal: 8, marginTop: 8, paddingHorizontal: 9, borderWidth: 1, borderColor: "#BFC9D4", borderRadius: 3, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 7 },
+  fontSearchInput: { flex: 1, color: "#0F172A", fontSize: 11, paddingVertical: 0 },
+  fontCategoryScroll: { maxHeight: 39, marginTop: 6 },
+  fontCategoryContent: { paddingHorizontal: 8, alignItems: "center", gap: 5 },
+  fontCategoryChip: { height: 25, paddingHorizontal: 9, borderRadius: 3, backgroundColor: "#F8FAFC", justifyContent: "center", borderWidth: 1, borderColor: "#D7DEE6" },
+  fontCategoryChipActive: { backgroundColor: "#DDF7F3", borderColor: "#8BD5CB" },
+  fontCategoryChipText: { color: "#475569", fontSize: 9, fontWeight: "700" },
+  fontCategoryChipTextActive: { color: "#0F766E" },
+  fontListHeading: { height: 30, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#F1F5F9", borderBottomWidth: 1, borderBottomColor: "#E2E8F0" },
+  fontListHeadingText: { color: "#475569", fontSize: 9, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5 },
+  fontListCount: { color: "#94A3B8", fontSize: 9, fontWeight: "700" },
+  fontDropdownList: { maxHeight: 342 },
+  fontDropdownItem: { minHeight: 46, paddingHorizontal: 10, paddingVertical: 5, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#F1F5F9" },
   fontDropdownItemActive: { backgroundColor: "#E6FFFB" },
-  fontDropdownPreview: { color: "#1E293B", fontSize: 14, flex: 1 },
-  manageFontsButton: { margin: 10, minHeight: 38, borderRadius: 7, backgroundColor: "#0F766E", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
+  fontPreviewWrap: { flex: 1, paddingRight: 8 },
+  fontDropdownPreview: { color: "#0F172A", fontSize: 12 },
+  fontDropdownSample: { color: "#64748B", fontSize: 10, marginTop: 2 },
+  fontEmpty: { minHeight: 100, alignItems: "center", justifyContent: "center", gap: 7 },
+  fontEmptyText: { color: "#64748B", fontSize: 10 },
+  manageFontsButton: { margin: 8, minHeight: 34, borderRadius: 4, backgroundColor: "#0F766E", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   manageFontsText: { color: "#FFFFFF", fontWeight: "800", fontSize: 11 },
 });

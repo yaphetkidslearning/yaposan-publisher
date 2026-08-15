@@ -1,0 +1,18 @@
+title: "[Q&A] "
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Explain what you are trying to do, what you expected, and what happened. Never include secrets or production credentials.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Example: Windows 11, Node 22, Chrome 128
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?

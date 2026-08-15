@@ -17,10 +17,10 @@ test("normalizes merge tokens and extracts unique fields", () => {
 });
 
 test("parses quoted CSV records", () => {
-  const records = parseMergeCsv('name,company,note\nJane,Yaposan,"Hello, world"\nJohn,Goodwill,Welcome');
+  const records = parseMergeCsv('name,company,note\nJane,Yaposan,"Hello, world"\nJohn,Organization,Welcome');
   assert.equal(records.length, 2);
   assert.equal(records[0].values.note, "Hello, world");
-  assert.equal(records[1].values.company, "Goodwill");
+  assert.equal(records[1].values.company, "Organization");
 });
 
 test("resolves record, project variable, and dynamic page fields", () => {

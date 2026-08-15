@@ -108,6 +108,7 @@ import {
   MIN_ZOOM,
   PAGE_SIZES,
   PUBLISHER_COLORS,
+  FONT_FAMILIES,
   cloneProject,
   createBlankPage
 } from "../constants/publisher";
@@ -172,9 +173,12 @@ import { makeCode128Svg, makeQrSvg, recolorSvg, svgDataUri, svgToEditableShapes,
 import { addTableColumn, addTableRow, createTableElement, csvToTable, deleteTableColumn, deleteTableRow, tableToCsv } from "../utils/tableEngine";
 import { runAiWriting } from "../services/aiService";
 import { applyMergeRecord } from "../services/mergeFieldService";
+import { loadCreationProject } from "../services/creationProjectStore";
+import { creationToPublisherProject } from "../services/phase9112StudioAdapters";
 import type { AiPresetPrompt, AiPromptRecord, AiWritingAction, MergeDataRecord } from "../types/aiWriting";
 import { loadAiHistory, loadSavedPrompts, saveAiHistory, saveSavedPrompts } from "../utils/aiWritingStorage";
-import { addEmbeddedFont, loadFontFavorites, loadRecentFonts, rememberRecentFont, removeEmbeddedFont, saveFontFavorites } from "../utils/typographyManager";
+import { addEmbeddedFont, discoverLocalFonts, fontReplacementCandidates, loadDiscoveredLocalFonts, loadFontFavorites, loadRecentFonts, rememberRecentFont, removeEmbeddedFont, saveDiscoveredLocalFonts, saveFontFavorites } from "../utils/typographyManager";
+import { bytesToDataUri, inspectFontFile } from "../utils/fontFileInspector";
 
 const EMPTY_CLIPBOARD: PublisherClipboard = { elements: [], sourcePageId: null };
 
@@ -323,6 +327,8 @@ function makeTemplateProject(template: PublisherTemplate): PublisherProject {
   };
 }
 
+function currentTimestamp() { return Date.now(); }
+
 export default function EditorScreen() {
   const auth = useAuth();
   const [authModalVisible, setAuthModalVisible] = useState(false);
@@ -332,7 +338,7 @@ export default function EditorScreen() {
     if (auth.isAuthenticated) return true;
     setAuthReason(reason); setPendingProtectedAction(() => action); setAuthModalVisible(true); return false;
   }, [auth.isAuthenticated]);
-  const params = useLocalSearchParams<{ projectId?: string; readOnly?: string; fresh?: string }>();
+  const params = useLocalSearchParams<{ projectId?: string; readOnly?: string; fresh?: string; creationProject?: string | string[] }>();
   const readOnly = params.readOnly === "1";
   const freshStart = params.fresh === "1";
   const navigation = useNavigation();
@@ -438,6 +444,7 @@ export default function EditorScreen() {
   const [alignmentSpacing, setAlignmentSpacing] = useState(12);
   const [fontFavorites, setFontFavorites] = useState<string[]>([]);
   const [recentFonts, setRecentFonts] = useState<string[]>([]);
+  const [localFonts, setLocalFonts] = useState<string[]>([]);
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiHistory, setAiHistory] = useState<AiPromptRecord[]>([]);
@@ -452,10 +459,10 @@ export default function EditorScreen() {
   useEffect(() => () => { if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current); }, []);
 
   const projectSignature = useCallback((value: PublisherProject) => JSON.stringify(value), []);
-  useEffect(() => { projectRef.current = project; if (!loading) setIsDirty(projectSignature(project) !== savedSignatureRef.current); }, [loading, project, projectSignature]);
+  useEffect(() => { projectRef.current = project; if (!loading) queueMicrotask(() => setIsDirty(projectSignature(project) !== savedSignatureRef.current)); }, [loading, project, projectSignature]);
 
   useEffect(() => {
-    void Promise.all([loadFontFavorites(), loadRecentFonts()]).then(([favorites, recents]) => { setFontFavorites(favorites); setRecentFonts(recents); });
+    void Promise.all([loadFontFavorites(), loadRecentFonts(), loadDiscoveredLocalFonts()]).then(([favorites, recents, locals]) => { setFontFavorites(favorites); setRecentFonts(recents); setLocalFonts(locals); });
   }, []);
 
   useEffect(() => {
@@ -483,12 +490,12 @@ export default function EditorScreen() {
   useEffect(() => {
     if (!project.pages.length) {
       const blank = createBlankPage(1);
-      setProject((current) => ({ ...current, pages: [blank], activePageId: blank.id }));
+      queueMicrotask(() => setProject((current) => ({ ...current, pages: [blank], activePageId: blank.id })));
       return;
     }
     if (!project.pages.some((page) => page.id === project.activePageId)) {
       const fallbackId = project.pages[0].id;
-      setProject((current) => ({ ...current, activePageId: fallbackId }));
+      queueMicrotask(() => setProject((current) => ({ ...current, activePageId: fallbackId })));
     }
   }, [project.activePageId, project.pages]);
 
@@ -519,11 +526,11 @@ export default function EditorScreen() {
   // had no real selected object, leaving contextual commands disabled.
   useEffect(() => {
     const validIds = new Set(activePage.elements.map((element) => element.id));
-    setSelectedElementIds((current) => {
+    queueMicrotask(() => setSelectedElementIds((current) => {
       const next = current.filter((id) => validIds.has(id));
       if (next.length === current.length && next.every((id, index) => id === current[index])) return current;
       return next;
-    });
+    }));
   }, [activePage.id, activePage.elements]);
 
   const snapshot = useCallback((): PublisherSnapshot => ({
@@ -546,7 +553,7 @@ export default function EditorScreen() {
     if (readOnly) return;
     if (commit) pushHistory();
     setProject((current) => {
-      const next = { ...updater(current), updatedAt: Date.now() };
+      const next = { ...updater(current), updatedAt: currentTimestamp() };
       projectRef.current = next;
       return next;
     });
@@ -574,14 +581,19 @@ export default function EditorScreen() {
       try {
         const requestedProjectId =
           typeof params.projectId === "string" ? params.projectId : undefined;
-        const saved = freshStart ? null : requestedProjectId
+        const creationProjectId = Array.isArray(params.creationProject) ? params.creationProject[0] : params.creationProject;
+        const creationSource = creationProjectId ? await loadCreationProject(creationProjectId) : null;
+        const saved = creationSource ? null : freshStart ? null : requestedProjectId
           ? await loadPublisherProject(requestedProjectId)
           : await loadCurrentPublisherProject();
 
-        let nextProject = initialProject;
-        let restoredSavedProject = false;
+        let nextProject = creationSource ? creationToPublisherProject(creationSource) : initialProject;
+        let restoredSavedProject = Boolean(creationSource);
 
-        if (requestedProjectId && saved) {
+        if (creationSource) {
+          nextProject = normalizeLayoutProject(nextProject);
+          await savePublisherProject(nextProject, "Yaposan Create 91.12", false);
+        } else if (requestedProjectId && saved) {
           nextProject = normalizeLayoutProject(saved);
           restoredSavedProject = true;
         } else if (saved) {
@@ -652,7 +664,7 @@ export default function EditorScreen() {
     return () => {
       cancelled = true;
     };
-  }, [initialProject, params.projectId, projectSignature, showEditorNotice]);
+  }, [initialProject, params.projectId, params.creationProject, projectSignature, showEditorNotice]);
 
   useEffect(() => {
     autoSaveRef.current?.cancel();
@@ -1202,7 +1214,7 @@ const source: PublisherPage = {
     try {
       const result = await runAiWriting({ action, text: sourceText, prompt, targetLanguage });
       const record: AiPromptRecord = {
-        id: uid("ai"), action, prompt, sourceText, result, createdAt: Date.now(), targetLanguage,
+        id: uid("ai"), action, prompt, sourceText, result, createdAt: currentTimestamp(), targetLanguage,
       };
       setAiHistory((current) => [record, ...current].slice(0, 100));
     } catch (error) {
@@ -1667,7 +1679,7 @@ const source: PublisherPage = {
         ...current,
         pages: [blank],
         activePageId: blank.id,
-        updatedAt: Date.now(),
+        updatedAt: currentTimestamp(),
       };
 
       projectRef.current = next;
@@ -1687,7 +1699,7 @@ showEditorNotice("Last page reset to a blank page");
       ...current,
       pages,
       activePageId: nextActive.id,
-      updatedAt: Date.now(),
+      updatedAt: currentTimestamp(),
     };
 
     projectRef.current = next;
@@ -1758,12 +1770,8 @@ showEditorNotice("Last page reset to a blank page");
     setActiveTab("Home");
   }, [pushHistory, readOnly, replaceProject]);
 
-  const saveProject = useCallback(async () => {
+  const saveProjectCore = useCallback(async () => {
     if (readOnly) { Alert.alert("Read-only project", "This project cannot be overwritten. Use Save As to create an editable copy."); return; }
-    if (!auth.isAuthenticated) {
-      requestAuthentication("Sign in to save your project securely and access it from any device.", () => void saveProject());
-      return;
-    }
     if (isSaving) return;
     setIsSaving(true);
     try {
@@ -1790,16 +1798,24 @@ showEditorNotice("Last page reset to a blank page");
 
 A local recovery copy is still stored in this browser.`);
     } finally { setIsSaving(false); }
-  }, [auth, isSaving, projectSignature, readOnly, requestAuthentication]);
+  }, [auth, isSaving, projectSignature, readOnly]);
+
+  const saveProject = useCallback(() => {
+    if (!auth.isAuthenticated) {
+      requestAuthentication("Sign in to save your project securely and access it from any device.", () => void saveProjectCore());
+      return;
+    }
+    void saveProjectCore();
+  }, [auth.isAuthenticated, requestAuthentication, saveProjectCore]);
 
 
   const saveProjectAs = useCallback(async () => {
     const current = projectRef.current;
     const apply = async (name: string) => {
-      const now = Date.now();
+      const now = currentTimestamp();
       const copy: PublisherProject = {
         ...cloneProject(current),
-        id: `project-${now}-${Math.random().toString(36).slice(2, 8)}`,
+        id: `project-${now}-${uid("project").split("-").slice(-1)[0]}`,
         name: name.trim() || `${current.name} Copy`,
         createdAt: now,
         updatedAt: now,
@@ -1822,10 +1838,10 @@ A local recovery copy is still stored in this browser.`);
     try {
       const imported = await importPublisherProjectFile();
       if (!imported) return;
-      const now = Date.now();
+      const now = currentTimestamp();
       const projectToOpen: PublisherProject = {
         ...imported,
-        id: `project-${now}-${Math.random().toString(36).slice(2, 8)}`,
+        id: `project-${now}-${uid("project").split("-").slice(-1)[0]}`,
         createdAt: now,
         updatedAt: now,
       };
@@ -1857,8 +1873,8 @@ A local recovery copy is still stored in this browser.`);
     try {
       const imported = await importProjectPackage();
       if (!imported) return;
-      const now = Date.now();
-      const next = { ...imported, id: `project-${now}-${Math.random().toString(36).slice(2,8)}`, createdAt: now, updatedAt: now };
+      const now = currentTimestamp();
+      const next = { ...imported, id: `project-${now}-${uid("project").split("-").slice(-1)[0]}`, createdAt: now, updatedAt: now };
       await savePublisherProject(next, "Imported package");
       replaceProject(next, true);
       savedSignatureRef.current = projectSignature(next); setIsDirty(false);
@@ -1877,7 +1893,7 @@ A local recovery copy is still stored in this browser.`);
   }, [activePage.elements]);
 
   const exportImage = useCallback(async (format: "png" | "jpg") => {
-    if (!auth.isAuthenticated) { requestAuthentication("Create a free account to download your design.", () => void exportImage(format)); return; }
+    if (!auth.isAuthenticated) { requestAuthentication("Create a free account to download your design.", () => router.push("/sign-in")); return; }
     try {
       const permission = await auth.authorizedFetch("/api/v1/usage/authorize-export", { method: "POST", body: JSON.stringify({ format, quality: "standard" }) });
       const permissionData = await permission.json(); if (!permission.ok) { Alert.alert("Export limit reached", permissionData?.error?.message ?? "Upgrade to continue exporting."); return; }
@@ -1899,7 +1915,7 @@ A local recovery copy is still stored in this browser.`);
   }, [activePage.elements, auth, capturePage, requestAuthentication]);
 
   const exportPdf = useCallback(async () => {
-    if (!auth.isAuthenticated) { requestAuthentication("Create a free account to download your design.", () => void exportPdf()); return; }
+    if (!auth.isAuthenticated) { requestAuthentication("Create a free account to download your design.", () => router.push("/sign-in")); return; }
     try {
       const permission = await auth.authorizedFetch("/api/v1/usage/authorize-export", { method: "POST", body: JSON.stringify({ format: "pdf", quality: "standard" }) });
       const permissionData = await permission.json(); if (!permission.ok) { Alert.alert("Export limit reached", permissionData?.error?.message ?? "Upgrade to continue exporting."); return; }
@@ -1921,7 +1937,7 @@ A local recovery copy is still stored in this browser.`);
   }, [auth, capturePage, requestAuthentication]);
 
   const exportJson = useCallback(() => {
-    if (!auth.isAuthenticated) { requestAuthentication("Sign in to export a portable Yaposan project file.", () => exportJson()); return; }
+    if (!auth.isAuthenticated) { requestAuthentication("Sign in to export a portable Yaposan project file.", () => router.push("/sign-in")); return; }
     downloadWebFile(JSON.stringify(projectRef.current, null, 2), `${safeFileName(projectRef.current.name)}.yaposan.json`, "application/json");
   }, [auth.isAuthenticated, requestAuthentication]);
 
@@ -1960,12 +1976,14 @@ A local recovery copy is still stored in this browser.`);
   }, [copySelected, deleteSelected, duplicateSelected, mutateSelectedTable, newProject, openProject, paste, redo, saveProject, selectedElement?.id, selectedElement?.type, selectedTable, tableClipboard, undo, showEditorNotice]);
 
   useEffect(() => {
-    if (selectedElements.length > 1) { setActiveTab("Home"); return; }
-    if (selectedElement?.type === "image") setActiveTab("Picture Format");
-    else if ((selectedElement?.type as any) === "table") setActiveTab("Table Tools");
-    else if (selectedElement?.type === "svg") setActiveTab("Icons & Assets");
-    else if (["rectangle", "circle", "line"].includes(String(selectedElement?.type))) setActiveTab("Shapes");
-    else if (selectedElement?.type === "text") setActiveTab("Home");
+    const nextTab = selectedElements.length > 1 ? "Home"
+      : selectedElement?.type === "image" ? "Picture Format"
+      : (selectedElement?.type as any) === "table" ? "Table Tools"
+      : selectedElement?.type === "svg" ? "Icons & Assets"
+      : ["rectangle", "circle", "line"].includes(String(selectedElement?.type)) ? "Shapes"
+      : selectedElement?.type === "text" ? "Home"
+      : null;
+    if (nextTab) queueMicrotask(() => setActiveTab(nextTab));
   }, [selectedElement?.id, selectedElement?.type, selectedElements.length]);
 
   const topMarks = useMemo(() => Array.from({ length: Math.ceil(activePage.width / 72) + 1 }, (_, index) => ({ value: index, position: index * 72 })), [activePage.width]);
@@ -1987,24 +2005,51 @@ A local recovery copy is still stored in this browser.`);
 
   const importCustomFont = useCallback(async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({ type: ["font/ttf", "font/otf", "font/woff", "font/woff2", "application/font-sfnt", "application/octet-stream"], copyToCacheDirectory: true });
+      const result = await DocumentPicker.getDocumentAsync({ type: ["font/ttf", "font/otf", "application/font-sfnt", "application/octet-stream"], copyToCacheDirectory: true });
       if (result.canceled || !result.assets[0]) return;
       const asset = result.assets[0];
-      const family = (asset.name || "Custom Font").replace(/\.(ttf|otf|woff2?)$/i, "").replace(/[-_]+/g, " ").trim();
-      let dataUri = asset.uri;
-      if (Platform.OS === "web" && typeof fetch !== "undefined") {
-        const blob = await (await fetch(asset.uri)).blob();
-        dataUri = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error("Unable to read font.")); reader.readAsDataURL(blob); });
-      }
-      updateProject((current) => addEmbeddedFont(current, family, dataUri), true);
-      Alert.alert("Font imported", `${family} is embedded in this project and available in the Font Manager.`);
+      const bytes = Platform.OS === "web" ? new Uint8Array(await (await fetch(asset.uri)).arrayBuffer()) : await new ExpoFile(asset.uri).bytes();
+      const metadata = inspectFontFile(bytes);
+      const fallbackFamily = (asset.name || "Custom Font").replace(/\.(ttf|otf|woff2?)$/i, "").replace(/[-_]+/g, " ").trim();
+      const family = (metadata.family || fallbackFamily).trim();
+      if (metadata.embeddingPermission === "restricted") throw new Error(`${family} does not permit embedding. Install it locally instead or choose a font whose license permits embedding.`);
+      const extension = (asset.name.match(/\.([^.]+)$/)?.[1] || "ttf").toLowerCase();
+      const mime = extension === "otf" ? "font/otf" : extension === "woff" ? "font/woff" : extension === "woff2" ? "font/woff2" : "font/ttf";
+      const dataUri = bytesToDataUri(bytes, mime);
+      updateProject((current) => addEmbeddedFont(current, family, dataUri, metadata), true);
+      const detail = metadata.variable ? ` Variable axes: ${metadata.axes.map((axis) => axis.tag).join(", ")}.` : "";
+      Alert.alert("Font imported", `${family} is embedded with verified font metadata and Unicode coverage.${detail}`);
     } catch (error) { Alert.alert("Font import failed", error instanceof Error ? error.message : "Unable to import font."); }
   }, [updateProject]);
+
+  const discoverInstalledFonts = useCallback(async () => {
+    try {
+      const discovered = await discoverLocalFonts();
+      if (!discovered.length) {
+        Alert.alert("Local font discovery", Platform.OS === "web" ? "This browser does not expose the Local Font Access API, or permission was not granted. You can still import TTF/OTF files." : "Automatic local-font discovery is available on supported desktop browsers. You can import TTF/OTF files on this platform.");
+        return;
+      }
+      setLocalFonts(discovered);
+      await saveDiscoveredLocalFonts(discovered);
+      showEditorNotice(`${discovered.length} installed font families discovered.`);
+    } catch (error) {
+      Alert.alert("Local font discovery", error instanceof Error ? error.message : "Unable to read installed fonts.");
+    }
+  }, [showEditorNotice]);
 
   const deleteCustomFont = useCallback((family: string) => {
     updateProject((current) => removeEmbeddedFont(current, family), true);
     if (selectedElement?.type === "text" && selectedElement.fontFamily === family) changeSelected({ fontFamily: "Arial" });
   }, [updateProject, selectedElement, changeSelected]);
+
+  const replaceMissingFont = useCallback((family: string) => {
+    const sampleText = project.pages.flatMap((page) => page.elements).filter((element) => element.type === "text" && element.fontFamily === family).map((element) => element.text ?? "").join(" ").slice(0, 512);
+    const replacement = fontReplacementCandidates(project, family, localFonts, sampleText)[0];
+    if (!replacement) { Alert.alert("No replacement found", `Import or install a font that supports the text used by ${family}.`); return; }
+    updateProject((current) => ({ ...current, updatedAt: Date.now(), pages: current.pages.map((page) => ({ ...page, elements: page.elements.map((element) => element.type === "text" && element.fontFamily === family ? { ...element, fontFamily: replacement.family } : element) })) }), true);
+    void rememberRecentFont(replacement.family).then(setRecentFonts);
+    showEditorNotice(`Replaced ${family} with ${replacement.family} throughout this publication.`);
+  }, [project, localFonts, updateProject, showEditorNotice]);
 
   const runVectorElementCommand = useCallback((command: "close"|"open"|"reverse"|"simplify"|"smooth"|"outline"|"corner"|"smooth-nodes"|"symmetric"|"clean"|"flatten"|"live-rectangle"|"live-rounded"|"live-polygon"|"live-star"|"live-spiral"|"live-gear"|"live-arrow"|"width-taper-start"|"width-taper-end"|"width-taper-both"|"width-bulge"|"brush-pencil"|"brush-marker"|"brush-ink"|"brush-calligraphy"|"brush-artistic"|"symbol"|"warp-arc"|"warp-wave"|"warp-fish"|"warp-bulge"|"warp-perspective"|"effect-zigzag"|"effect-roughen"|"effect-pucker"|"effect-inflate"|"effect-twist"|"effect-bloat"|"repeat-radial"|"repeat-grid"|"repeat-mirror"|"knife"|"eraser"|"live-corners"|"mesh-gradient") => {
     if (!selectedElement) return;
@@ -2126,8 +2171,10 @@ A local recovery copy is still stored in this browser.`);
         canRedo={future.length > 0}
         hasSelection={Boolean(selectedElement)}
         showGrid={showGrid}
+        showGuides={showGuides}
         snapToGrid={snapToGrid}
         selectedText={selectedElement?.type === "text" ? selectedElement : null}
+        availableFontFamilies={[...new Set([...FONT_FAMILIES, ...localFonts, ...Object.keys(project.embeddedFonts ?? {})])]}
         saveStatusLabel={auth.isAuthenticated ? (isDirty ? "Cloud changes pending" : "Saved to cloud") : "Saved locally"}
         profileInitials={auth.session?.user?.email ? auth.session.user.email.slice(0, 2).toUpperCase() : "GU"}
         onProjectNameChange={(name) => updateProject((current) => ({ ...current, name }), false)}
@@ -2170,6 +2217,7 @@ A local recovery copy is still stored in this browser.`);
         onAlignCenter={() => alignSelected("center")}
         onAlignRight={() => alignSelected("right")}
         onToggleGrid={() => setShowGrid((value) => !value)}
+        onToggleGuides={() => setShowGuides((value) => !value)}
         onToggleSnap={() => setSnapToGrid((value) => !value)}
         onZoomIn={() => setZoom((value) => Math.min(MAX_ZOOM, value + 0.1))}
         onZoomOut={() => setZoom((value) => Math.max(MIN_ZOOM, value - 0.1))}
@@ -2504,7 +2552,7 @@ A local recovery copy is still stored in this browser.`);
           updateActivePage((page) => ({ ...page, elements: page.elements.map((item) => byId.get(item.id) ?? item) }), true);
           showEditorNotice(`Staggered ${selectedElements.length} objects by ${step.toFixed(2)}s`);
         }}
-        onSettings={(settings: AnimationProjectSettings) => setProject((current) => ({ ...current, animationSettings: settings, phase19Version: "19.2", updatedAt: Date.now() }))}
+        onSettings={(settings: AnimationProjectSettings) => setProject((current) => ({ ...current, animationSettings: settings, phase19Version: "19.2", updatedAt: currentTimestamp() }))}
         onTime={setAnimationTime}
         onPlay={() => setAnimationPlaying(true)}
         onPause={() => setAnimationPlaying(false)}
@@ -2600,7 +2648,7 @@ A local recovery copy is still stored in this browser.`);
         onUpdate={(id, updates) => { if (!selectedElement) return; changeSelected(updateElementInteraction(selectedElement, id, updates)); }}
         onRemove={(id) => { if (!selectedElement) return; pushHistory(); changeSelected(removeElementInteraction(selectedElement, id)); }}
         onTransition={(transition: PageTransition) => { pushHistory(); updateActivePage((page) => setPageTransition(page, transition), true); }}
-        onSettings={(settings: InteractiveProjectSettings) => setProject((current) => ({ ...current, interactiveSettings: settings, phase19Version: "19.2", updatedAt: Date.now() }))}
+        onSettings={(settings: InteractiveProjectSettings) => setProject((current) => ({ ...current, interactiveSettings: settings, phase19Version: "19.2", updatedAt: currentTimestamp() }))}
         onPreviewPage={setPresentationPreviewPageId}
         onStartPresentation={() => { const runtime = createInteractionRuntime(project); setPresentationPreviewPageId(runtime.activePageId); showEditorNotice("Presentation preview started"); }}
       />
@@ -2608,7 +2656,7 @@ A local recovery copy is still stored in this browser.`);
         visible={showAnimationExport}
         project={project}
         settings={animationExportSettings}
-        onChange={(settings) => { setAnimationExportSettings(settings); setProject((current) => ({ ...current, animationExportSettings: settings, phase19Version: "19.6", updatedAt: Date.now() })); }}
+        onChange={(settings) => { setAnimationExportSettings(settings); setProject((current) => ({ ...current, animationExportSettings: settings, phase19Version: "19.6", updatedAt: currentTimestamp() })); }}
         onExport={() => {
           void performAnimationExport(project, animationExportSettings).then((result) => showEditorNotice(`Exported ${result.filename} · readiness ${result.report.score}%`)).catch((error) => Alert.alert("Animation export failed", error instanceof Error ? error.message : String(error)));
         }}
@@ -2902,7 +2950,7 @@ A local recovery copy is still stored in this browser.`);
           pushHistory();
           updateProject((current) => ({
             ...current,
-            updatedAt: Date.now(),
+            updatedAt: currentTimestamp(),
             pages: current.pages.map((page) => page.id === current.activePageId ? { ...page, elements: [...page.elements, ...elements] } : page),
           }), false);
           setSelectedElementIds(elements.map((element) => element.id));
@@ -2941,13 +2989,17 @@ A local recovery copy is still stored in this browser.`);
         visible={showFontManager}
         project={project}
         selectedFamily={selectedElement?.type === "text" ? selectedElement.fontFamily ?? "Arial" : "Arial"}
+        selectedText={selectedElement?.type === "text" ? selectedElement.text ?? "" : ""}
         favorites={fontFavorites}
         recents={recentFonts}
+        localFonts={localFonts}
         onClose={() => setShowFontManager(false)}
         onSelect={selectManagedFont}
         onToggleFavorite={toggleFontFavorite}
         onImport={() => void importCustomFont()}
+        onDiscoverLocalFonts={() => void discoverInstalledFonts()}
         onRemoveCustom={deleteCustomFont}
+        onReplaceMissing={replaceMissingFont}
       />
 
       <ExportManagerModal visible={showExportManager} project={project} onClose={() => setShowExportManager(false)} authorizeExport={async (formats) => { const response = await auth.authorizedFetch("/api/v1/usage/authorize-export", { method: "POST", body: JSON.stringify({ formats, quality: "advanced" }) }); const data = await response.json(); if (!response.ok) throw new Error(data?.error?.message ?? "Upgrade to continue exporting."); }} />

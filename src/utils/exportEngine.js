@@ -83,14 +83,14 @@ async function encode(svg, format, dpi, q, o) { const c = await canvasFor(svg, d
     const UTIF = await import('utif'), rgba = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, bytes = UTIF.encodeImage(rgba.buffer, c.width, c.height);
     return new Blob([bytes], { type: 'image/tiff' });
 } if (format === 'bmp') {
-    const BMP = await import('bmp-js'), rgba = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, enc = BMP.encode({ data: Buffer.from(rgba), width: c.width, height: c.height });
+    const BMP = await import('bmp-js'), rgba = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, enc = BMP.encode({ data: new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength), width: c.width, height: c.height });
     return new Blob([new Uint8Array(enc.data)], { type: 'image/bmp' });
 } const mime = format === 'jpg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png'; return await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('Encoding failed.')), mime, q)); }
 async function webPdf(project, pages, o) { const PDFDocument = (await import('pdfkit')).default, blobStream = (await import('blob-stream')).default, SVGtoPDF = (await import('svg-to-pdfkit')).default; const doc = new PDFDocument({ autoFirstPage: false, compress: o.compression > 0, info: o.metadata ? { Title: project.name, Author: project.author || '', Subject: project.description || '', Creator: 'Yaposan Publisher', Producer: 'Yaposan Export Engine', CreationDate: new Date(), ModDate: new Date(), GTS_PDFXVersion: o.pdfXReady ? 'PDF/X-4' : '' } : {}, userPassword: o.password || undefined, ownerPassword: o.ownerPassword || o.password || undefined, permissions: { printing: 'highResolution', modifying: false, copying: false } }), stream = doc.pipe(blobStream()); const registered = new Set(); if (o.embedFonts && project.embeddedFonts) {
     for (const [name, data] of Object.entries(project.embeddedFonts)) {
         try {
             const raw = data.includes(',') ? data.split(',').pop() || '' : data;
-            doc.registerFont(name, Buffer.from(raw, 'base64'));
+            doc.registerFont(name, Uint8Array.from(atob(raw), char => char.charCodeAt(0)));
             registered.add(name);
         }
         catch { }

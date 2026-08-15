@@ -1,0 +1,22 @@
+name: Documentation improvement
+description: Report missing, unclear, or outdated Yaposan documentation
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Documentation location
+      placeholder: README, CONTRIBUTING, Help Center, docs/ARCHITECTURE.md, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is unclear or missing?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested improvement

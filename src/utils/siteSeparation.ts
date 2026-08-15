@@ -21,6 +21,6 @@ export function canonicalUrl(pathname = "/", surface: YaposanSurface = "public")
 }
 
 export const PUBLIC_ROUTES = new Set([
-  "/", "/features", "/pricing", "/templates", "/help", "/sign-in", "/register",
+  "/", "/features", "/pricing", "/templates", "/help", "/faq", "/troubleshoot", "/contact", "/sign-in", "/register",
   "/privacy", "/terms", "/cookies", "/acceptable-use", "/refund-policy", "/accessibility",
 ]);

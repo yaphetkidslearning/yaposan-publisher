@@ -1,0 +1,18 @@
+Yaposan 92.3 corrected validation note
+
+Corrections applied after Windows typecheck report:
+1. server/database.ts
+   - Removed duplicate DatabaseSchema declarations for supportTicketMessages and helpFeedback.
+2. server/storageFactory.ts
+   - Removed unreachable non-local driver branch that narrowed storageDriver to never and caused TS2339 on toUpperCase().
+3. docs/ARCHITECTURE.md
+   - Changed contributor install command from npm install to npm ci.
+4. Phase 92.2 compatibility
+   - Moved this validation record out of the repository root so the 92.2 root-cleanliness test remains valid.
+
+Validation completed in packaging environment:
+- npm run test:phase92.2 -> 4/4 passed
+- npm run test:phase92.3 -> 5/5 passed
+- npm run check:phase92.3 -> passed
+
+Full npm run typecheck could not be completed in the packaging environment after the source correction because dependency restoration failed at the container/runtime layer, leaving @types/node and expo/tsconfig.base unavailable. The five source-level errors reported from the Windows environment were corrected directly. Run npm ci and npm run typecheck after extracting this archive to verify in the target environment.

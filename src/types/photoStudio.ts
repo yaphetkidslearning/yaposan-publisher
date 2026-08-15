@@ -1,6 +1,10 @@
 export type PhotoStudioAsset = {
   id: string;
   uri: string;
+  originalUri?: string;
+  cutoutUri?: string;
+  backgroundMode?: "original" | "transparent" | "white" | "color";
+  backgroundColor?: string;
   name: string;
   createdAt: number;
   rotation: number;

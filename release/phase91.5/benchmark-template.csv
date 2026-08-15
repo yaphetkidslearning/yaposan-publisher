@@ -1,0 +1,10 @@
+image_id,category,yaposan_acceptable,comparison_acceptable,critical_product_loss,original_file_loss,batch_consistent,unexpected_paid_api_usd,notes
+001,hard-goods,,,,,,0,
+002,footwear,,,,,,0,
+003,apparel,,,,,,0,
+004,furniture,,,,,,0,
+005,thin-structures,,,,,,0,
+006,hair-fur,,,,,,0,
+007,glass-transparent,,,,,,0,
+008,jewelry,,,,,,0,
+009,general-merchandise,,,,,,0,

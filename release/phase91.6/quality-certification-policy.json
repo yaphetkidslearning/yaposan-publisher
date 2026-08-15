@@ -1,0 +1,44 @@
+{
+  "phase": "91.6",
+  "title": "Commercial Product Photo Quality Certification",
+  "claimStatus": "COMMERCIAL_PARITY_TARGET_NOT_EXTERNALLY_CERTIFIED",
+  "referenceQualityIsNotAssumed": true,
+  "minimumImages": 500,
+  "targets": {
+    "hard-goods": {
+      "maxGapPercentagePoints": 1
+    },
+    "footwear": {
+      "maxGapPercentagePoints": 1
+    },
+    "apparel": {
+      "maxGapPercentagePoints": 2
+    },
+    "furniture": {
+      "maxGapPercentagePoints": 2
+    },
+    "thin-structures": {
+      "maxGapPercentagePoints": 2
+    },
+    "hair-fur": {
+      "maxGapPercentagePoints": 3
+    },
+    "glass-transparent": {
+      "maxGapPercentagePoints": 3
+    },
+    "batch-consistency": {
+      "maxGapPercentagePoints": 1
+    }
+  },
+  "criticalProductLossAllowed": 0,
+  "lostOrCorruptOriginalsAllowed": 0,
+  "minimumBatchCompletionPercent": 99,
+  "maximumUnexpectedPaidApiSpendUsd": 0,
+  "requiredDecisionStates": [
+    "pass",
+    "review",
+    "retry",
+    "manual"
+  ],
+  "rollout": "benchmark -> small pilot -> measured expansion -> 50-user production"
+}

@@ -1,11 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Link, useRouter, type Href } from "expo-router";
-import { useMemo, useState } from "react";
+import { Link, useLocalSearchParams, useRouter, type Href } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../context/AuthContext";
 import {
   Pressable,
   SafeAreaView,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -116,6 +118,11 @@ const sidebarSections: SidebarSection[] = [
     { label: "Production", href: "/production-infrastructure", icon: "server-outline" },
     { label: "Learning Center", href: "/learning-center", icon: "school-outline" },
     { label: "Help & Documentation", href: "/help", icon: "help-circle-outline" },
+    { label: "FAQ & Q/A", href: "/faq", icon: "chatbubble-ellipses-outline" },
+    { label: "Troubleshooting", href: "/troubleshoot", icon: "construct-outline" },
+    { label: "Contact & Support", href: "/contact", icon: "mail-outline" },
+    { label: "My Support Requests", href: "/support-requests", icon: "ticket-outline" },
+    { label: "Support Inbox", href: "/support-inbox", icon: "file-tray-full-outline" },
     { label: "Account", href: "/account", icon: "person-circle-outline" },
     { label: "Settings", href: "/settings", icon: "settings-outline" },
   ]},
@@ -274,12 +281,29 @@ function RaisedButton({ label, href, accent, dark }: { label: string; href: Href
 export default function HomeScreen() {
   const auth = useAuth();
   const router = useRouter();
+  const routeParams = useLocalSearchParams<{ tour?: string }>();
   const { width } = useWindowDimensions();
   const mobile = width < 620;
   const compact = width < 760;
   const [prompt, setPrompt] = useState("");
   const [darkMode, setDarkMode] = useState(true);
   const [activeSidebarSection, setActiveSidebarSection] = useState("Home");
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  useEffect(() => {
+    if (routeParams.tour === "1") { queueMicrotask(() => { setOnboardingStep(0); setShowOnboarding(true); }); return; }
+    Promise.all([AsyncStorage.getItem("yaposan.guidance.onboarding91.20.dismissed"), AsyncStorage.getItem("yaposan.guidance.onboarding91.18.dismissed")])
+      .then(([current, legacy]) => { if (current !== "1" && legacy !== "1") setShowOnboarding(true); })
+      .catch(() => {});
+  }, [routeParams.tour]);
+  const dismissOnboarding = async () => { setShowOnboarding(false); await Promise.all([AsyncStorage.setItem("yaposan.guidance.onboarding91.20.dismissed", "1"), AsyncStorage.setItem("yaposan.guidance.onboarding91.18.dismissed", "1")]).catch(() => {}); };
+  const onboarding = [
+    { title: "Welcome to Yaposan", body: "Start with What will you create today? You can describe a flyer, website, presentation, image, document, video, app, or automation." },
+    { title: "Yaposan routes the work", body: "You do not need to know every studio. Yaposan can infer the creation type, prepare a plan, and open the right editable workspace." },
+    { title: "AI is optional and configurable", body: "Core editing works without cloud AI. For image, video, audio, or text generation, open AI Provider Settings and check readiness." },
+    { title: "Save, reopen, and export", body: "Use Projects to reopen saved work. Each studio provides its own editing and export workflow." },
+    { title: "Help is always available", body: "Open Help, FAQ, or Troubleshooting from Platform & Support. Studio pages that use the shared Yaposan shell also include contextual Help." },
+  ];
   const workspaceWidth = useMemo(() => (mobile ? "100%" : compact ? "48%" : "31.7%") as `${number}%`, [mobile, compact]);
   const templateWidth = useMemo(() => (mobile ? "48%" : width < 980 ? "18%" : "8.8%") as `${number}%`, [mobile, width]);
   const recentWidth = useMemo(() => (mobile ? "100%" : width < 980 ? "31.2%" : "18.2%") as `${number}%`, [mobile, width]);
@@ -292,6 +316,15 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, darkMode && styles.darkSafeArea]}>
+      <Modal visible={showOnboarding} transparent animationType="fade" onRequestClose={() => void dismissOnboarding()}>
+        <View style={styles.onboardingShade}><View style={styles.onboardingCard}>
+          <View style={styles.onboardingTop}><Text style={styles.onboardingEyebrow}>FIRST-TIME GUIDE · {onboardingStep + 1}/{onboarding.length}</Text><Pressable onPress={() => void dismissOnboarding()}><Ionicons name="close" size={22} color="#475569" /></Pressable></View>
+          <Text style={styles.onboardingTitle}>{onboarding[onboardingStep].title}</Text><Text style={styles.onboardingBody}>{onboarding[onboardingStep].body}</Text>
+          <View style={styles.onboardingDots}>{onboarding.map((_,i)=><View key={i} style={[styles.onboardingDot,i===onboardingStep&&styles.onboardingDotOn]} />)}</View>
+          <View style={styles.onboardingActions}>{onboardingStep>0?<Pressable style={styles.onboardingSecondary} onPress={()=>setOnboardingStep(v=>v-1)}><Text style={styles.onboardingSecondaryText}>Back</Text></Pressable>:<Pressable style={styles.onboardingSecondary} onPress={() => void dismissOnboarding()}><Text style={styles.onboardingSecondaryText}>Skip</Text></Pressable>}<Pressable style={styles.onboardingPrimary} onPress={()=>onboardingStep<onboarding.length-1?setOnboardingStep(v=>v+1):void dismissOnboarding()}><Text style={styles.onboardingPrimaryText}>{onboardingStep<onboarding.length-1?"Next":"Start creating"}</Text></Pressable></View>
+          <Pressable onPress={()=>{void dismissOnboarding();router.push("/help");}}><Text style={styles.onboardingHelp}>Open full How Yaposan Works guide</Text></Pressable>
+        </View></View>
+      </Modal>
       <View style={[styles.page, darkMode && styles.darkPage]}>
         {!mobile ? (
           <View style={styles.tSidebar}>
@@ -365,7 +398,7 @@ export default function HomeScreen() {
                   onChangeText={setPrompt}
                   onSubmitEditing={submitHeroPrompt}
                   returnKeyType="send"
-                  placeholder="Describe a flyer, product scene..."
+                  placeholder="Describe anything you want to create..."
                   placeholderTextColor="#667085"
                   style={styles.heroPromptInput}
                   accessibilityLabel="Describe what you want Yaposan AI to create"
@@ -377,7 +410,7 @@ export default function HomeScreen() {
                   onPress={submitHeroPrompt}
                   style={({ pressed }) => [styles.heroGenerateButton, !prompt.trim() && styles.heroGenerateButtonDisabled, pressed && prompt.trim() && styles.heroGenerateButtonPressed]}
                 >
-                  <Text style={styles.heroGenerateText}>Generate</Text>
+                  <Text style={styles.heroGenerateText}>Create</Text>
                   <Ionicons name="sparkles" size={15} color="#ffffff" />
                 </Pressable>
               </View>
@@ -494,7 +527,7 @@ export default function HomeScreen() {
             </View>
             <View style={[styles.aiPolicyNote, darkMode && styles.aiPolicyNoteDark]}>
               <Ionicons name="shield-checkmark-outline" size={18} color="#14b8a6" />
-              <Text style={[styles.aiPolicyNoteText, darkMode && styles.darkPlanFeatureText]}><Text style={styles.aiPolicyStrong}>No Yaposan subscription fee.</Text> Community AI is funded by Yaposan's shared monthly budget and may be unavailable when that budget is reached.</Text>
+              <Text style={[styles.aiPolicyNoteText, darkMode && styles.darkPlanFeatureText]}><Text style={styles.aiPolicyStrong}>No Yaposan subscription fee.</Text> Community AI is funded by Yaposan&apos;s shared monthly budget and may be unavailable when that budget is reached.</Text>
             </View>
           </View>
 
@@ -580,6 +613,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  onboardingShade:{flex:1,backgroundColor:"rgba(15,23,42,.68)",alignItems:"center",justifyContent:"center",padding:20},onboardingCard:{width:"100%",maxWidth:620,backgroundColor:"#fff",borderRadius:20,padding:24,borderWidth:1,borderColor:"#ddd6fe"},onboardingTop:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},onboardingEyebrow:{fontSize:11,fontWeight:"900",color:"#7c3aed",letterSpacing:1},onboardingTitle:{fontSize:28,fontWeight:"900",color:"#0f172a",marginTop:18},onboardingBody:{fontSize:15,color:"#475569",lineHeight:23,marginTop:10},onboardingDots:{flexDirection:"row",gap:6,marginTop:20},onboardingDot:{width:9,height:9,borderRadius:9,backgroundColor:"#e2e8f0"},onboardingDotOn:{backgroundColor:"#7c3aed",width:24},onboardingActions:{flexDirection:"row",justifyContent:"flex-end",gap:10,marginTop:22},onboardingPrimary:{backgroundColor:"#7c3aed",paddingHorizontal:18,paddingVertical:12,borderRadius:10},onboardingPrimaryText:{color:"#fff",fontWeight:"900"},onboardingSecondary:{borderWidth:1,borderColor:"#cbd5e1",paddingHorizontal:18,paddingVertical:12,borderRadius:10},onboardingSecondaryText:{color:"#334155",fontWeight:"900"},onboardingHelp:{color:"#6d28d9",fontWeight:"900",textAlign:"center",marginTop:16},
   safeArea: { flex: 1, backgroundColor: "#f4f8fc" },
   page: { flex: 1, flexDirection: "row" },
   scroll: { flex: 1 },
@@ -774,13 +808,8 @@ const styles = StyleSheet.create({
   iSmallPressed: { opacity: 0.78 },
 
   quickActions: { borderTopWidth: 1, borderTopColor: "#17364d", paddingTop: 12, marginTop: 8, gap: 8 },
-  quickTitle: { color: "#91a9bd", fontSize: 8, fontWeight: "900", letterSpacing: 1.1 },
   quickRow: { flexDirection: "row", alignItems: "center", gap: 9, minHeight: 26, paddingHorizontal: 4 },
-  quickText: { color: "#ffffff", fontSize: 10, fontWeight: "700" },
-  sidebarUpgrade: { marginTop: 18, borderRadius: 12, padding: 13, backgroundColor: "#14235a", borderWidth: 1, borderColor: "#3346a0", alignItems: "center", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 5 } },
   sidebarCrown: { color: "#ffd45c", fontSize: 25, fontWeight: "900" },
-  sidebarUpgradeTitle: { color: "#ffffff", fontSize: 12, fontWeight: "900", marginTop: 4 },
-  sidebarUpgradeText: { color: "#c8d5e4", fontSize: 8, lineHeight: 12, textAlign: "center", marginTop: 7 },
   sidebarUpgradeButton: { width: "100%", marginTop: 10, minHeight: 31, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: "#13c7dc", borderBottomWidth: 4, borderBottomColor: "#8125c9", shadowColor: "#8b2be2", shadowOpacity: 0.55, shadowRadius: 7, shadowOffset: { width: 0, height: 4 } },
   sidebarUpgradeButtonText: { color: "#ffffff", fontSize: 10, fontWeight: "900" },
 

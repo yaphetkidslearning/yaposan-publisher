@@ -10,7 +10,7 @@ type Props = {
 
 export default function AssetRenameModal({ asset, onClose, onSave }: Props) {
   const [name, setName] = useState("");
-  useEffect(() => setName(asset?.name ?? ""), [asset]);
+  useEffect(() => { queueMicrotask(() => setName(asset?.name ?? "")); }, [asset]);
   const valid = name.trim().length > 0;
   return <Modal transparent animationType="fade" visible={asset !== null} onRequestClose={onClose}>
     <View style={styles.backdrop}><View style={styles.card}>

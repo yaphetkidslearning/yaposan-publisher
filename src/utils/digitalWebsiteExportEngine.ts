@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { detectTextDirection, fontCssStack } from "./typographyManager";
 import type { PublisherElement, PublisherPage, PublisherProject } from "../types/publisher";
 import { normalizeDigitalPublishingEditorIntegration } from "./digitalPublishingEditorIntegrationEngine";
 import { validateDigitalPublishingDeployment } from "./digitalPublishingDeploymentEngine";
@@ -47,7 +48,7 @@ function renderElement(element: PublisherElement): string {
   if (element.hidden) return "";
   const style = [`left:${cssValue(element.x)}px`,`top:${cssValue(element.y)}px`,`width:${Math.max(1,cssValue(element.width,1))}px`,`height:${Math.max(1,cssValue(element.height,1))}px`,`z-index:${cssValue(element.zIndex)}`,`opacity:${element.opacity ?? 1}`,`transform:rotate(${cssValue(element.rotation)}deg)`,`background:${element.fillColor ?? "transparent"}`,`border:${cssValue(element.borderWidth)}px solid ${element.borderColor ?? "transparent"}`,`border-radius:${cssValue(element.borderRadius)}px`].join(";");
   const attrs = `class="yp-element yp-${element.type}" style="${style}" data-element-id="${escapeHtml(element.id)}" aria-label="${escapeHtml(element.accessibilityLabel || element.name || element.type)}"`;
-  if (element.type === "text") return `<div ${attrs}><span style="font-family:${escapeHtml(element.fontFamily || "Arial")};font-size:${cssValue(element.fontSize,16)}px;font-weight:${element.fontWeight || "400"};color:${element.textColor || "#111827"};text-align:${element.textAlign || "left"}">${escapeHtml(element.text || "")}</span></div>`;
+  if (element.type === "text") { const text=element.text||"", direction=detectTextDirection(text), align=direction==="rtl"&&(!element.textAlign||element.textAlign==="left")?"right":(element.textAlign||"left"); return `<div ${attrs}><span dir="${direction}" style="font-family:${escapeHtml(fontCssStack(element.fontFamily || "Arial", text))};font-size:${cssValue(element.fontSize,16)}px;font-weight:${element.fontWeight || "400"};color:${element.textColor || "#111827"};text-align:${align};unicode-bidi:plaintext">${escapeHtml(text)}</span></div>`; }
   if (element.type === "image" && element.imageUri) return `<div ${attrs}><img src="${escapeHtml(element.imageUri)}" alt="${escapeHtml(element.accessibilityLabel || element.name || "Image")}" style="width:100%;height:100%;object-fit:${element.imageFit || "cover"}"/></div>`;
   if (element.type === "svg" && element.svgMarkup) return `<div ${attrs}>${element.svgMarkup}</div>`;
   return `<div ${attrs}></div>`;

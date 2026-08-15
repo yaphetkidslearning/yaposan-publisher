@@ -7,6 +7,13 @@ Describe the change and why it is needed.
 - [ ] `npm run typecheck`
 - [ ] Relevant tests were run
 - [ ] UI changes were checked in the browser, if applicable
+- [ ] Accessibility/keyboard impact was checked, if applicable
+- [ ] Documentation was updated when behavior or setup changed
+
+## Scope
+
+- [ ] This pull request is focused on one coherent change
+- [ ] Unrelated generated or formatting changes were avoided
 
 ## Security / deployment
 

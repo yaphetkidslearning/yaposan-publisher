@@ -83,7 +83,7 @@ function NumberField({
   const [draft, setDraft] = useState(String(Math.round(value * 100) / 100));
 
   useEffect(() => {
-    setDraft(String(Math.round(value * 100) / 100));
+    queueMicrotask(() => setDraft(String(Math.round(value * 100) / 100)));
   }, [value]);
 
   return (
@@ -259,8 +259,8 @@ export default function PropertiesPanel({
   const selected = selectedElements[0] ?? null;
 
   useEffect(() => {
-    if (!selected && activeTab === "object") setActiveTab("page");
-    if (selected && activeTab === "page") setActiveTab("object");
+    if (!selected && activeTab === "object") queueMicrotask(() => setActiveTab("page"));
+    if (selected && activeTab === "page") queueMicrotask(() => setActiveTab("object"));
   }, [activeTab, selected]);
 
   const isText = selected?.type === "text";

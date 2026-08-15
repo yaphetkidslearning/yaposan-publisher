@@ -11,7 +11,17 @@ type Connected={provider:string;endpoint?:string;model?:string;keyLast4?:string}
 export default function AIProviderSettingsPage(){
  const auth=useAuth();const [settings,setSettings]=useState<AISettings>(DEFAULT_AI_SETTINGS);const [usage,setUsage]=useState<AIUsageEntry[]>([]);const [saved,setSaved]=useState("");const [apiKey,setApiKey]=useState("");const [endpoint,setEndpoint]=useState("");const [connected,setConnected]=useState<Connected[]>([]);
  const loadConnections=async()=>{if(!auth.isAuthenticated)return;const r=await auth.authorizedFetch("/api/v1/ai/providers/credentials");if(r.ok)setConnected((await r.json()).items??[])};
- useEffect(()=>{loadAISettings().then(x=>{setSettings(x);setEndpoint(endpoints[x.provider]??"")});loadAIUsage().then(setUsage);void loadConnections()},[auth.isAuthenticated]);
+ useEffect(()=>{
+  let cancelled=false;
+  void loadAISettings().then(x=>{if(cancelled)return;setSettings(x);setEndpoint(endpoints[x.provider]??"")});
+  void loadAIUsage().then(entries=>{if(!cancelled)setUsage(entries)});
+  if(auth.isAuthenticated){
+   void auth.authorizedFetch("/api/v1/ai/providers/credentials").then(async r=>{if(!r.ok||cancelled)return;const body=await r.json();if(!cancelled)setConnected(body.items??[])});
+  } else {
+   queueMicrotask(()=>{if(!cancelled)setConnected([])});
+  }
+  return()=>{cancelled=true};
+ },[auth.isAuthenticated,auth.authorizedFetch]);
  const provider=getProvider(settings.provider);const total=useMemo(()=>usage.reduce((n,e)=>n+e.inputTokens+e.outputTokens,0),[usage]);const connection=connected.find(x=>x.provider===settings.provider);
  const choose=(id:AIProviderId)=>{const next=getProvider(id);setSettings(v=>({...v,provider:id,model:next.models[0]}));setEndpoint(endpoints[id]??"");setApiKey("");setSaved("")};
  const save=async()=>{await saveAISettings(settings);setSaved("AI preferences saved locally.")};

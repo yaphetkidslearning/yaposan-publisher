@@ -1,0 +1,8 @@
+Yaposan Publisher v1.0.0 Final Source Release Validation
+Date: 2026-08-03
+Focused regression: 91 passed, 0 failed
+ZIP integrity: pending packaging verification
+TypeScript/build status: requires npm registry and installed dependencies
+Hosted provider validation: requires real production credentials and infrastructure
+Desktop native signing/notarization: requires native build environments
+Certification boundary: final source release; hosted production readiness remains evidence-gated

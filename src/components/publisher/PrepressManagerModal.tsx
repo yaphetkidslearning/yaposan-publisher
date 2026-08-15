@@ -6,6 +6,7 @@ import type { PublisherProject } from "../../types/publisher";
 import { applyPrintPreset, getPrepressSettings, runPrepress, updatePrepressSettings, type FinishingOperation, type ImpositionMode, type PrepressSettings, type ProofMode, type PressType, type SubstrateType, type ApprovalStatus } from "../../utils/prepressEngine";
 import { generateAndDeliverPressPackage } from "../../utils/productionPackageService";
 
+const eventTimestamp = () => Date.now();
 type Props = {
   visible: boolean;
   project: PublisherProject;
@@ -26,7 +27,7 @@ export default function PrepressManagerModal({ visible, project, onChange, onClo
   const settings = getPrepressSettings(project);
   const report = project.lastPrepressReport ?? runPrepress(project, settings);
   const update = (updates: Partial<PrepressSettings>) => onChange(updatePrepressSettings(project, updates));
-  const run = () => onChange({ ...project, updatedAt: Date.now(), lastPrepressReport: runPrepress(project, settings) });
+  const run = () => onChange({ ...project, updatedAt: eventTimestamp(), lastPrepressReport: runPrepress(project, settings) });
   const [packageBusy, setPackageBusy] = useState(false);
   const [packageProgress, setPackageProgress] = useState(0);
   const [packageStep, setPackageStep] = useState("Ready to generate");
@@ -86,7 +87,7 @@ export default function PrepressManagerModal({ visible, project, onChange, onClo
         <View style={styles.row}>{(["coated", "uncoated", "newsprint", "synthetic", "board"] as SubstrateType[]).map((v) => <Choice key={v} value={v} current={settings.substrate} label={v} onChange={(substrate) => update({ substrate })} />)}</View>
         <View style={styles.row}><Toggle label="Enforce Hairlines" active={settings.enforceHairlineMinimum} onPress={() => update({ enforceHairlineMinimum: !settings.enforceHairlineMinimum })} /><Toggle label="Black Text Overprint" active={settings.requireBlackTextOverprint} onPress={() => update({ requireBlackTextOverprint: !settings.requireBlackTextOverprint })} /></View>
         <View style={styles.metricRow}><Text style={styles.metric}>Screen: {settings.screenFrequency} LPI</Text><Pressable onPress={() => update({ screenFrequency: settings.screenFrequency >= 200 ? 85 : settings.screenFrequency + 15 })} style={styles.smallButton}><Text style={styles.smallButtonText}>Change</Text></Pressable><Text style={styles.metric}>Dot gain: {settings.dotGain}%</Text><Pressable onPress={() => update({ dotGain: settings.dotGain >= 25 ? 10 : settings.dotGain + 5 })} style={styles.smallButton}><Text style={styles.smallButtonText}>Change</Text></Pressable></View>
-        <View style={styles.row}>{(["draft", "internal-approved", "client-approved", "press-approved"] as ApprovalStatus[]).map((v) => <Choice key={v} value={v} current={settings.approvalStatus} label={v.replace("-", " ")} onChange={(approvalStatus) => update({ approvalStatus, approvalTimestamp: approvalStatus === "press-approved" ? Date.now() : undefined })} />)}</View>
+        <View style={styles.row}>{(["draft", "internal-approved", "client-approved", "press-approved"] as ApprovalStatus[]).map((v) => <Choice key={v} value={v} current={settings.approvalStatus} label={v.replace("-", " ")} onChange={(approvalStatus) => update({ approvalStatus, approvalTimestamp: approvalStatus === "press-approved" ? eventTimestamp() : undefined })} />)}</View>
         <View style={styles.summary}><Text style={styles.summaryText}>Fingerprint: {report.pressReadiness.fingerprint}</Text><Text style={styles.summaryText}>Small text: {report.pressReadiness.smallTextObjects}</Text><Text style={styles.summaryText}>Reverse text: {report.pressReadiness.reverseTextObjects}</Text><Text style={styles.summaryText}>Hairlines: {report.pressReadiness.hairlineObjects}</Text><Text style={styles.summaryText}>{report.pressReadiness.certified ? "Certified" : "Not certified"}</Text></View>
 
         <Text style={styles.section}>Production Package</Text>

@@ -1,0 +1,27 @@
+name: Question / setup help
+about: Get directed to the community Q&A channel
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your question. General setup and usage questions are handled in GitHub Discussions Q&A so answers remain searchable for everyone.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Describe what you are trying to do and where you are stuck. Do not include secrets, API keys, customer data, or production credentials.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node version, browser, and relevant Yaposan version/commit.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I have removed secrets, credentials, personal data, and private production information.
+          required: true

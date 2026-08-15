@@ -1,0 +1,22 @@
+{
+  "phase": "90.18",
+  "purpose": "Complete-source packaging repair and combined release finalization",
+  "status": "AUTOMATED_BASELINE_READY",
+  "automated": {
+    "completeSourceTreeRequired": true,
+    "sourceArchiveRejectsMissingCorePaths": true,
+    "sourceArchiveRejectsSecretsAndGeneratedBulk": true,
+    "phase9014To9017RegressionChainRetained": true,
+    "productionWebBuildRequiredByVerifier": true
+  },
+  "externalProductionEvidence": {
+    "browserMatrix": false,
+    "wcag22AA": false,
+    "productionEmail": false,
+    "gracefulDegradation": false,
+    "backupRestore": false,
+    "rollback": false,
+    "zeroDowntime": false
+  },
+  "note": "The automated package can be release-candidate ready while the listed operational gates remain pending real production evidence."
+}

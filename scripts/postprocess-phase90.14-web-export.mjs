@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const SITE_TITLE = "Yaposan — Creative Design & Publishing Suite";
+export const SITE_TITLE = "Yaposan — AI Creative Design & Productivity Suite";
 export const SITE_DESCRIPTION =
   "Create publications, edit product photos, collaborate, publish professional content, and create with AI in one powerful workspace.";
 export const SITE_URL = "https://yaposan.com";

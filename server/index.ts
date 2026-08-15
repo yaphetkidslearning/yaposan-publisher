@@ -1,7 +1,23 @@
 import { randomUUID } from "node:crypto";
+import {
+  claimNextProductPhotoBatch,
+  cleanupExpiredProductPhotoBatches,
+  createProductPhotoBatch,
+  getProductPhotoBatch,
+  getProductPhotoBatchZip,
+  listProductPhotoBatches,
+  processProductPhotoBatch,
+  productPhotoBatchMetrics,
+  recoverStaleProductPhotoBatches,
+  retryProductPhotoBatch,
+  startProductPhotoBatch,
+  uploadProductPhotoBatchItem,
+} from "./productPhotoBatches";
+import { loadBackgroundRemovalConfig, runSelfHostedBackgroundRemoval, runSelfHostedProductPhotoAnalysis } from "./backgroundRemoval";
 
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { runAiGateway } from "./aiPlatform";
+import { cancelMediaJob, generateMedia, getMediaJob, mediaProviderCapabilities } from "./mediaGeneration";
 import {
   constantTimeEqual,
   isConfiguredAdmin,
@@ -235,6 +251,37 @@ const requestLimiter = new BoundedRateLimiter({
   windowMs: 60_000,
   maxEntries: config.rateLimitMaxEntries,
 });
+
+const supportTicketLimiter = new BoundedRateLimiter({
+  limit: 5,
+  windowMs: 60_000,
+  maxEntries: config.rateLimitMaxEntries,
+});
+
+const SUPPORT_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+const SUPPORT_ATTACHMENT_MIME_TYPES = new Set([
+  "image/png", "image/jpeg", "image/webp", "image/gif",
+  "application/pdf", "text/plain", "application/json", "application/zip",
+]);
+
+const supportAttachmentMatchesMime = (bytes: Buffer, mimeType: string) => {
+  if (!bytes.length) return false;
+  const head = bytes.subarray(0, 16);
+  if (mimeType === "image/png") return head.subarray(0,8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]));
+  if (mimeType === "image/jpeg") return head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff;
+  if (mimeType === "image/gif") return head.subarray(0,6).toString("ascii") === "GIF87a" || head.subarray(0,6).toString("ascii") === "GIF89a";
+  if (mimeType === "image/webp") return head.subarray(0,4).toString("ascii") === "RIFF" && head.subarray(8,12).toString("ascii") === "WEBP";
+  if (mimeType === "application/pdf") return head.subarray(0,5).toString("ascii") === "%PDF-";
+  if (mimeType === "application/zip") return head[0] === 0x50 && head[1] === 0x4b && [0x03,0x05,0x07].includes(head[2] ?? -1);
+  if (mimeType === "text/plain" || mimeType === "application/json") {
+    if (bytes.includes(0)) return false;
+    if (mimeType === "application/json") { try { JSON.parse(bytes.toString("utf8")); } catch { return false; } }
+    return true;
+  }
+  return false;
+};
+
+const supportTicketStatuses = new Set(["open","in_progress","waiting_for_user","resolved","closed"]);
 
 function rateLimit(ip: string) {
   return !requestLimiter.check(ip).allowed;
@@ -702,6 +749,80 @@ export async function handleRequest(
 
     if (
       req.method === "POST" &&
+      url.pathname === "/api/v1/support/tickets"
+    ) {
+      const optionalClaims = verifyToken(String(req.headers.authorization ?? ""), identityConfig.secret, "access");
+      const limiterKey = optionalClaims?.sub ? `user:${optionalClaims.sub}` : `ip:${ip}`;
+      if (!supportTicketLimiter.check(limiterKey).allowed) {
+        return json(res, 429, { error: { code: "SUPPORT_RATE_LIMITED", message: "Too many support requests. Please wait before trying again." } }, requestId);
+      }
+
+      const b = await bodyJson(req) as {
+        name?: string; email?: string; category?: string; priority?: string; subject?: string; message?: string; website?: string;
+        source?: string; page?: string; action?: string; diagnostics?: Record<string, unknown>;
+        attachment?: { name?: string; mimeType?: string; size?: number; base64?: string; storageKey?: string };
+      };
+      // Honeypot: bots commonly fill hidden website fields. Return a generic success without persisting spam.
+      if (String(b.website ?? "").trim()) return json(res, 201, { ticket: { id: randomUUID(), status: "open", createdAt: new Date().toISOString(), attachmentStored: false } }, requestId);
+
+      const name = String(b.name ?? "").trim().slice(0, 120);
+      const email = String(b.email ?? "").trim().toLowerCase().slice(0, 254);
+      const category = String(b.category ?? "Bug / Problem").trim().slice(0, 80);
+      const priorityRaw = String(b.priority ?? "Normal").trim().toLowerCase();
+      const priority = priorityRaw === "urgent" ? "urgent" : priorityRaw === "important" ? "important" : "normal";
+      const subject = String(b.subject ?? "").trim().slice(0, 240);
+      const message = String(b.message ?? "").trim().slice(0, 20_000);
+
+      if (name.length < 2 || !/^\S+@\S+\.\S+$/.test(email) || subject.length < 4 || message.length < 20) {
+        return json(res, 400, { error: { code: "INVALID_SUPPORT_REQUEST", message: "Name, valid email, subject, and a detailed description are required." } }, requestId);
+      }
+
+      let attachmentStorageKey: string | undefined;
+      let attachmentName: string | undefined;
+      let attachmentMimeType: string | undefined;
+      let attachmentSize: number | undefined;
+
+      if (b.attachment?.storageKey && optionalClaims?.sub) {
+        attachmentStorageKey = String(b.attachment.storageKey).slice(0, 500);
+        if (!attachmentStorageKey.startsWith(`support-${optionalClaims.sub}/`)) return json(res, 403, { error: { code: "SUPPORT_ATTACHMENT_ACCESS", message: "Attachment does not belong to this support session." } }, requestId);
+        attachmentName = String(b.attachment.name ?? "support-attachment").trim().slice(0, 160);
+        attachmentMimeType = String(b.attachment.mimeType ?? "application/octet-stream").toLowerCase();
+        attachmentSize = Math.max(0, Number(b.attachment.size ?? 0));
+      } else if (b.attachment?.base64) {
+        attachmentName = String(b.attachment.name ?? "support-attachment").trim().slice(0, 160);
+        attachmentMimeType = String(b.attachment.mimeType ?? "application/octet-stream").toLowerCase();
+        if (!SUPPORT_ATTACHMENT_MIME_TYPES.has(attachmentMimeType)) return json(res, 400, { error: { code: "SUPPORT_ATTACHMENT_TYPE", message: "Unsupported support attachment type." } }, requestId);
+        const encoded = String(b.attachment.base64);
+        if (!/^[A-Za-z0-9+/=\r\n]+$/.test(encoded)) return json(res, 400, { error: { code: "SUPPORT_ATTACHMENT_ENCODING", message: "Attachment encoding is invalid." } }, requestId);
+        const bytes = Buffer.from(encoded, "base64");
+        if (!bytes.length || bytes.length > SUPPORT_ATTACHMENT_MAX_BYTES) return json(res, 400, { error: { code: "SUPPORT_ATTACHMENT_SIZE", message: "Support attachments must be 10 MB or smaller." } }, requestId);
+        if (!supportAttachmentMatchesMime(bytes, attachmentMimeType)) return json(res, 400, { error: { code: "SUPPORT_ATTACHMENT_SIGNATURE", message: "Attachment contents do not match the declared file type." } }, requestId);
+        const stored = await storage.put({ workspaceId: optionalClaims?.sub ? `support-${optionalClaims.sub}` : "support-public", name: attachmentName, contentType: attachmentMimeType, body: bytes });
+        attachmentStorageKey = stored.key;
+        attachmentSize = stored.size;
+      }
+
+      const ticket = await db.insert("supportTickets", {
+        userId: optionalClaims?.sub, email, name, category, priority, subject, message, status: "open",
+        source: String(b.source ?? "").slice(0, 160) || undefined, page: String(b.page ?? "").slice(0, 300) || undefined, action: String(b.action ?? "").slice(0, 160) || undefined,
+        diagnostics: b.diagnostics && typeof b.diagnostics === "object" ? b.diagnostics : undefined, attachmentName, attachmentMimeType, attachmentSize, attachmentStorageKey,
+      });
+      await db.insert("supportTicketMessages", { ticketId: ticket.id, authorUserId: optionalClaims?.sub, authorType: "user", body: message, attachmentName, attachmentMimeType, attachmentSize, attachmentStorageKey });
+
+      return json(res, 201, { ticket: { id: ticket.id, status: ticket.status, createdAt: ticket.createdAt, attachmentStored: Boolean(ticket.attachmentStorageKey) } }, requestId);
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/v1/help/feedback") {
+      const b=await bodyJson(req) as {contentType?:string;contentId?:string;helpful?:boolean;page?:string;metadata?:Record<string,unknown>;website?:string};
+      if(String(b.website??"").trim()) return json(res,201,{feedback:{id:randomUUID()}},requestId);
+      if(!["faq","guide"].includes(String(b.contentType))||!String(b.contentId??"").trim()||typeof b.helpful!=="boolean") return json(res,400,{error:{code:"HELP_FEEDBACK_INVALID",message:"Valid help feedback is required."}},requestId);
+      const optionalClaims=verifyToken(String(req.headers.authorization??""),identityConfig.secret,"access");
+      const feedback=await db.insert("helpFeedback",{userId:optionalClaims?.sub,contentType:b.contentType as "faq"|"guide",contentId:String(b.contentId).slice(0,160),helpful:b.helpful,page:String(b.page??"").slice(0,300)||undefined,metadata:b.metadata&&typeof b.metadata==="object"?b.metadata:undefined});
+      return json(res,201,{feedback:{id:feedback.id}},requestId);
+    }
+
+    if (
+      req.method === "POST" &&
       url.pathname ===
         "/api/v1/webhooks/stripe"
     ) {
@@ -857,6 +978,20 @@ export async function handleRequest(
       );
     }
 
+    if (req.method === "POST" && url.pathname === "/api/v1/internal/product-photo/process-next") {
+      const expected = config.productPhotoWorkerToken;
+      if (!expected || !constantTimeEqual(String(req.headers["x-worker-token"] ?? ""), expected)) {
+        return json(res, 401, { error: { code: "WORKER_UNAUTHORIZED", message: "Valid product photo worker token required" } }, requestId);
+      }
+      const db = await getDatabase();
+      await recoverStaleProductPhotoBatches(db);
+      await cleanupExpiredProductPhotoBatches(db, storage);
+      const job = await claimNextProductPhotoBatch(db, config.productPhotoWorkerId, config.productPhotoJobLeaseSeconds);
+      if (!job) return json(res, 200, { job: null }, requestId);
+      const processed = await processProductPhotoBatch(db, storage, job);
+      return json(res, 200, { job: processed }, requestId);
+    }
+
     const claims = verifyToken(
       String(
         req.headers.authorization ??
@@ -883,6 +1018,130 @@ export async function handleRequest(
 
     const userId = claims.sub;
 
+    if (req.method === "POST" && url.pathname === "/api/v1/support/uploads") {
+      const mimeType=String(req.headers["content-type"] ?? "application/octet-stream").toLowerCase();
+      const name=String(req.headers["x-file-name"] ?? "support-attachment").slice(0,160);
+      if(!SUPPORT_ATTACHMENT_MIME_TYPES.has(mimeType)) return json(res,400,{error:{code:"SUPPORT_ATTACHMENT_TYPE",message:"Unsupported support attachment type."}},requestId);
+      const bytes=await readBody(req);
+      if(!bytes.length||bytes.length>SUPPORT_ATTACHMENT_MAX_BYTES) return json(res,400,{error:{code:"SUPPORT_ATTACHMENT_SIZE",message:"Support attachments must be 10 MB or smaller."}},requestId);
+      if(!supportAttachmentMatchesMime(bytes,mimeType)) return json(res,400,{error:{code:"SUPPORT_ATTACHMENT_SIGNATURE",message:"Attachment contents do not match the declared file type."}},requestId);
+      const stored=await storage.put({workspaceId:`support-${userId}`,name,contentType:mimeType,body:bytes});
+      return json(res,201,{attachment:{storageKey:stored.key,name,mimeType,size:stored.size}},requestId);
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/v1/support/tickets/my") {
+      const items=(await db.find("supportTickets",t=>t.userId===userId)).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+      return json(res,200,{items:items.map(t=>({id:t.id,subject:t.subject,category:t.category,priority:t.priority,status:t.status,createdAt:t.createdAt,updatedAt:t.updatedAt}))},requestId);
+    }
+
+    const supportAttachmentMatch=url.pathname.match(/^\/api\/v1\/support\/tickets\/([^/]+)\/attachment$/);
+    if(req.method==="GET"&&supportAttachmentMatch){
+      const ticket=await db.get("supportTickets",supportAttachmentMatch[1]);
+      if(!ticket||ticket.userId!==userId||!ticket.attachmentStorageKey) return json(res,404,{error:{code:"SUPPORT_ATTACHMENT_NOT_FOUND",message:"Attachment not found."}},requestId);
+      const bytes=await storage.get(ticket.attachmentStorageKey);
+      res.writeHead(200,{"content-type":ticket.attachmentMimeType??"application/octet-stream","content-disposition":`attachment; filename="${String(ticket.attachmentName??"support-attachment").replace(/[\r\n"]/g,"")}"`,...securityHeaders(requestId)});res.end(Buffer.from(bytes));return;
+    }
+
+    const supportTicketMatch=url.pathname.match(/^\/api\/v1\/support\/tickets\/([^/]+)$/);
+    if (req.method === "GET" && supportTicketMatch) {
+      const ticket=await db.get("supportTickets",supportTicketMatch[1]);
+      if(!ticket||ticket.userId!==userId) return json(res,404,{error:{code:"SUPPORT_TICKET_NOT_FOUND",message:"Support ticket not found."}},requestId);
+      const messages=(await db.find("supportTicketMessages",m=>m.ticketId===ticket.id)).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+      return json(res,200,{ticket:{...ticket,attachmentStorageKey:undefined},messages:messages.map(m=>({...m,attachmentStorageKey:undefined}))},requestId);
+    }
+
+    const supportReplyMatch=url.pathname.match(/^\/api\/v1\/support\/tickets\/([^/]+)\/reply$/);
+    if (req.method === "POST" && supportReplyMatch) {
+      const ticket=await db.get("supportTickets",supportReplyMatch[1]);
+      if(!ticket||ticket.userId!==userId) return json(res,404,{error:{code:"SUPPORT_TICKET_NOT_FOUND",message:"Support ticket not found."}},requestId);
+      const b=await bodyJson(req) as {message?:string}; const body=String(b.message??"").trim().slice(0,10000);
+      if(body.length<2) return json(res,400,{error:{code:"SUPPORT_REPLY_REQUIRED",message:"Reply cannot be empty."}},requestId);
+      const message=await db.insert("supportTicketMessages",{ticketId:ticket.id,authorUserId:userId,authorType:"user",body});
+      await db.update("supportTickets",ticket.id,{status:"open"});
+      return json(res,201,{message},requestId);
+    }
+
+
+    const currentUser=await db.get("users",userId);
+    const isSupportAdmin=isConfiguredAdmin(currentUser?.email,config.adminEmails);
+    if (req.method === "GET" && url.pathname === "/api/v1/admin/support/tickets") {
+      if(!isSupportAdmin) return json(res,403,{error:{code:"ADMIN_REQUIRED",message:"Administrator access required."}},requestId);
+      const status=url.searchParams.get("status"); const q=(url.searchParams.get("q")??"").toLowerCase();
+      const items=(await db.find("supportTickets",t=>(!status||t.status===status)&&(!q||`${t.id} ${t.email} ${t.name} ${t.subject} ${t.category}`.toLowerCase().includes(q)))).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+      return json(res,200,{items:items.slice(0,250).map(t=>({...t,attachmentStorageKey:undefined}))},requestId);
+    }
+
+    const adminSupportMatch=url.pathname.match(/^\/api\/v1\/admin\/support\/tickets\/([^/]+)$/);
+    if (adminSupportMatch && req.method === "GET") {
+      if(!isSupportAdmin) return json(res,403,{error:{code:"ADMIN_REQUIRED",message:"Administrator access required."}},requestId);
+      const ticket=await db.get("supportTickets",adminSupportMatch[1]); if(!ticket) return json(res,404,{error:{code:"SUPPORT_TICKET_NOT_FOUND",message:"Support ticket not found."}},requestId);
+      const messages=(await db.find("supportTicketMessages",m=>m.ticketId===ticket.id)).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+      return json(res,200,{ticket:{...ticket,attachmentStorageKey:undefined},messages:messages.map(m=>({...m,attachmentStorageKey:undefined}))},requestId);
+    }
+    const adminAttachmentMatch=url.pathname.match(/^\/api\/v1\/admin\/support\/tickets\/([^/]+)\/attachment$/);
+    if(req.method==="GET"&&adminAttachmentMatch){
+      if(!isSupportAdmin) return json(res,403,{error:{code:"ADMIN_REQUIRED",message:"Administrator access required."}},requestId);
+      const ticket=await db.get("supportTickets",adminAttachmentMatch[1]); if(!ticket?.attachmentStorageKey) return json(res,404,{error:{code:"SUPPORT_ATTACHMENT_NOT_FOUND",message:"Attachment not found."}},requestId);
+      const bytes=await storage.get(ticket.attachmentStorageKey);
+      res.writeHead(200,{"content-type":ticket.attachmentMimeType??"application/octet-stream","content-disposition":`attachment; filename="${String(ticket.attachmentName??"support-attachment").replace(/[\r\n"]/g,"")}"`,...securityHeaders(requestId)});res.end(Buffer.from(bytes));return;
+    }
+
+    if (adminSupportMatch && req.method === "PATCH") {
+      if(!isSupportAdmin) return json(res,403,{error:{code:"ADMIN_REQUIRED",message:"Administrator access required."}},requestId);
+      const b=await bodyJson(req) as {status?:string}; const status=String(b.status??"");
+      if(!supportTicketStatuses.has(status)) return json(res,400,{error:{code:"SUPPORT_STATUS_INVALID",message:"Invalid support ticket status."}},requestId);
+      const ticket=await db.update("supportTickets",adminSupportMatch[1],{status:status as any});
+      await db.insert("supportTicketMessages",{ticketId:ticket.id,authorUserId:userId,authorType:"system",body:`Status changed to ${status.replaceAll("_"," ")}.`});
+      return json(res,200,{ticket:{...ticket,attachmentStorageKey:undefined}},requestId);
+    }
+    const adminNoteMatch=url.pathname.match(/^\/api\/v1\/admin\/support\/tickets\/([^/]+)\/messages$/);
+    if (adminNoteMatch && req.method === "POST") {
+      if(!isSupportAdmin) return json(res,403,{error:{code:"ADMIN_REQUIRED",message:"Administrator access required."}},requestId);
+      const ticket=await db.get("supportTickets",adminNoteMatch[1]); if(!ticket) return json(res,404,{error:{code:"SUPPORT_TICKET_NOT_FOUND",message:"Support ticket not found."}},requestId);
+      const b=await bodyJson(req) as {message?:string}; const body=String(b.message??"").trim().slice(0,10000); if(body.length<2) return json(res,400,{error:{code:"SUPPORT_REPLY_REQUIRED",message:"Message cannot be empty."}},requestId);
+      const message=await db.insert("supportTicketMessages",{ticketId:ticket.id,authorUserId:userId,authorType:"staff",body});
+      await db.update("supportTickets",ticket.id,{status:"waiting_for_user"});
+      return json(res,201,{message},requestId);
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/v1/image/product-photo-analyze") {
+      const body = await bodyJson(req) as { imageBase64?: string; mimeType?: string; categoryHint?: "auto" | "hard-goods" | "footwear" | "apparel" | "furniture" | "thin-structures" | "hair-fur" | "glass-transparent" | "jewelry" | "general-merchandise" };
+      const result = await runSelfHostedProductPhotoAnalysis({ imageBase64: String(body.imageBase64 ?? ""), mimeType: String(body.mimeType ?? ""), categoryHint: body.categoryHint }, loadBackgroundRemovalConfig());
+      return json(res, 200, result, requestId);
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/v1/image/background-remove") {
+      const body = await bodyJson(req) as {
+        imageBase64?: string; mimeType?: string; background?: "transparent" | "white" | "custom";
+        backgroundColor?: string; qualityMode?: "auto" | "fast" | "quality";
+        preset?: "marketplace-product" | "pure-white-catalog" | "transparent-original" | "custom"; paddingPercent?: number; squareCanvas?: boolean; preserveShadow?: boolean;
+        categoryHint?: "auto" | "hard-goods" | "footwear" | "apparel" | "furniture" | "thin-structures" | "hair-fur" | "glass-transparent" | "jewelry" | "general-merchandise";
+        outputFormat?: "png" | "webp" | "jpeg"; normalizeLighting?: boolean; catalogTargetOccupancy?: number; catalogCanvasPx?: number; targetLuma?: number; targetRgb?: number[]; strictWhite?: boolean; whiteAuditThreshold?: number;
+      };
+      const result = await runSelfHostedBackgroundRemoval({
+        imageBase64: String(body.imageBase64 ?? ""),
+        mimeType: String(body.mimeType ?? ""),
+        background: body.background,
+        backgroundColor: body.backgroundColor,
+        qualityMode: body.qualityMode,
+        preset: body.preset,
+        paddingPercent: body.paddingPercent,
+        squareCanvas: body.squareCanvas,
+        preserveShadow: body.preserveShadow,
+        categoryHint: body.categoryHint,
+        outputFormat: body.outputFormat,
+        normalizeLighting: body.normalizeLighting,
+        catalogTargetOccupancy: body.catalogTargetOccupancy,
+        catalogCanvasPx: body.catalogCanvasPx,
+        targetLuma: body.targetLuma,
+        targetRgb: body.targetRgb,
+        strictWhite: body.strictWhite,
+        whiteAuditThreshold: body.whiteAuditThreshold,
+      }, loadBackgroundRemovalConfig());
+      return json(res, 200, result, requestId);
+    }
+
+
     const membershipForUser = (
       await db.find(
         "memberships",
@@ -897,6 +1156,47 @@ export async function handleRequest(
             membershipForUser.organizationId
           )
         : undefined;
+
+    const batchCreatePath = url.pathname === "/api/v1/product-photo/batches";
+    if (req.method === "POST" && batchCreatePath) {
+      const b = await bodyJson(req) as { idempotencyKey?:string; strictWhite?:boolean; outputFormat?:"png"|"webp"|"jpeg"; items?:{name:string;mimeType:string;size:number;checksum?:string}[] };
+      const job = await createProductPhotoBatch(db, { userId, organizationId: organizationForUser?.id, idempotencyKey:b.idempotencyKey, strictWhite:b.strictWhite, outputFormat:b.outputFormat, items:Array.isArray(b.items)?b.items:[] });
+      return json(res, 201, { batch: await getProductPhotoBatch(db, job.id, userId, organizationForUser?.id) }, requestId);
+    }
+    if (req.method === "GET" && batchCreatePath) {
+      return json(res, 200, { batches: await listProductPhotoBatches(db, userId, organizationForUser?.id) }, requestId);
+    }
+    const batchItemUpload = match(url.pathname, /^\/api\/v1\/product-photo\/batches\/([^/]+)\/items\/([^/]+)\/upload$/);
+    if (req.method === "POST" && batchItemUpload) {
+      const b = await bodyJson(req) as { imageBase64?:string; mimeType?:string };
+      const bytes = Buffer.from(String(b.imageBase64 ?? ""), "base64");
+      const job = await uploadProductPhotoBatchItem(db, storage, { jobId:batchItemUpload[1], itemId:batchItemUpload[2], userId, bytes, mimeType:String(b.mimeType??"") });
+      return json(res, 200, { batch: await getProductPhotoBatch(db, job.id, userId, organizationForUser?.id) }, requestId);
+    }
+    const batchStart = match(url.pathname, /^\/api\/v1\/product-photo\/batches\/([^/]+)\/start$/);
+    if (req.method === "POST" && batchStart) {
+      const job = await startProductPhotoBatch(db, batchStart[1], userId);
+      return json(res, 200, { batch: await getProductPhotoBatch(db, job.id, userId, organizationForUser?.id) }, requestId);
+    }
+    const batchRetry = match(url.pathname, /^\/api\/v1\/product-photo\/batches\/([^/]+)\/retry$/);
+    if (req.method === "POST" && batchRetry) {
+      const job = await retryProductPhotoBatch(db, batchRetry[1], userId);
+      return json(res, 200, { batch: await getProductPhotoBatch(db, job.id, userId, organizationForUser?.id) }, requestId);
+    }
+    const batchZip = match(url.pathname, /^\/api\/v1\/product-photo\/batches\/([^/]+)\/zip$/);
+    if (req.method === "GET" && batchZip) {
+      const bytes = await getProductPhotoBatchZip(db, storage, batchZip[1], userId, organizationForUser?.id);
+      res.writeHead(200, { "content-type":"application/zip", "content-disposition":`attachment; filename="yaposan-product-photo-${batchZip[1]}.zip"`, ...securityHeaders(requestId) });
+      res.end(Buffer.from(bytes));
+      return;
+    }
+    const batchGet = match(url.pathname, /^\/api\/v1\/product-photo\/batches\/([^/]+)$/);
+    if (req.method === "GET" && batchGet) {
+      return json(res, 200, { batch: await getProductPhotoBatch(db, batchGet[1], userId, organizationForUser?.id) }, requestId);
+    }
+    if (req.method === "GET" && url.pathname === "/api/v1/product-photo/batch-metrics") {
+      return json(res, 200, await productPhotoBatchMetrics(db), requestId);
+    }
 
     const subscriptionForUser =
       membershipForUser
@@ -2566,6 +2866,44 @@ export async function handleRequest(
         },
         requestId
       );
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/v1/ai/media/capabilities") {
+      return json(res, 200, {
+        ...mediaProviderCapabilities(),
+        backgroundRemoval: {
+          configured: Boolean(process.env.BACKGROUND_REMOVAL_URL),
+          endpoint: process.env.BACKGROUND_REMOVAL_URL ? "configured" : "missing",
+        },
+      }, requestId);
+    }
+
+    const mediaJobMatch = url.pathname.match(/^\/api\/v1\/ai\/media\/(image|video|audio)\/jobs\/([^/]+)$/);
+    if (mediaJobMatch && req.method === "GET") {
+      try { return json(res, 200, await getMediaJob(mediaJobMatch[1] as "image"|"video"|"audio", decodeURIComponent(mediaJobMatch[2])), requestId); }
+      catch (error) { return json(res, 502, { error:{ code:"AI_MEDIA_STATUS_FAILED", message:error instanceof Error?error.message:String(error) } }, requestId); }
+    }
+    if (mediaJobMatch && req.method === "DELETE") {
+      try { return json(res, 200, await cancelMediaJob(mediaJobMatch[1] as "image"|"video"|"audio", decodeURIComponent(mediaJobMatch[2])), requestId); }
+      catch (error) { return json(res, 502, { error:{ code:"AI_MEDIA_CANCEL_FAILED", message:error instanceof Error?error.message:String(error) } }, requestId); }
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/v1/ai/media/generate") {
+      const body = await bodyJson(req) as { kind?: "image" | "video" | "audio"; prompt?: string; model?: string; options?: Record<string, unknown> };
+      if (!body.kind || !["image", "video", "audio"].includes(body.kind)) {
+        return json(res, 400, { error: { code: "AI_MEDIA_KIND_REQUIRED", message: "kind must be image, video, or audio" } }, requestId);
+      }
+      if (!String(body.prompt ?? "").trim()) {
+        return json(res, 400, { error: { code: "AI_MEDIA_PROMPT_REQUIRED", message: "A media generation prompt is required" } }, requestId);
+      }
+      try {
+        const result = await generateMedia({ kind: body.kind, prompt: String(body.prompt), model: body.model, options: body.options });
+        return json(res, result.status === "queued" ? 202 : 200, result, requestId);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const notConfigured = /NOT_CONFIGURED/.test(message);
+        return json(res, notConfigured ? 503 : 502, { error: { code: message, message: notConfigured ? `Connect a ${body.kind} generation provider before using this lane.` : `${body.kind} generation failed.` } }, requestId);
+      }
     }
 
     if (

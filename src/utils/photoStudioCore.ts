@@ -8,7 +8,7 @@ export function createPhotoStudioProject(name = "Untitled Photo Project"): Photo
 }
 
 export function createPhotoAsset(uri: string, name = "Imported image"): PhotoStudioAsset {
-  return { id: uid("asset"), uri, name, createdAt: Date.now(), rotation: 0, scale: 1, offsetX: 0, offsetY: 0 };
+  return { id: uid("asset"), uri, originalUri: uri, backgroundMode: "original", name, createdAt: Date.now(), rotation: 0, scale: 1, offsetX: 0, offsetY: 0 };
 }
 
 export function addPhotoAssets(project: PhotoStudioProject, assets: PhotoStudioAsset[]): PhotoStudioProject {

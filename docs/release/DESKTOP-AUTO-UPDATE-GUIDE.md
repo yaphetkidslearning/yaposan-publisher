@@ -24,7 +24,7 @@ Public production updates must be code-signed. macOS packages must also be notar
 ## Local verification
 
 ```powershell
-npm install
+npm ci
 npm run verify:phase24.0b
 ```
 

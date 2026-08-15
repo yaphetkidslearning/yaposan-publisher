@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import type { PublisherProject } from "../../types/publisher";
 import { buildCommercialReleaseReport, createTrialLicense, evaluateLicense, type CommercialLicense } from "../../utils/commercialReleaseCompletionEngine";
@@ -8,7 +8,8 @@ type Tab = "Licensing" | "E2E Tests" | "Documentation" | "Security" | "Performan
 
 export default function CommercialReleaseCompletionModal({ visible, project, onClose, onExportReport }: Props) {
   const [tab, setTab] = useState<Tab>("Licensing");
-  const [deviceId] = useState(() => `device-${Math.random().toString(36).slice(2, 12)}`);
+  const reactDeviceId = useId();
+  const deviceId = `device-${reactDeviceId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const [license, setLicense] = useState<CommercialLicense | null>(null);
   const [key, setKey] = useState("");
   const report = useMemo(() => buildCommercialReleaseReport(project, license), [project, license]);

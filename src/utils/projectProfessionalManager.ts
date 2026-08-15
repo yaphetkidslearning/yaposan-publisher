@@ -3,6 +3,7 @@ import { File as ExpoFile, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { Platform } from "react-native";
 import type { PublisherElement, PublisherProject } from "../types/publisher";
+import { FONT_FAMILIES } from "../constants/publisher";
 import { normalizePublisherProject } from "./publisherStorage";
 
 export const PACKAGE_EXTENSION = ".yaposan-package";
@@ -33,7 +34,7 @@ export type StorageDiagnostic = {
   totalBytes: number;
 };
 
-const commonFonts = new Set(["Arial", "Helvetica", "Times New Roman", "Georgia", "Courier New", "Verdana", "Tahoma", "Trebuchet MS", "Impact", "Comic Sans MS", "System"]);
+const commonFonts = new Set([...FONT_FAMILIES, "System"]);
 const bytes = (value: string) => {
   try { return new Blob([value]).size; } catch { return value.length; }
 };
@@ -73,7 +74,7 @@ export function scanFonts(project: PublisherProject): FontDiagnostic[] {
   return [...counts.entries()].map(([fontFamily, usageCount]) => ({
     fontFamily,
     usageCount,
-    available: commonFonts.has(fontFamily) || (Platform.OS === "web" && typeof document !== "undefined" && Boolean(document.fonts?.check(`12px \"${fontFamily}\"`))),
+    available: Boolean(project.embeddedFonts?.[fontFamily]) || commonFonts.has(fontFamily) || (Platform.OS === "web" && typeof document !== "undefined" && Boolean(document.fonts?.check(`12px \"${fontFamily}\"`))),
   })).sort((a, b) => a.fontFamily.localeCompare(b.fontFamily));
 }
 

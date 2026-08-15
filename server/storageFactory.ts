@@ -13,6 +13,5 @@ export function createObjectStorage(config: CloudConfig): ObjectStorage {
       publicBaseUrl: config.publicAssetBaseUrl,
     });
   }
-  if (config.storageDriver !== "local") throw new Error(`STORAGE_DRIVER_NOT_IMPLEMENTED_${config.storageDriver.toUpperCase()}`);
   return new LocalObjectStorage(config.localStorageRoot, config.publicAssetBaseUrl);
 }

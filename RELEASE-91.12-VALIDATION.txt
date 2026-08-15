@@ -1,0 +1,26 @@
+Yaposan 91.12 validation
+========================
+
+PASS: Phase 91.11 server repair regression tests (3/3)
+PASS: Phase 91.12 creation completion tests (5/5)
+PASS: TypeScript parser/transpile check for 12 modified runtime files
+PASS: Exactly one /api/v1/internal/product-photo/process-next route remains
+PASS: productPhotoBatchWorker uses async main().catch(...)
+
+91.12 additions validated:
+- persistent Creation Project Store
+- creationProject route handoff
+- Publisher project adapter
+- Web Studio project adapter
+- editable Presentation Studio handoff
+- dedicated image/video/audio provider generation endpoint
+- asynchronous media status/cancel endpoints
+- generated media asset capture
+- persistent App project specifications
+- persistent Agent workflows
+
+Environment note:
+A full Expo typecheck/web export was not executed in this packaging environment because the supplied source archive does not contain an installed dependency tree. Run npm ci before npm run typecheck / npm run web locally.
+
+Provider note:
+Real cloud image/video/audio output requires AI_IMAGE_PROVIDER_*, AI_VIDEO_PROVIDER_*, and AI_AUDIO_PROVIDER_* credentials/endpoints. 91.12 does not fake provider success when those services are absent.

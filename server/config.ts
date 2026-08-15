@@ -3,7 +3,7 @@ export type CloudConfig = {
   sessionSecret: string;
   accessTokenMinutes: number;
   refreshTokenDays: number;
-  storageDriver: "local" | "s3" | "r2" | "azure";
+  storageDriver: "local" | "r2";
   storageBucket: string;
   storageRegion?: string;
   storageEndpoint?: string;
@@ -25,6 +25,10 @@ export type CloudConfig = {
   exportWorkerId: string;
   exportJobLeaseSeconds: number;
   exportWorkerPollMs: number;
+  productPhotoWorkerToken?: string;
+  productPhotoWorkerId: string;
+  productPhotoJobLeaseSeconds: number;
+  productPhotoWorkerPollMs: number;
   ffmpegPath?: string;
   rendererTimeoutMs: number;
   licenseSigningSecret?: string;
@@ -43,6 +47,12 @@ export type CloudConfig = {
   rateLimitMaxEntries: number;
 };
 
+const storageDriverEnv = (env: NodeJS.ProcessEnv): CloudConfig["storageDriver"] => {
+  const value = (env.STORAGE_DRIVER ?? "local").trim().toLowerCase();
+  if (value === "local" || value === "r2") return value;
+  throw new Error(`Unsupported STORAGE_DRIVER=${value}. Supported drivers: local, r2`);
+};
+
 const numberEnv = (env: NodeJS.ProcessEnv, name: string, fallback: number) => {
   const value = Number(env[name]);
   return Number.isFinite(value) && value > 0 ? value : fallback;
@@ -54,7 +64,7 @@ export function loadCloudConfig(env = process.env): CloudConfig {
     sessionSecret: env.SESSION_SECRET ?? "development-only-change-me",
     accessTokenMinutes: numberEnv(env, "ACCESS_TOKEN_MINUTES", 15),
     refreshTokenDays: numberEnv(env, "REFRESH_TOKEN_DAYS", 30),
-    storageDriver: (env.STORAGE_DRIVER as CloudConfig["storageDriver"]) ?? "local",
+    storageDriver: storageDriverEnv(env),
     storageBucket: env.STORAGE_BUCKET ?? "yaposan-assets",
     storageRegion: env.STORAGE_REGION,
     storageEndpoint: env.STORAGE_ENDPOINT,
@@ -76,6 +86,10 @@ export function loadCloudConfig(env = process.env): CloudConfig {
     exportWorkerId: env.EXPORT_WORKER_ID ?? `export-worker-${process.pid}`,
     exportJobLeaseSeconds: numberEnv(env, "EXPORT_JOB_LEASE_SECONDS", 60),
     exportWorkerPollMs: numberEnv(env, "EXPORT_WORKER_POLL_MS", 1000),
+    productPhotoWorkerToken: env.PRODUCT_PHOTO_WORKER_TOKEN,
+    productPhotoWorkerId: env.PRODUCT_PHOTO_WORKER_ID ?? `product-photo-worker-${process.pid}`,
+    productPhotoJobLeaseSeconds: numberEnv(env, "PRODUCT_PHOTO_JOB_LEASE_SECONDS", 120),
+    productPhotoWorkerPollMs: numberEnv(env, "PRODUCT_PHOTO_WORKER_POLL_MS", 1000),
     ffmpegPath: env.FFMPEG_PATH,
     rendererTimeoutMs: numberEnv(env, "RENDERER_TIMEOUT_MS", 120000),
     licenseSigningSecret: env.LICENSE_SIGNING_SECRET,
@@ -99,7 +113,7 @@ export function validateProductionConfig(config: CloudConfig, nodeEnv = process.
   const issues: string[] = [];
   if (nodeEnv === "production" && !config.databaseUrl) issues.push("DATABASE_URL is required in production");
   if (nodeEnv === "production" && config.sessionSecret === "development-only-change-me") issues.push("SESSION_SECRET must be changed in production");
-  if (["s3", "r2", "azure"].includes(config.storageDriver) && !config.storageBucket) issues.push("STORAGE_BUCKET is required for cloud storage");
+  if (config.storageDriver === "r2" && !config.storageBucket) issues.push("STORAGE_BUCKET is required for cloud storage");
   if (nodeEnv === "production" && config.storageDriver === "r2" && (!config.storageEndpoint || !config.r2AccessKeyId || !config.r2SecretAccessKey)) issues.push("R2 storage requires STORAGE_ENDPOINT, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY");
   if (nodeEnv === "production" && config.collaborationDriver === "redis" && !config.redisUrl) issues.push("REDIS_URL is required for Redis collaboration");
   if (nodeEnv === "production" && !config.stripeSecretKey) issues.push("STRIPE_SECRET_KEY is required for paid checkout");
@@ -109,6 +123,8 @@ export function validateProductionConfig(config: CloudConfig, nodeEnv = process.
   if (nodeEnv === "production" && (!config.licenseSigningSecret || config.licenseSigningSecret.length < 32)) issues.push("LICENSE_SIGNING_SECRET must be at least 32 characters in production");
   if (nodeEnv === "production" && config.exportWorkerEnabled && !config.exportWorkerToken) issues.push("EXPORT_WORKER_TOKEN is required when export workers are enabled");
   if (nodeEnv === "production" && config.exportWorkerEnabled && config.storageDriver !== "r2") issues.push("STORAGE_DRIVER=r2 is required for durable multi-worker export publication");
+  if (nodeEnv === "production" && !config.productPhotoWorkerToken) issues.push("PRODUCT_PHOTO_WORKER_TOKEN is required for durable product photo batch processing");
+  if (nodeEnv === "production" && config.storageDriver !== "r2") issues.push("STORAGE_DRIVER=r2 is required for durable multi-worker product photo batches");
   if (config.rendererTimeoutMs < 1000 || config.rendererTimeoutMs > 900000) issues.push("RENDERER_TIMEOUT_MS must be between 1000 and 900000");
   if (config.requestTimeoutMs < 1000 || config.requestTimeoutMs > 120000) issues.push("REQUEST_TIMEOUT_MS must be between 1000 and 120000");
   if (config.shutdownTimeoutMs < 1000 || config.shutdownTimeoutMs > 120000) issues.push("SHUTDOWN_TIMEOUT_MS must be between 1000 and 120000");
@@ -120,7 +136,6 @@ export function validateProductionConfig(config: CloudConfig, nodeEnv = process.
   if (config.maxQueryParameters < 1 || config.maxQueryParameters > 1000) issues.push("MAX_QUERY_PARAMETERS must be between 1 and 1000");
   if (config.rateLimitPerMinute < 1 || config.rateLimitPerMinute > 10000) issues.push("RATE_LIMIT_PER_MINUTE must be between 1 and 10000");
   if (config.rateLimitMaxEntries < 100 || config.rateLimitMaxEntries > 1_000_000) issues.push("RATE_LIMIT_MAX_ENTRIES must be between 100 and 1000000");
-  if (["s3", "azure"].includes(config.storageDriver)) issues.push(`${config.storageDriver.toUpperCase()} storage is not implemented; use local or r2`);
   if (nodeEnv === "production" && config.collaborationDriver !== "redis") issues.push("COLLABORATION_DRIVER=redis is required for multi-instance production collaboration");
   return issues;
 }

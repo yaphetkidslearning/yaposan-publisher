@@ -1,0 +1,10 @@
+import test from "node:test";import assert from "node:assert/strict";import fs from "node:fs";
+const R=p=>fs.readFileSync(p,"utf8");
+test("91.7 audits exact pure white",()=>{const a=R("services/background-removal/app.py");for(const t of ["pure_white_audit","exact_white_pixels","nonwhite_background_pixels","(255,255,255)"])assert.ok(a.includes(t))});
+test("91.7 strict mode disables shadow path",()=>assert.ok(R("services/background-removal/app.py").includes("disabled-for-strict-pure-white")));
+test("91.7 exposes pure white server contract",()=>{const s=R("server/backgroundRemoval.ts");for(const t of ["strictWhite","whiteAuditThreshold","whiteBackgroundAudit"])assert.ok(s.includes(t))});
+test("91.7 supports batches larger than 50",()=>{const u=R("src/app/product-photo-studio.tsx");assert.ok(u.includes("slice(0,500)"));assert.ok(u.includes("Select up to 500 photos"))});
+test("91.7 uses bounded adjustable workers",()=>{const u=R("src/app/product-photo-studio.tsx");assert.ok(u.includes("batchConcurrency"));assert.ok(u.includes("Math.min(12,batchConcurrency)"))});
+test("91.7 supports batch zip export",()=>assert.ok(R("src/app/product-photo-studio.tsx").includes("new JSZip()")));
+test("91.7 pure white is default",()=>{const u=R("src/app/product-photo-studio.tsx");assert.ok(u.includes('useState<Background>("white")'));assert.ok(u.includes("useState(true)"))});
+test("91.7 keeps paid API cost firewall closed",()=>assert.equal(JSON.parse(R("release/phase91.0/cost-policy.json")).paidProviderMonthlyBudgetUsd,0));

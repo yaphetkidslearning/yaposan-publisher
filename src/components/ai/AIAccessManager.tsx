@@ -14,7 +14,7 @@ type Budget={limitUsd:number;usedUsd:number;remainingUsd:number;available:boolea
 export default function AIAccessManager(){
   const auth=useAuth(); const [balance,setBalance]=useState<number|null>(null); const [budget,setBudget]=useState<Budget|null>(null);
   const refresh=async()=>{if(!auth.isAuthenticated)return;try{const [a,b]=await Promise.all([auth.authorizedFetch("/api/v1/ai-credits/balance"),auth.authorizedFetch("/api/v1/ai/community-budget")]);if(a.ok)setBalance((await a.json()).balance??0);if(b.ok)setBudget(await b.json())}catch{}};
-  useEffect(()=>{void refresh()},[auth.isAuthenticated]);
+  useEffect(()=>{queueMicrotask(()=>{void refresh()})},[auth.isAuthenticated]);
   const creditInfo=()=>Alert.alert("Yaposan AI Credits", "Credits are prepaid, non-subscription usage for Yaposan-hosted cloud AI. You can always use local AI or pay your own provider directly instead.");
   const buyCredits=async(pack:string)=>{if(!auth.isAuthenticated)return Alert.alert("Sign in required","Sign in before purchasing AI credits so the pack can be credited to your workspace.");try{const origin=Platform.OS==="web"&&typeof window!=="undefined"?window.location.origin:"https://app.yaposan.com";const response=await auth.authorizedFetch("/api/v1/ai-credits/checkout",{method:"POST",body:JSON.stringify({pack,successUrl:`${origin}/account?aiCredits=purchased`,cancelUrl:`${origin}/account?aiCredits=cancelled`})});const data=await response.json();if(!response.ok)throw new Error(data?.error?.message??"Checkout could not be started.");if(data.url)await Linking.openURL(data.url)}catch(error){Alert.alert("AI credit checkout",error instanceof Error?error.message:"Checkout could not be started.")}};
   return <View style={{gap:14}}>

@@ -1,0 +1,12 @@
+Yaposan 92.5 validation
+=======================
+Source regression validation performed in the packaging environment:
+- Phase 92.3 tests: PASS
+- Phase 92.3.1 tests: PASS
+- Phase 92.4 tests: PASS
+- Phase 92.5 tests: PASS
+- Combined release regression tests: 14/14 PASS
+
+Final production certification still requires the repository dependency tree:
+  npm run verify:phase92.5
+Do not push unless that command exits 0.

@@ -1,0 +1,13 @@
+Yaposan 91.11 validation
+
+PASS: server/index.ts parser/transpilation check
+PASS: server/productPhotoBatchWorker.ts parser/transpilation check
+PASS: 91.11 service/UI parser/transpilation checks
+PASS: Phase 91.9 logic tests (2)
+PASS: Phase 91.10 logic tests (2)
+PASS: Phase 91.11 repair/coverage tests (3)
+PASS: Product Photo internal worker route occurs exactly once and before access-token authentication
+PASS: /api/v1/auth/refresh contains no Product Photo worker code
+PASS: productPhotoBatchWorker executable awaits are inside async main()
+
+Full Expo project typecheck was not available from this uploaded source package because the packaged dependency tree does not provide expo/tsconfig.base and @types/node to tsc. This is an environment/dependency-package limitation, not a parser failure in the 91.11 changes.

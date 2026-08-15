@@ -55,6 +55,14 @@ export function useTextEditor(initialTexts: TextObject[] = []) {
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const undoStack = useRef<TextEditorSnapshot[]>([]);
   const redoStack = useRef<TextEditorSnapshot[]>([]);
+  const [historyAvailability, setHistoryAvailability] = useState({ canUndo: false, canRedo: false });
+
+  const syncHistoryAvailability = useCallback(() => {
+    setHistoryAvailability({
+      canUndo: undoStack.current.length > 0,
+      canRedo: redoStack.current.length > 0,
+    });
+  }, []);
 
   const selectedText = useMemo(
     () => texts.find((item) => item.id === selectedTextId) ?? null,
@@ -68,7 +76,8 @@ export function useTextEditor(initialTexts: TextObject[] = []) {
     });
     if (undoStack.current.length > 100) undoStack.current.shift();
     redoStack.current = [];
-  }, [texts, selectedTextId]);
+    syncHistoryAvailability();
+  }, [texts, selectedTextId, syncHistoryAvailability]);
 
   const addText = useCallback(() => {
     capture();
@@ -201,7 +210,8 @@ export function useTextEditor(initialTexts: TextObject[] = []) {
     redoStack.current.push({ texts: cloneTexts(texts), selectedTextId });
     setTexts(previous.texts);
     setSelectedTextId(previous.selectedTextId);
-  }, [texts, selectedTextId]);
+    syncHistoryAvailability();
+  }, [texts, selectedTextId, syncHistoryAvailability]);
 
   const redo = useCallback(() => {
     const next = redoStack.current.pop();
@@ -209,7 +219,8 @@ export function useTextEditor(initialTexts: TextObject[] = []) {
     undoStack.current.push({ texts: cloneTexts(texts), selectedTextId });
     setTexts(next.texts);
     setSelectedTextId(next.selectedTextId);
-  }, [texts, selectedTextId]);
+    syncHistoryAvailability();
+  }, [texts, selectedTextId, syncHistoryAvailability]);
 
   return {
     texts,
@@ -231,8 +242,8 @@ export function useTextEditor(initialTexts: TextObject[] = []) {
     toggleVisibility,
     undo,
     redo,
-    canUndo: undoStack.current.length > 0,
-    canRedo: redoStack.current.length > 0,
+    canUndo: historyAvailability.canUndo,
+    canRedo: historyAvailability.canRedo,
     capture,
   };
 }

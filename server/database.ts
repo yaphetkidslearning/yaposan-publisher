@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-export type EntityName = "users"|"organizations"|"memberships"|"workspaces"|"projects"|"assets"|"versions"|"subscriptions"|"auditEvents"|"jobs"|"aiCreditTransactions"|"aiCommunityTransactions"|"aiProviderCredentials";
+export type EntityName = "users"|"organizations"|"memberships"|"workspaces"|"projects"|"assets"|"versions"|"subscriptions"|"auditEvents"|"jobs"|"aiCreditTransactions"|"aiCommunityTransactions"|"aiProviderCredentials"|"supportTickets"|"supportTicketMessages"|"helpFeedback";
 export type RecordBase = { id:string; createdAt:string; updatedAt:string };
 export type UserRecord = RecordBase & { email:string; passwordHash:string; emailVerified:boolean; mfaSecret?:string; status:"active"|"disabled" };
 export type OrganizationRecord = RecordBase & { name:string; ownerUserId:string; plan:"free"|"creator"|"pro"|"business" };
@@ -12,11 +12,15 @@ export type VersionRecord = RecordBase & { projectId:string; revision:number; pa
 export type AICreditTransactionRecord = RecordBase & { organizationId:string; credits:number; kind:"purchase"|"usage"|"refund"|"adjustment"; packId?:string; amountCents?:number; currency?:string; providerEventId?:string; providerCheckoutSessionId?:string; metadata?:Record<string,unknown> };
 export type AICommunityTransactionRecord = RecordBase & { organizationId?:string; month:string; requestId:string; amountMicros:number; kind:"reserve"|"settle"|"release"; metadata?:Record<string,unknown> };
 export type AIProviderCredentialRecord = RecordBase & { organizationId:string; provider:string; endpoint?:string; model?:string; encryptedApiKey:string; keyLast4?:string; keyVersion?:string };
+export type SupportTicketStatus = "open"|"in_progress"|"waiting_for_user"|"resolved"|"closed";
+export type SupportTicketRecord = RecordBase & { userId?:string; email:string; name:string; category:string; priority:"normal"|"important"|"urgent"; subject:string; message:string; status:SupportTicketStatus; source?:string; page?:string; action?:string; diagnostics?:Record<string,unknown>; attachmentName?:string; attachmentMimeType?:string; attachmentSize?:number; attachmentStorageKey?:string };
+export type SupportTicketMessageRecord = RecordBase & { ticketId:string; authorUserId?:string; authorType:"user"|"staff"|"system"; body:string; attachmentName?:string; attachmentMimeType?:string; attachmentSize?:number; attachmentStorageKey?:string };
+export type HelpFeedbackRecord = RecordBase & { userId?:string; contentType:"faq"|"guide"; contentId:string; helpful:boolean; page?:string; metadata?:Record<string,unknown> };
 export type SubscriptionRecord = RecordBase & { organizationId:string; providerCustomerId?:string; providerSubscriptionId?:string; plan:string; status:string; seats:number };
 export type AuditEventRecord = RecordBase & { organizationId?:string; actorUserId?:string; action:string; target?:string; requestId?:string; metadata?:Record<string,unknown> };
 export type JobRecord = RecordBase & { kind:"export"|"ai"|"image"|"video"|"notification"; status:"queued"|"running"|"succeeded"|"failed"|"cancelled"; progress:number; attempts:number; payload:unknown; result?:unknown; error?:string; workerId?:string; leaseExpiresAt?:string; heartbeatAt?:string };
 export type DatabaseSchema = {
- users:UserRecord; organizations:OrganizationRecord; memberships:MembershipRecord; workspaces:WorkspaceRecord; projects:ProjectRecord; assets:AssetRecord; versions:VersionRecord; subscriptions:SubscriptionRecord; auditEvents:AuditEventRecord; jobs:JobRecord; aiCreditTransactions:AICreditTransactionRecord; aiCommunityTransactions:AICommunityTransactionRecord; aiProviderCredentials:AIProviderCredentialRecord;
+ users:UserRecord; organizations:OrganizationRecord; memberships:MembershipRecord; workspaces:WorkspaceRecord; projects:ProjectRecord; assets:AssetRecord; versions:VersionRecord; subscriptions:SubscriptionRecord; auditEvents:AuditEventRecord; jobs:JobRecord; aiCreditTransactions:AICreditTransactionRecord; aiCommunityTransactions:AICommunityTransactionRecord; aiProviderCredentials:AIProviderCredentialRecord; supportTickets:SupportTicketRecord; supportTicketMessages:SupportTicketMessageRecord; helpFeedback:HelpFeedbackRecord;
 };
 
 export interface DatabaseAdapter {
@@ -36,7 +40,7 @@ export class InMemoryDatabase implements DatabaseAdapter {
  private connected=false;
  private transactionTail:Promise<void>=Promise.resolve();
  private tables:{[K in EntityName]:Map<string,DatabaseSchema[K]>} = {
-  users:new Map(),organizations:new Map(),memberships:new Map(),workspaces:new Map(),projects:new Map(),assets:new Map(),versions:new Map(),subscriptions:new Map(),auditEvents:new Map(),jobs:new Map(),aiCreditTransactions:new Map(),aiCommunityTransactions:new Map(),aiProviderCredentials:new Map()
+  users:new Map(),organizations:new Map(),memberships:new Map(),workspaces:new Map(),projects:new Map(),assets:new Map(),versions:new Map(),subscriptions:new Map(),auditEvents:new Map(),jobs:new Map(),aiCreditTransactions:new Map(),aiCommunityTransactions:new Map(),aiProviderCredentials:new Map(),supportTickets:new Map(),supportTicketMessages:new Map(),helpFeedback:new Map()
  };
  async connect(){this.connected=true}
  async close(){this.connected=false}
@@ -63,7 +67,7 @@ export class InMemoryDatabase implements DatabaseAdapter {
 }
 
 export const MIGRATIONS=[
- {id:1,name:"identity-organizations-workspaces"},{id:2,name:"projects-assets-version-history"},{id:3,name:"subscriptions-audit-jobs"},{id:4,name:"ai-credit-ledger"}
+ {id:1,name:"identity-organizations-workspaces"},{id:2,name:"projects-assets-version-history"},{id:3,name:"subscriptions-audit-jobs"},{id:4,name:"ai-credit-ledger"},{id:5,name:"support-tickets"},{id:6,name:"support-lifecycle-help-feedback"}
 ] as const;
 
 let singleton:DatabaseAdapter|undefined;

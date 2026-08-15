@@ -1,4 +1,5 @@
 import type { PublisherElement, PublisherPage } from "../types/publisher";
+import { detectTextDirection, fontCssStack } from "./typographyManager";
 
 export type PageSvgOptions = {
   hyperlinks?: boolean;
@@ -18,12 +19,13 @@ function gradient(e:PublisherElement, defs:string[], enabled=true){
   return `url(#${id})`;
 }
 function textSvg(e:PublisherElement, common:string){
-  const size=e.fontSize||24,lh=size*(e.lineHeight||1.2),lines=(e.text||'').split('\n');
-  const anchor=e.textAlign==='center'?'middle':e.textAlign==='right'?'end':'start';
-  const x=e.textAlign==='center'?e.width/2:e.textAlign==='right'?e.width:0;
+  const size=e.fontSize||24,lh=size*(e.lineHeight||1.2),text=e.text||'',lines=text.split('\n');
+  const direction=detectTextDirection(text),align=direction==='rtl'&&(!e.textAlign||e.textAlign==='left')?'right':(e.textAlign||'left');
+  const anchor=align==='center'?'middle':align==='right'?'end':'start';
+  const x=align==='center'?e.width/2:align==='right'?e.width:0;
   const deco=[e.underline?'underline':''].filter(Boolean).join(' ');
   const tspans=lines.map((line,i)=>`<tspan x="${x}" dy="${i===0?size:lh}">${esc(line||' ')}</tspan>`).join('');
-  return `<g ${common}><text x="${x}" y="0" font-family="${attr(e.fontFamily||'Helvetica')}" font-size="${size}" font-weight="${e.fontWeight||400}" font-style="${e.italic?'italic':'normal'}" text-anchor="${anchor}" fill="${attr(e.textColor||e.fillColor||'#111827')}" letter-spacing="${e.letterSpacing||0}" text-decoration="${deco}" xml:space="preserve">${tspans}</text></g>`;
+  return `<g ${common}><text x="${x}" y="0" direction="${direction}" unicode-bidi="plaintext" font-family="${attr(fontCssStack(e.fontFamily||'Helvetica',text))}" font-size="${size}" font-weight="${e.fontWeight||400}" font-style="${e.italic?'italic':'normal'}" text-anchor="${anchor}" fill="${attr(e.textColor||e.fillColor||'#111827')}" letter-spacing="${e.letterSpacing||0}" text-decoration="${deco}" xml:space="preserve">${tspans}</text></g>`;
 }
 function elementSvg(e:PublisherElement,defs:string[],o:PageSvgOptions):string {
  if(e.hidden)return ""; const opacity=e.opacity??1; const common=`transform="${transform(e)}" opacity="${opacity}"`;

@@ -1,27 +1,43 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { repairHtmlSeo, SITE_TITLE } from "../scripts/postprocess-phase90.14-web-export.mjs";
+import { existsSync, readFileSync } from "node:fs";
 
-test("repairs Expo Router empty title in static HTML", () => {
-  const input = '<!DOCTYPE html><html><head><title data-rh="true"></title></head><body></body></html>';
-  const output = repairHtmlSeo(input);
-  assert.match(output, new RegExp(`<title>${SITE_TITLE}</title>`));
-  assert.doesNotMatch(output, /<title\b[^>]*>\s*<\/title>/i);
+test("RootLayout uses the supported Expo Router Head export", () => {
+  const source = readFileSync("src/app/_layout.tsx", "utf8");
+  assert.match(source, /import Head from ["']expo-router\/head["']/);
+  assert.doesNotMatch(source, /import\s*\{[^}]*\bHead\b[^}]*\}\s*from\s*["']expo-router["']/);
 });
 
-test("injects required production SEO metadata", () => {
-  const output = repairHtmlSeo("<!DOCTYPE html><html><head></head><body></body></html>");
-  assert.match(output, /name="description"/i);
-  assert.match(output, /rel="canonical"/i);
-  assert.match(output, /property="og:title"/i);
-  assert.match(output, /name="twitter:title"/i);
-});
-
-test("static HTML shell contains Yaposan SEO metadata", () => {
-  const source = readFileSync("src/app/+html.tsx", "utf8");
+test("RootLayout contains Yaposan SEO metadata", () => {
+  const source = readFileSync("src/app/_layout.tsx", "utf8");
   assert.match(source, /Yaposan — Creative Design & Publishing Suite/);
+  assert.match(source, /name="description"/);
+  assert.match(source, /rel="canonical"/);
+  assert.match(source, /property="og:title"/);
+  assert.match(source, /name="twitter:title"/);
   assert.match(source, /application\/ld\+json/);
+});
+
+test("+html is a document shell and does not duplicate React-managed SEO", () => {
+  const source = readFileSync("src/app/+html.tsx", "utf8");
+  assert.match(source, /ScrollViewStyleReset/);
+  assert.doesNotMatch(source, /<title/);
+  assert.doesNotMatch(source, /name="description"/);
+  assert.doesNotMatch(source, /rel="canonical"/);
+  assert.doesNotMatch(source, /application\/ld\+json/);
+});
+
+test("build:web does not post-process Expo-rendered HTML", () => {
+  const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+  assert.equal(pkg.scripts["build:web"], "expo export --platform web");
+});
+
+test("built HTML contains exactly one Yaposan title when dist exists", () => {
+  if (!existsSync("dist/index.html")) return;
+  const built = readFileSync("dist/index.html", "utf8");
+  const titles = built.match(/<title\b[^>]*>[\s\S]*?<\/title>/gi) ?? [];
+  assert.equal(titles.length, 1);
+  assert.match(titles[0], /Yaposan/);
 });
 
 test("Phase 90.4 Gitleaks protection remains enabled", () => {

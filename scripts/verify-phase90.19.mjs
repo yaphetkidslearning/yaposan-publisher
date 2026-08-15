@@ -1,0 +1,10 @@
+import { existsSync, readFileSync } from "node:fs";
+const required=["src/app/product-photo-studio.tsx","server/backgroundRemoval.ts","services/background-removal/app.py","services/background-removal/Dockerfile","release/phase90.19/quality-benchmark.json","release/phase90.19/cost-policy.json","release/phase90.19/model-license-review.json","tests/phase9019-product-photo-engine.test.mjs","PHASE90.19-YAPOSAN-PRODUCT-PHOTO-ENGINE-AND-QUALITY-BENCHMARK.md"];
+for(const f of required) if(!existsSync(f)) throw new Error(`Missing Phase 90.19 artifact: ${f}`);
+const pkg=JSON.parse(readFileSync("package.json","utf8"));
+if(!pkg.scripts?.test?.includes("test:phase90.19")) throw new Error("Top-level npm test must include Phase 90.19");
+const cost=JSON.parse(readFileSync("release/phase90.19/cost-policy.json","utf8"));
+if(cost.paidPerImageProviderEnabled || cost.paidProviderMonthlyBudgetUsd!==0) throw new Error("Phase 90.19 paid API fallback must remain disabled with a zero default budget");
+const quality=JSON.parse(readFileSync("release/phase90.19/quality-benchmark.json","utf8"));
+if(quality.certifiedEquivalentToPhotoRoom || quality.certifiedEquivalentToRemovalAI) throw new Error("Do not pre-certify third-party quality equivalence without real benchmark evidence");
+console.log("Phase 90.19 product-photo engine baseline passed: self-hosted cost-safe path is present; model-weight license approval and real organization quality benchmark remain required before production claims.");

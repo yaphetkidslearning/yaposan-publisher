@@ -1,0 +1,20 @@
+services:
+  background-removal:
+    build:
+      context: ./services/background-removal
+      dockerfile: Dockerfile
+    ports:
+      - "8090:8090"
+    environment:
+      PORT: "8090"
+      YAPOSAN_BG_STANDARD_MODEL: ${YAPOSAN_BG_STANDARD_MODEL:-u2net}
+      YAPOSAN_BG_DETAIL_MODEL: ${YAPOSAN_BG_DETAIL_MODEL:-birefnet-general}
+      YAPOSAN_BG_MAX_BYTES: ${YAPOSAN_BG_MAX_BYTES:-50000000}
+      YAPOSAN_BG_MAX_PIXELS: ${YAPOSAN_BG_MAX_PIXELS:-50000000}
+      YAPOSAN_BG_MAX_CONCURRENCY: ${YAPOSAN_BG_MAX_CONCURRENCY:-2}
+    volumes:
+      - yaposan-rembg-models:/root/.u2net
+    restart: unless-stopped
+
+volumes:
+  yaposan-rembg-models:
