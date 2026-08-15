@@ -11,7 +11,7 @@ type Message={id:string;authorType:string;body:string;createdAt:string};
 const label=(v:string)=>v.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
 export default function SupportRequests(){
  const auth=useAuth(); const [items,setItems]=useState<Ticket[]>([]); const [selected,setSelected]=useState<Ticket>(); const [messages,setMessages]=useState<Message[]>([]); const [reply,setReply]=useState(''); const [busy,setBusy]=useState(false); const [error,setError]=useState('');
- const base=(globalThis as any).process?.env?.EXPO_PUBLIC_API_URL??'http://localhost:4100'; const token=auth.session?.accessToken;
+ const base=process.env.EXPO_PUBLIC_API_URL ?? (typeof window !== "undefined" && !["localhost", "127.0.0.1"].includes(window.location.hostname) ? "https://api.yaposan.com" : "http://localhost:4100"); const token=auth.session?.accessToken;
  const headers=token?{authorization:`Bearer ${token}`}:{ };
  const load=async()=>{if(!token)return;setError('');const r=await fetch(`${base}/api/v1/support/tickets/my`,{headers});const d=await r.json();if(!r.ok)throw new Error(d?.error?.message??'Unable to load support requests.');setItems(d.items??[])};
  const open=async(t:Ticket)=>{if(!token)return;setSelected(t);setError('');const r=await fetch(`${base}/api/v1/support/tickets/${t.id}`,{headers});const d=await r.json();if(!r.ok)throw new Error(d?.error?.message??'Unable to load ticket.');setSelected(d.ticket);setMessages(d.messages??[])};

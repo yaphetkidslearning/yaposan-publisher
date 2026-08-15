@@ -26,7 +26,7 @@ export default function Faq(){
   },[params.question]);
 
   const items=useMemo(()=>helpFaqs.filter(x=>(category==='All'||x.category===category)&&`${x.question} ${x.answer} ${x.category}`.toLowerCase().includes(q.trim().toLowerCase())),[q,category]);
-  const vote=async(id:string,value:'yes'|'no')=>{setFeedback(v=>({...v,[id]:value}));const base=(globalThis as any).process?.env?.EXPO_PUBLIC_API_URL??'http://localhost:4100';await fetch(`${base}/api/v1/help/feedback`,{method:'POST',headers:{'content-type':'application/json',...(auth.session?.accessToken?{authorization:`Bearer ${auth.session.accessToken}`}:{})},body:JSON.stringify({contentType:'faq',contentId:id,helpful:value==='yes',page:'/faq'})}).catch(()=>{});};
+  const vote=async(id:string,value:'yes'|'no')=>{setFeedback(v=>({...v,[id]:value}));const base=process.env.EXPO_PUBLIC_API_URL ?? (typeof window !== "undefined" && !["localhost", "127.0.0.1"].includes(window.location.hostname) ? "https://api.yaposan.com" : "http://localhost:4100");await fetch(`${base}/api/v1/help/feedback`,{method:'POST',headers:{'content-type':'application/json',...(auth.session?.accessToken?{authorization:`Bearer ${auth.session.accessToken}`}:{})},body:JSON.stringify({contentType:'faq',contentId:id,helpful:value==='yes',page:'/faq'})}).catch(()=>{});};
   const toggle=(id:string,active:boolean)=>{
     setOpen(v=>active?v.filter(x=>x!==id):[...v,id]);
     if(!active) router.setParams({question:id});

@@ -7,7 +7,9 @@ services:
     staticPublishPath: ./dist
     autoDeployTrigger: checksPass
     domains:
+      - yaposan.com
       - app.yaposan.com
+      - www.yaposan.com
     headers:
       - path: /*
         name: X-Content-Type-Options
@@ -50,7 +52,7 @@ services:
           name: yaposan-redis
           property: connectionString
       - key: PUBLIC_ORIGINS
-        value: https://app.yaposan.com
+        value: https://yaposan.com,https://app.yaposan.com,https://www.yaposan.com
       - key: COLLABORATION_DRIVER
         value: redis
       - key: STORAGE_DRIVER

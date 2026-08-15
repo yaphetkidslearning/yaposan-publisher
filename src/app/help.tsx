@@ -36,7 +36,7 @@ export default function Help(){
     };
   },[q]);
 
-  const vote=async(value:'yes'|'no')=>{setFeedback(value);const base=(globalThis as any).process?.env?.EXPO_PUBLIC_API_URL??'http://localhost:4100';await fetch(`${base}/api/v1/help/feedback`,{method:'POST',headers:{'content-type':'application/json',...(auth.session?.accessToken?{authorization:`Bearer ${auth.session.accessToken}`}:{})},body:JSON.stringify({contentType:'guide',contentId:selected.id,helpful:value==='yes',page:'/help'})}).catch(()=>{});};
+  const vote=async(value:'yes'|'no')=>{setFeedback(value);const base=process.env.EXPO_PUBLIC_API_URL ?? (typeof window !== "undefined" && !["localhost", "127.0.0.1"].includes(window.location.hostname) ? "https://api.yaposan.com" : "http://localhost:4100");await fetch(`${base}/api/v1/help/feedback`,{method:'POST',headers:{'content-type':'application/json',...(auth.session?.accessToken?{authorization:`Bearer ${auth.session.accessToken}`}:{})},body:JSON.stringify({contentType:'guide',contentId:selected.id,helpful:value==='yes',page:'/help'})}).catch(()=>{});};
 
   const restartTour=async()=>{
     await Promise.all([AsyncStorage.removeItem(ONBOARDING_KEY),AsyncStorage.removeItem('yaposan.guidance.onboarding91.18.dismissed')]).catch(()=>{});

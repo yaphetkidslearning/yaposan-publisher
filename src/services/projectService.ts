@@ -1,4 +1,4 @@
-const base=(globalThis as any).process?.env?.EXPO_PUBLIC_API_URL??"http://localhost:4100";
+const base=process.env.EXPO_PUBLIC_API_URL ?? (typeof window !== "undefined" && !["localhost", "127.0.0.1"].includes(window.location.hostname) ? "https://api.yaposan.com" : "http://localhost:4100");
 let token=""; export const configureProjectService=(accessToken:string)=>{token=accessToken};
 export type CloudProject={id:string;workspaceId:string;ownerUserId:string;name:string;revision:number;payload:unknown;deletedAt?:string;createdAt:string;updatedAt:string};
 export type CloudProjectVersion={id:string;projectId:string;revision:number;payload:unknown;actorUserId:string;createdAt:string};

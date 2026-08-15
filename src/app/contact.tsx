@@ -56,7 +56,7 @@ export default function Contact(){
     if(!canReview)return;
     setSubmitting(true);
     try{
-      const base=(globalThis as any).process?.env?.EXPO_PUBLIC_API_URL??'http://localhost:4100';
+      const base=process.env.EXPO_PUBLIC_API_URL ?? (typeof window !== "undefined" && !["localhost", "127.0.0.1"].includes(window.location.hostname) ? "https://api.yaposan.com" : "http://localhost:4100");
       let attachmentPayload:any=undefined;
       if(attachment&&auth.session?.accessToken&&Platform.OS==='web'){
         const uploaded=await uploadSupportAttachment(base,auth.session.accessToken,attachment);
