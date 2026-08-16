@@ -6,8 +6,8 @@ const network = fs.readFileSync(new URL('../server/aiNetworkSecurity.ts', import
 const phase71 = fs.readFileSync(new URL('./phase71-commercial-ai-platform.test.ts', import.meta.url), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
-test('92.17 release metadata and verification are present', () => {
-  assert.equal(pkg.version, '92.17');
+test('92.17 release metadata and verification remain available in later releases', () => {
+  assert.match(pkg.version, /^92\.\d+(?:\.\d+)?$/);
   assert.match(pkg.scripts['test:phase92.17'], /phase9217-ci-ai-gateway-hardening/);
   assert.match(pkg.scripts['verify:phase92.17'], /test:phase71/);
   assert.match(pkg.scripts['verify:phase92.17'], /test:phase92\.17/);

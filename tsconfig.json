@@ -20,7 +20,9 @@
   "include": [
     "server/**/*.ts",
     "scripts/export-worker.ts",
-    "scripts/phase75-launch-audit.ts"
+    "scripts/phase75-launch-audit.ts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
   ],
   "exclude": [
     "tests",

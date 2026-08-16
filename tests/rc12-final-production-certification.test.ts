@@ -53,15 +53,20 @@ test("release evidence checksum detects tampering", () => {
   assert.equal(verifyFinalReleaseCertification({ ...result, testsPassed: 999 }), false);
 });
 
-test("release package version labels are locked", () => {
+test("release package and platform phase labels are synchronized", () => {
   const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-  assert.equal(pkg.version, "1.0.0");
+  const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+  const phase = fs.readFileSync("release/CURRENT_CREATIVE_PLATFORM_PHASE", "utf8").trim();
+  assert.match(pkg.version, /^92\.\d+(?:\.\d+)?$/);
+  assert.equal(lock.version, pkg.version);
+  assert.equal(lock.packages[""].version, pkg.version);
+  assert.equal(phase, pkg.version);
   assert.match(fs.readFileSync("server/index.ts", "utf8"), /releaseVersion = "1\.0\.0"/);
   assert.match(fs.readFileSync("electron-builder.yml", "utf8"), /version: 1\.0\.0/);
 });
 
 test("final release documentation contains deployment distinction", () => {
-  const text = fs.readFileSync("RC12-FINAL-PRODUCTION-CERTIFICATION-AND-V1.0.0-RELEASE.md", "utf8");
+  const text = fs.readFileSync("docs/history/RC12-FINAL-PRODUCTION-CERTIFICATION-AND-V1.0.0-RELEASE.md", "utf8");
   assert.match(text, /source release/i);
   assert.match(text, /hosted production/i);
   assert.match(text, /not independently validated/i);

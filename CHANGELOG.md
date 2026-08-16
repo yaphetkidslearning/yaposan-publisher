@@ -1,3 +1,11 @@
+# Yaposan 92.18 — CI Release Certification Hardening
+
+- Synchronizes package, lockfile, and platform phase metadata at 92.18.
+- Declares ESLint 9.39.5 and eslint-config-expo 57.0.1 as development dependencies for clean CI environments.
+- Adds `actions: read` to CodeQL permissions while preserving `contents: read` and `security-events: write`.
+- Replaces the obsolete RC12 hard-coded package version assertion with release-metadata consistency checks.
+- Preserves the 92.17 AI gateway CI hardening.
+
 ## 92.15 - Word-style font flyout
 
 - Re-anchored the Home ribbon font family menu beneath the font control instead of centering it on the workspace.

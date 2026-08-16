@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { loadBackgroundRemovalConfig, runSelfHostedBackgroundRemoval, runSelfHostedProductPhotoAnalysis } from "./backgroundRemoval";
 import {
   claimNextProductPhotoBatch,
   cleanupExpiredProductPhotoBatches,
@@ -13,20 +14,17 @@ import {
   startProductPhotoBatch,
   uploadProductPhotoBatchItem,
 } from "./productPhotoBatches";
-import { loadBackgroundRemovalConfig, runSelfHostedBackgroundRemoval, runSelfHostedProductPhotoAnalysis } from "./backgroundRemoval";
 
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
+import { communityBudgetStatus } from "./aiCostControls";
+import { AI_CREDIT_PACKS, applyStripeCreditReversal, creditBalance, getCreditPack, grantPurchasedCredits } from "./aiCredits";
 import { runAiGateway } from "./aiPlatform";
-import { cancelMediaJob, generateMedia, getMediaJob, mediaProviderCapabilities } from "./mediaGeneration";
 import {
   constantTimeEqual,
   isConfiguredAdmin,
   requireProjectAccess,
   requireWorkspaceAccess,
 } from "./authorization";
-import { AI_CREDIT_PACKS, applyStripeCreditReversal, creditBalance, getCreditPack, grantPurchasedCredits } from "./aiCredits";
-import { communityBudgetStatus } from "./aiCostControls";
-import { deleteProviderCredential, listProviderCredentials, loadProviderCredential, rotateProviderCredentials, saveProviderCredential, testProviderCredential } from "./providerVault";
 import {
   PLAN_CATALOG,
   resolveEntitlements,
@@ -92,6 +90,7 @@ import {
   verifyPassword,
   verifyToken,
 } from "./identity";
+import { cancelMediaJob, generateMedia, getMediaJob, mediaProviderCapabilities } from "./mediaGeneration";
 import {
   buildReleaseEvidence,
   clientIp,
@@ -101,9 +100,9 @@ import {
   safeTokenEqual,
 } from "./operations";
 import {
+  createAICreditCheckoutSession,
   createBillingPortal,
   createCheckoutSession,
-  createAICreditCheckoutSession,
   createCustomer,
   verifyStripeWebhook,
 } from "./payments";
@@ -115,6 +114,7 @@ import {
   retryExportJob,
   updateExportJob,
 } from "./productionExport";
+import { deleteProviderCredential, listProviderCredentials, loadProviderCredential, rotateProviderCredentials, saveProviderCredential, testProviderCredential } from "./providerVault";
 import {
   BoundedRateLimiter,
   inspectJsonComplexity,
@@ -392,7 +392,33 @@ export async function handleRequest(
         requestId
       );
     }
+    const requestOrigin = String(req.headers.origin ?? "");
 
+    if (
+      requestOrigin &&
+      isOriginAllowed(requestOrigin, securityConfig.publicOrigins)
+    ) {
+      res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+      res.setHeader("Vary", "Origin");
+      res.setHeader(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+      );
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, X-CSRF-Token, X-Request-ID"
+      );
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+
+    if (req.method === "OPTIONS") {
+      res.writeHead(204, {
+        ...securityHeaders(requestId),
+      });
+      res.end();
+      return;
+    }
+    
     if (rateLimit(ip)) {
       return json(
         res,
