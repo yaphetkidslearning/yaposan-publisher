@@ -55,7 +55,7 @@
     "@types/svg-to-pdfkit": "0.1.4",
     "@types/xlsx": "^0.0.35",
     "tsx": "^4.20.6",
-    "typescript": "~5.9.3",
+    "typescript": "~7.0.2",
     "electron-updater": "^6.6.2",
     "@types/pg": "^8.11.10",
     "electron": "^37.2.4",
