@@ -4,7 +4,7 @@ export const TEMPLATE_CATEGORIES = [
   "Business", "Marketing", "Social Media", "Print", "Education", "Church",
   "Restaurant", "Retail", "Healthcare", "Technology", "Fashion", "Sports",
   "Real Estate", "Personal", "Events", "YouTube", "Streaming", "Podcast",
-  "AI", "Blank Documents",
+  "AI", "Presentation", "Blank Documents",
 ] as const;
 
 export type ProfessionalTemplateCategory = (typeof TEMPLATE_CATEGORIES)[number];
@@ -33,7 +33,7 @@ export type TemplateMetadata = {
   updatedAt: string;
   themeId?: string;
   supportedThemeIds?: string[];
-  style?: "corporate" | "luxury" | "minimal" | "creative" | "editorial" | "bold" | "elegant";
+  style?: "corporate" | "luxury" | "minimal" | "creative" | "editorial" | "bold" | "elegant" | "professional";
   masterTemplateId?: string;
   palette?: string[];
   fonts?: string[];
@@ -44,6 +44,9 @@ export type ProfessionalTemplate = {
   metadata: TemplateMetadata;
   pages: PublisherPage[];
 };
+
+// Backward-compatible alias for template management/marketplace modules.
+export type PublisherTemplate = ProfessionalTemplate;
 
 export type TemplateTheme = {
   id: string;

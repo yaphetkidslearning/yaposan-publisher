@@ -1,6 +1,0 @@
-import assert from "node:assert/strict";
-import test from "node:test";
-import {authenticatePublicApiKey,cancelAiAutomation,createPublicApiKey,createWebhook,enqueueAiAutomation,registerMobileDevice,setMobileDeviceTrust,signWebhookPayload} from "../server/phase85Platform";
-test("Phase 85 API keys are scoped",()=>{const {secret,record}=createPublicApiKey("ws1","Automation",["projects:read","ai:run"]);assert.equal(authenticatePublicApiKey(secret,"projects:read")?.id,record.id);assert.equal(authenticatePublicApiKey(secret,"exports:create"),undefined)});
-test("Phase 85 device trust is user-bound",()=>{const d=registerMobileDevice({userId:"u1",platform:"ios",deviceName:"iPhone"});assert.equal(setMobileDeviceTrust("u2",d.id,true),false);assert.equal(setMobileDeviceTrust("u1",d.id,true),true)});
-test("Phase 85 signed webhooks and cancellable AI jobs",()=>{const w=createWebhook("ws1","https://example.com/hooks/yaposan",["export.completed"]);assert.match(signWebhookPayload(w.secret,"{}"),/^t=\d+,v1=[a-f0-9]{64}$/);const j=enqueueAiAutomation({workspaceId:"ws1",createdBy:"u1",name:"Descriptions",prompt:"Create descriptions",batchProjectIds:["p1"]});assert.equal(cancelAiAutomation("ws1",j.id),true)});

@@ -55,16 +55,13 @@ export async function submitCreatorProduct(db: DatabaseAdapter, userId: string, 
   return product;
 }
 
-export async function moderateCreatorProduct(db: DatabaseAdapter, actorUserId: string, productId: string, approved: boolean, adminEmails: string[] = []) {
-  const actor = await db.get("users", actorUserId);
-  const { membership } = await organizationContext(db, actorUserId);
-  const isGlobalAdmin = Boolean(actor && adminEmails.map(x => x.toLowerCase()).includes(actor.email.toLowerCase()));
-  if (!isGlobalAdmin && !["owner", "admin"].includes(membership.role)) throw new Error("MARKETPLACE_ADMIN_REQUIRED");
+
+export async function moderateCreatorProductAsAdmin(db: DatabaseAdapter, principalId: string, productId: string, approved: boolean) {
   const current = (await listCreatorProducts(db)).find(product => product.id === productId);
   if (!current) throw new Error("PRODUCT_NOT_FOUND");
   const product = { ...current, status: approved ? "approved" as const : "rejected" as const, updatedAt: new Date().toISOString() };
-  await db.insert("auditEvents", { organizationId: current.organizationId, actorUserId, action: "marketplace.product.snapshot", target: product.id, metadata: { product } });
-  await db.insert("auditEvents", { organizationId: current.organizationId, actorUserId, action: approved ? "marketplace.product.approved" : "marketplace.product.rejected", target: product.id });
+  await db.insert("auditEvents", { organizationId: current.organizationId, action: "marketplace.product.snapshot", target: product.id, metadata: { product, adminPrincipalId: principalId } });
+  await db.insert("auditEvents", { organizationId: current.organizationId, action: approved ? "marketplace.product.approved" : "marketplace.product.rejected", target: product.id, metadata: { adminPrincipalId: principalId } });
   return product;
 }
 

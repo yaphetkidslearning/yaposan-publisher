@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { certifyPhase38, commercialModuleScore, commercialReadinessScore, DEFAULT_COMMERCIAL_CHECKS, DEFAULT_COMMERCIAL_CONNECTORS, DEFAULT_RELEASE_ARTIFACTS, PHASE38_MODULES, updateCommercialCheck, type CommercialCheck, type CommercialConnector, type ReleaseArtifact, type ReleaseStatus } from "../utils/phase38GlobalCommercialReleaseEngine";
+import { certifyPhase38, commercialModuleScore, commercialReadinessScore, DEFAULT_COMMERCIAL_CHECKS, DEFAULT_COMMERCIAL_CONNECTORS, DEFAULT_RELEASE_ARTIFACTS, PHASE38_MODULES, updateCommercialCheck, type CommercialCheck, type CommercialConnector, type ReleaseArtifact, type ReleaseStatus } from "../utils/globalCommercialReleaseEngine";
 
 const CHECKS_KEY = "yaposan.phase38.commercial-checks";
 const CONNECTORS_KEY = "yaposan.phase38.connectors";
@@ -35,7 +35,7 @@ export default function GlobalCommercialReleaseScreen() {
   const certification = certifyPhase38(checks, connectors, artifacts);
   const activeChecks = checks.filter((check) => check.moduleId === activeModule.id);
 
-  const setCheckStatus = (id: string, status: ReleaseStatus) => setChecks((items) => items.map((item) => item.id === id ? updateCommercialCheck(item, status, status === "released" ? "Validated in Phase 38 release center" : undefined) : item));
+  const setCheckStatus = (id: string, status: ReleaseStatus) => setChecks((items) => items.map((item) => item.id === id ? updateCommercialCheck(item, status, status === "released" ? "Validated in release center" : undefined) : item));
   const toggleConnector = (id: string) => setConnectors((items) => items.map((item) => item.id === id ? { ...item, configured: !item.configured, lastValidatedAt: new Date().toISOString() } : item));
   const advanceArtifact = (id: string) => setArtifacts((items) => items.map((item) => {
     if (item.id !== id) return item;
@@ -44,9 +44,9 @@ export default function GlobalCommercialReleaseScreen() {
   }));
 
   return <SafeAreaView style={styles.safe}><View style={styles.page}>
-    <View style={styles.header}><Pressable onPress={() => router.back()} style={styles.iconButton}><Ionicons name="arrow-back" size={21} color="#fff7ed" /></Pressable><View style={{flex:1}}><Text style={styles.eyebrow}>YAPOSAN PHASE 38.0</Text><Text style={styles.title}>Global Commercial Platform & Yaposan 1.0 Release</Text><Text style={styles.subtitle}>Packages 38.0-38.12 consolidate marketplace, billing, publishing, desktop, mobile, quality, documentation and commercial-release governance.</Text></View><View style={[styles.score, certification.certified && styles.scoreReady]}><Text style={styles.scoreValue}>{score}%</Text><Text style={styles.scoreLabel}>{certification.certified ? "CERTIFIED" : "READINESS"}</Text></View></View>
+    <View style={styles.header}><Pressable onPress={() => router.back()} style={styles.iconButton}><Ionicons name="arrow-back" size={21} color="#fff7ed" /></Pressable><View style={{flex:1}}><Text style={styles.eyebrow}>YAPOSAN</Text><Text style={styles.title}>Global Commercial Platform</Text><Text style={styles.subtitle}>Marketplace, billing, publishing, desktop, mobile, quality, documentation, and commercial-release governance in one workspace.</Text></View><View style={[styles.score, certification.certified && styles.scoreReady]}><Text style={styles.scoreValue}>{score}%</Text><Text style={styles.scoreLabel}>{certification.certified ? "CERTIFIED" : "READINESS"}</Text></View></View>
     <ScrollView contentContainerStyle={styles.content}>
-      <TextInput value={query} onChangeText={setQuery} placeholder="Search Phase 38 packages" placeholderTextColor="#94a3b8" style={styles.search} />
+      <TextInput value={query} onChangeText={setQuery} placeholder="Search packages" placeholderTextColor="#94a3b8" style={styles.search} />
       <View style={styles.moduleGrid}>{filtered.map((module) => <Pressable key={module.id} onPress={() => setActive(module.id)} style={[styles.moduleCard, active === module.id && styles.moduleCardActive]}><Text style={styles.moduleId}>PACKAGE {module.id}</Text><Text style={styles.moduleTitle}>{module.title}</Text><Text style={styles.moduleDescription}>{module.description}</Text><Text style={styles.moduleScore}>{commercialModuleScore(module.id, checks)}% ready</Text></Pressable>)}</View>
 
       <View style={styles.hero}><Text style={styles.heroEyebrow}>{activeModule.id}</Text><Text style={styles.heroTitle}>{activeModule.title}</Text><Text style={styles.heroText}>{activeModule.description}</Text><View style={styles.capabilityWrap}>{activeModule.capabilities.map((capability) => <View key={capability} style={styles.capability}><Ionicons name="checkmark-circle" size={15} color="#fdba74" /><Text style={styles.capabilityText}>{capability}</Text></View>)}</View></View>
@@ -60,7 +60,7 @@ export default function GlobalCommercialReleaseScreen() {
       <View style={styles.sectionRow}><Text style={styles.sectionTitle}>Release artifacts</Text><Text style={styles.sectionMeta}>{artifacts.filter((artifact) => artifact.status === "approved" || artifact.status === "published").length}/{artifacts.length} approved</Text></View>
       <View style={styles.grid}>{artifacts.map((artifact) => <Pressable key={artifact.id} onPress={() => advanceArtifact(artifact.id)} style={styles.card}><Ionicons name="cube-outline" size={22} color="#fdba74" /><Text style={styles.cardTitle}>{artifact.name}</Text><Text style={styles.cardText}>{artifact.platform} · v{artifact.version}</Text><Text style={styles.connectorStatus}>{artifact.status.toUpperCase()}</Text></Pressable>)}</View>
 
-      <View style={styles.certification}><Text style={styles.sectionTitle}>Phase 38 certification</Text><Text style={styles.heroText}>{certification.certified ? "Yaposan 1.0 commercial release requirements are certified." : `${certification.blockers.length} external or release blockers remain. The workspace does not report 100% until evidence, production connectors and artifacts are complete.`}</Text>{certification.blockers.slice(0, 8).map((blocker) => <Text key={blocker} style={styles.blocker}>• {blocker}</Text>)}</View>
+      <View style={styles.certification}><Text style={styles.sectionTitle}>certification</Text><Text style={styles.heroText}>{certification.certified ? "Commercial release requirements are certified." : `${certification.blockers.length} external or release blockers remain. The workspace does not report 100% until evidence, production connectors and artifacts are complete.`}</Text>{certification.blockers.slice(0, 8).map((blocker) => <Text key={blocker} style={styles.blocker}>• {blocker}</Text>)}</View>
     </ScrollView>
   </View></SafeAreaView>;
 }

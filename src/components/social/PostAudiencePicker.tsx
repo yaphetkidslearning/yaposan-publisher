@@ -1,0 +1,21 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+export type PostAudience='private'|'followers'|'specific'|'public';
+export type AudienceCandidate={id:string;email:string;following?:boolean;member?:boolean};
+const options:[PostAudience,string,keyof typeof Ionicons.glyphMap][]=[
+ ['private','Private','lock-closed-outline'],
+ ['followers','Followers only','people-circle-outline'],
+ ['public','Public','globe-outline'],
+ ['specific','Specific people','person-add-outline'],
+];
+const labels:Record<PostAudience,string>={private:'Private',followers:'Followers only',specific:'Specific people',public:'Public'};
+
+export default function PostAudiencePicker({value,selectedUserIds=[],candidates=[],onChange,text='#111827',muted='#64748b',border='#e5e7eb',panel='#fff'}:{value:PostAudience;selectedUserIds?:string[];candidates?:AudienceCandidate[];onChange:(value:PostAudience,userIds:string[])=>void;text?:string;muted?:string;border?:string;panel?:string}){
+ const [open,setOpen]=useState(false);const [draft,setDraft]=useState<string[]>(selectedUserIds);
+ const choose=(next:PostAudience)=>{if(next==='specific'){setDraft(selectedUserIds);return}onChange(next,[]);setOpen(false)};
+ const toggle=(id:string)=>setDraft(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);
+ return <View style={s.anchor}><Pressable onPress={()=>setOpen(true)} style={[s.button,{borderColor:border,backgroundColor:panel}]}><Ionicons name="settings-outline" size={15} color={text}/><Ionicons name={value==='public'?'globe-outline':value==='followers'?'people-circle-outline':value==='specific'?'person-add-outline':'lock-closed-outline'} size={14} color={muted}/><Text style={{color:text,fontWeight:'800'}}>{labels[value]}</Text><Ionicons name="chevron-down" size={12} color={muted}/></Pressable><Modal transparent visible={open} animationType="fade" onRequestClose={()=>setOpen(false)}><View style={s.modalLayer}><Pressable style={StyleSheet.absoluteFill} onPress={()=>setOpen(false)}/><View style={[s.menu,{borderColor:border,backgroundColor:panel}]}>{options.map(([v,label,icon])=><Pressable key={v} style={s.choice} onPress={()=>choose(v)}><Ionicons name={icon} size={16} color={value===v?'#7c3aed':muted}/><Text style={{color:text,flex:1}}>{label}</Text>{value===v?<Ionicons name="checkmark" size={16} color="#7c3aed"/>:null}</Pressable>)}<View style={[s.specific,{borderTopColor:border}]}><Text style={{color:text,fontWeight:'800',marginBottom:6}}>Specific people</Text>{candidates.length?<ScrollView style={{maxHeight:180}}>{candidates.map(c=><Pressable key={c.id} style={s.person} onPress={()=>toggle(c.id)}><Ionicons name={draft.includes(c.id)?'checkbox':'square-outline'} size={18} color={draft.includes(c.id)?'#7c3aed':muted}/><View style={{flex:1}}><Text style={{color:text}} numberOfLines={1}>{c.email}</Text><Text style={{color:muted,fontSize:10}}>{c.member?'Page member':c.following?'Follower':'Person'}</Text></View></Pressable>)}</ScrollView>:<Text style={{color:muted,fontSize:11}}>No followers or Page members are available yet.</Text>}<Pressable disabled={!draft.length} onPress={()=>{if(draft.length){onChange('specific',draft);setOpen(false)}}} style={[s.done,!draft.length&&{opacity:.45}]}><Text style={s.doneText}>Use selected people</Text></Pressable></View></View></View></Modal></View>;
+}
+const s=StyleSheet.create({anchor:{position:'relative',zIndex:50},modalLayer:{flex:1,backgroundColor:'rgba(15,23,42,.18)',paddingTop:110,paddingHorizontal:18,alignItems:'center'},button:{borderWidth:1,borderRadius:999,paddingHorizontal:10,paddingVertical:7,flexDirection:'row',alignItems:'center',gap:5},menu:{zIndex:9999,width:'100%',maxWidth:340,minWidth:280,borderWidth:1,borderRadius:12,padding:6,shadowColor:'#000',shadowOpacity:.14,shadowRadius:12},choice:{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:9,paddingVertical:8,borderRadius:8},specific:{borderTopWidth:1,marginTop:5,paddingTop:9,paddingHorizontal:5},person:{flexDirection:'row',alignItems:'center',gap:8,paddingVertical:6},done:{marginTop:8,backgroundColor:'#7c3aed',borderRadius:9,paddingVertical:8,alignItems:'center'},doneText:{color:'#fff',fontWeight:'900',fontSize:12}});

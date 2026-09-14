@@ -61,10 +61,10 @@ export function compileMasterTemplate(master: MasterTemplateDefinition, access: 
     width: master.width,
     height: master.height,
     orientation: master.orientation === "square" ? "portrait" : master.orientation,
-    sizeKey: master.pageSize.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+    sizeKey: "custom",
     backgroundColor: master.palette.background,
     margin: 32,
-    bleed: { top: 12, right: 12, bottom: 12, left: 12 },
+    bleed: 12,
     elements: clone(page.elements),
   }));
   return {

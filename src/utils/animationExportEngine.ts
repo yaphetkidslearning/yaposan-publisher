@@ -1,9 +1,9 @@
-// Phase 19.5 migration marker retained for regression compatibility: version:"19.5".
+// migration marker retained for regression compatibility: version:"19.5".
 import type { PublisherElement, PublisherPage, PublisherProject } from "../types/publisher";
 import { evaluateAnimatedPage, getAnimationSettings } from "./animationEngine";
 import { buildInteractiveManifest } from "./interactivePublishingEngine";
 
-// Phase 19.3 legacy diagnostic identifiers retained for migration: gif-plan, mp4-plan.
+// legacy diagnostic identifiers retained for migration: gif-plan, mp4-plan.
 export type AnimationExportFormat = "interactive-html" | "presentation-zip" | "gif" | "video" | "presentation-json";
 export type AnimationExportQuality = "draft" | "standard" | "high" | "ultra";
 export type AnimationExportSettings = {
@@ -219,7 +219,7 @@ async function presentationZip(project: PublisherProject, settings: AnimationExp
   for (const uri of collectAssetUris(project)) { try { const path=`assets/asset-${String(++assetIndex).padStart(4,"0")}.${assetExtension(uri)}`; zip.file(path,await fetchAssetBytes(uri)); assetMap.set(uri,path); } catch { /* validation report retains external asset warning */ } }
   packaged.pages.forEach((page) => page.elements.forEach((element) => { const keys=["imageUri","originalImageUri","rasterOriginalImageUri","rasterPreviewImageUri","rasterRenderedImageUri"] as const; keys.forEach((key)=>{const uri=element[key];if(uri&&assetMap.has(uri))(element as any)[key]=assetMap.get(uri)}); }));
   if(packaged.embeddedFonts) Object.entries(packaged.embeddedFonts).forEach(([name,uri])=>{if(assetMap.has(uri))packaged.embeddedFonts![name]=assetMap.get(uri)!});
-  zip.file("index.html",buildInteractiveHtml(packaged,settings)); zip.file("manifest.json",JSON.stringify({...buildInteractiveManifest(packaged),phase:"19.6",assets:[...assetMap.values()]},null,2)); zip.file("project.json",JSON.stringify(packaged,null,2)); zip.file("README.txt","Yaposan Phase 19.6 production-hardened interactive presentation package. Open index.html in a modern browser. Assets and embedded fonts are stored in the assets folder.");
+  zip.file("index.html",buildInteractiveHtml(packaged,settings)); zip.file("manifest.json",JSON.stringify({...buildInteractiveManifest(packaged),phase:"19.6",assets:[...assetMap.values()]},null,2)); zip.file("project.json",JSON.stringify(packaged,null,2)); zip.file("README.txt","Yaposan production-hardened interactive presentation package. Open index.html in a modern browser. Assets and embedded fonts are stored in the assets folder.");
   return zip.generateAsync({type:"uint8array",compression:"DEFLATE",compressionOptions:{level:settings.optimizeAssets?9:3}});
 }
 async function deliver(data: string | Uint8Array, filename: string, mimeType: string) { if(typeof document!=="undefined"){const blob=new Blob([data as BlobPart],{type:mimeType}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return filename;}const [{File:ExpoFile,Paths},Sharing]=await Promise.all([import("expo-file-system"),import("expo-sharing")]);const file=new ExpoFile(Paths.cache,filename);file.create({overwrite:true,intermediates:true});file.write(typeof data==="string"?data:data);if(await Sharing.isAvailableAsync())await Sharing.shareAsync(file.uri,{mimeType});return file.uri; }

@@ -1008,8 +1008,8 @@ const PublisherCanvas = forwardRef<View, Props>(
           const points=drawPoints.length>1?drawPoints:[drawStart,{x,y}];
           const norm=normalizedPath(points);
           if(norm.width<1&&norm.height<1)return;
-          const paint=normalizePaintingSettings(paintingSettings,drawingTool);
-          const predicted=predictStrokePoints(points,paint.prediction);
+          const paint=normalizePaintingSettings(paintingSettings);
+          const predicted=predictPaintEndpoint(points, paint.strokePrediction);
           const smoothed=smoothPaintPoints(predicted.map((point,index)=>({...point,pressure:paint.pressureSize?(drawingTool==="calligraphy"?0.5+0.5*Math.abs(Math.sin(index/3)):undefined):1})),paint.smoothing);
           const local=applyBrushDynamics(smoothed,paint);
           onAddDrawnElement(({id:`paint-${page.id}-${eventTime}`,name:`${paint.presetId} stroke`,type:"line",x:norm.x,y:norm.y,width:norm.width,height:norm.height,rotation:0,zIndex:Math.max(0,...page.elements.map(element=>element.zIndex))+1,shapeKind:"freehand",points:local,vectorNodes:local,vectorPoints:local,brushKind:drawingTool,paintCreatedAt:eventTime,phase18Version:"18.1",...paintingElementPatch(paint)} as any));

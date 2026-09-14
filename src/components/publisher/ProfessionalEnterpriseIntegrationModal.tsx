@@ -11,7 +11,7 @@ export default function ProfessionalEnterpriseIntegrationModal({ visible, projec
   const runSync = (connectorId: string) => setWorkspace((current) => queueIntegrationJob(current, connectorId, "sync"));
   return <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
     <View style={styles.root}>
-      <View style={styles.header}><View><Text style={styles.title}>Enterprise Integration Platform</Text><Text style={styles.subtitle}>{projectName} · Phase 25.8</Text></View><Pressable onPress={onClose} style={styles.close}><Ionicons name="close" size={22} color="#fff" /></Pressable></View>
+      <View style={styles.header}><View><Text style={styles.title}>Enterprise Integration Platform</Text><Text style={styles.subtitle}>{projectName} · </Text></View><Pressable onPress={onClose} style={styles.close}><Ionicons name="close" size={22} color="#fff" /></Pressable></View>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}><View><Text style={styles.eyebrow}>INTEGRATION READINESS</Text><Text style={styles.score}>{audit.score}</Text><Text style={styles.muted}>Secure connector and API governance score</Text></View><Ionicons name="extension-puzzle" size={66} color="#a78bfa" /></View>
         <View style={styles.cards}>{[["Connected", audit.connected], ["Attention", audit.attention], ["Webhooks", audit.activeWebhooks], ["Successful Jobs", audit.successfulJobs], ["Failed Jobs", audit.failedJobs]].map(([label, value]) => <View key={String(label)} style={styles.card}><Text style={styles.cardValue}>{value}</Text><Text style={styles.cardLabel}>{label}</Text></View>)}</View>

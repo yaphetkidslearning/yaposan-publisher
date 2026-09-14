@@ -12,7 +12,7 @@ RUN apk add --no-cache ffmpeg \
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY server ./server
 COPY scripts/export-worker.ts ./scripts/export-worker.ts
-COPY package.json tsconfig.json ./
+COPY package.json tsconfig.json runtime-config-keys.json ./
 USER yaposan
 EXPOSE 4100
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD wget -qO- http://127.0.0.1:${PORT:-4100}/health || exit 1

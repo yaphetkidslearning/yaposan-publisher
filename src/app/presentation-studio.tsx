@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { loadCreationProject } from "../services/creationProjectStore";
-import { creationToPresentation, type PresentationDraft } from "../services/phase9112StudioAdapters";
+import { creationToPresentation, type PresentationDraft } from "../services/studioAdapters";
 
 const blank = (): PresentationDraft => ({ id:`presentation-${Date.now()}`, title:"Untitled Presentation", editable:true, slides:[{id:"slide-1",title:"Presentation title",body:"Add your story here."}] });
 export default function PresentationStudio(){

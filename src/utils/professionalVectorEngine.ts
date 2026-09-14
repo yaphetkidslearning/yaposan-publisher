@@ -152,7 +152,7 @@ export function offsetVectorPath(element:E,amount:number):E{
 export function setVectorStrokePattern(element:E,dashArray:number[],dashOffset=0):E{return {...normalizeVectorElement(element),strokeDashArray:dashArray.filter(v=>Number.isFinite(v)&&v>=0),strokeDashOffset:dashOffset};}
 export function setVectorArrowheads(element:E,start:"none"|"arrow"|"circle"|"square",end:"none"|"arrow"|"circle"|"square"):E{return {...normalizeVectorElement(element),startArrowhead:start,endArrowhead:end};}
 
-// Phase 16.4 advanced illustration completion.
+// advanced illustration completion.
 export type LiveShapeKind = "rectangle"|"rounded-rectangle"|"polygon"|"star"|"spiral"|"gear"|"arrow";
 export type VectorBrushPreset = "pencil"|"marker"|"ink"|"calligraphy"|"artistic";
 export type VectorWarpMode = "arc"|"wave"|"fish"|"bulge"|"perspective";

@@ -1,4 +1,4 @@
-import type { AiImageJob, AiImageStudioProvider, AiImageTool, AiImageToolSettings } from "../types/aiImageStudio";
+import type { AiImageJob, AiImageProviderResult, AiImageStudioProvider, AiImageTool, AiImageToolSettings } from "../types/aiImageStudio";
 
 export const DEFAULT_AI_IMAGE_SETTINGS: AiImageToolSettings = {
   prompt: "Clean professional product photo",
@@ -61,7 +61,7 @@ export class HostedImageProviderUnavailable implements AiImageStudioProvider {
   id = "hosted-image-provider-unavailable";
   label = "Hosted AI (server configuration required)";
   supports(tool: AiImageTool) { return tool === "remove-background" || tool === "transparent-png" || tool === "white-background"; }
-  async run(_request: Parameters<AiImageStudioProvider["run"]>[0]) {
+  async run(_request: Parameters<AiImageStudioProvider["run"]>[0]): Promise<AiImageProviderResult> {
     throw new Error("Hosted image AI is not configured. Provider credentials must stay on the server; use Yaposan Local or connect an AI provider from AI Access.");
   }
 }

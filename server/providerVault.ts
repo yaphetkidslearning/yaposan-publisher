@@ -38,7 +38,7 @@ function open(value:string,organizationId:string,provider:string,storedVersion?:
     const iv=data.subarray(0,12),tag=data.subarray(12,28),enc=data.subarray(28);
     try{const decipher=createDecipheriv("aes-256-gcm",key,iv);decipher.setAAD(aad(organizationId,provider));decipher.setAuthTag(tag);return Buffer.concat([decipher.update(enc),decipher.final()]).toString("utf8")}catch{throw new Error("AI_PROVIDER_CREDENTIAL_DECRYPT_FAILED")}
   }
-  // Backward-compatible Phase 90.7/90.8 ciphertext migration path. Re-save/rotate upgrades it to v3 + AAD.
+  // Backward-compatible /90.8 ciphertext migration path. Re-save/rotate upgrades it to v3 + AAD.
   const encoded=value.startsWith("v2:")?value.slice(3):value;const data=Buffer.from(encoded,"base64");if(data.length<29)throw new Error("AI_PROVIDER_CREDENTIAL_DECRYPT_FAILED");
   const iv=data.subarray(0,12),tag=data.subarray(12,28),enc=data.subarray(28);
   for(const key of keyMap().values())try{const decipher=createDecipheriv("aes-256-gcm",key,iv);decipher.setAuthTag(tag);return Buffer.concat([decipher.update(enc),decipher.final()]).toString("utf8")}catch{}

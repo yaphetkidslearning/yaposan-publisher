@@ -22,7 +22,7 @@ const stop=new Set("the a an and or but for to of in on at by with from is are w
 function textOf(project:PublisherProject){return project.pages.flatMap(p=>p.elements.filter(e=>e.type==="text").map(e=>e.text??"")).join("\n").trim();}
 function syllables(word:string){const w=word.toLowerCase().replace(/[^a-z]/g,"");if(!w)return 0;const m=w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/,"" ).match(/[aeiouy]{1,2}/g);return Math.max(1,m?.length??1);}
 export function analyzeAdvancedDocument(project:PublisherProject):AdvancedDocumentMetrics{
- const text=textOf(project);const words=text.match(/[\p{L}\p{N}'-]+/gu)??[];const sentences=text.split(/[.!?]+/).map(x=>x.trim()).filter(Boolean);const paragraphs=text.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+ const text=textOf(project);const words:string[]=text.match(/[\p{L}\p{N}'-]+/gu)??[];const sentences=text.split(/[.!?]+/).map(x=>x.trim()).filter(Boolean);const paragraphs=text.split(/\n+/).map(x=>x.trim()).filter(Boolean);
  const syl=words.reduce((n,w)=>n+syllables(w),0);const wc=Math.max(1,words.length),sc=Math.max(1,sentences.length);const readability=Math.max(0,Math.min(100,206.835-1.015*(wc/sc)-84.6*(syl/wc)));const grade=Math.max(0,.39*(wc/sc)+11.8*(syl/wc)-15.59);
  const passive=sentences.filter(s=>/\b(am|is|are|was|were|be|been|being)\b\s+\w+(ed|en)\b/i.test(s)).length;const counts=new Map<string,number>();for(const w of words.map(w=>w.toLowerCase()))if(w.length>4&&!stop.has(w))counts.set(w,(counts.get(w)??0)+1);const repeated=[...counts].filter(([,n])=>n>=3).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([w])=>w);
  const headings=project.pages.flatMap(p=>p.elements).filter(e=>e.type==="text"&&(e.fontSize??0)>=28).length;const style=words.length<80?"Concise":sentences.length&&wc/sc>22?"Dense":"Balanced";

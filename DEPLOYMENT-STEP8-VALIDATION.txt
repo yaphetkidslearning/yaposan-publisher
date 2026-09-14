@@ -1,6 +1,0 @@
-Yaposan Publisher v1.0.0 - Deployment Step 8 Validation
-Structural validation: PASS (0 issues)
-Source version: 1.0.0
-Live production certification: PENDING REAL HOSTED EVIDENCE
-Certification command: npm run deploy:step8:certify
-Required evidence template: deploy/templates/production-launch-evidence.example.json

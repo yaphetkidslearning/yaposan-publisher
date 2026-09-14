@@ -1,21 +1,10 @@
 name: Dependency Review
-
-on:
-  pull_request:
-    branches: [main]
-
+on: [pull_request]
 permissions:
   contents: read
-
 jobs:
   dependency-review:
-    # Dependency Review requires GitHub Advanced Security for private repositories.
-    # Run it automatically when the repository is public.
-    if: github.event.repository.visibility == 'public'
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Review dependency changes
-        uses: actions/dependency-review-action@v4
+      - uses: actions/dependency-review-action@v4

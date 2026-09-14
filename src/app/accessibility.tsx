@@ -12,7 +12,7 @@ const supportedPractices = [
 
 export default function AccessibilityStatement() {
   return (
-    <View style={styles.page} accessibilityRole="main" nativeID="main-content">
+    <View style={styles.page} nativeID="main-content">
       <Text style={styles.h1} accessibilityRole="header">
         Accessibility at Yaposan
       </Text>
@@ -37,7 +37,7 @@ export default function AccessibilityStatement() {
         Open Help center
       </Link>
       <Text style={styles.note}>
-        Phase 90.16 adds keyboard-focus, reduced-motion, and forced-colors safeguards. Final WCAG 2.2 AA certification still requires manual assistive-technology, contrast, zoom, and keyboard evidence.
+        adds keyboard-focus, reduced-motion, and forced-colors safeguards. Final WCAG 2.2 AA certification still requires manual assistive-technology, contrast, zoom, and keyboard evidence.
       </Text>
     </View>
   );

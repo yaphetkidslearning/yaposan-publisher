@@ -12,7 +12,7 @@ export default function ProfessionalWorkflowAutomationModal({ visible, projectNa
   const run = (id: string) => setWorkspace((current) => executeAutomationRule(current, id, { projectName, approved: true }));
   return <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
     <View style={styles.screen}>
-      <View style={styles.header}><View><Text style={styles.title}>Professional Workflow Automation</Text><Text style={styles.subtitle}>{projectName} · Phase 25.6</Text></View><Pressable onPress={onClose} style={styles.close}><Ionicons name="close" size={22} color="#fff" /></Pressable></View>
+      <View style={styles.header}><View><Text style={styles.title}>Professional Workflow Automation</Text><Text style={styles.subtitle}>{projectName} · </Text></View><Pressable onPress={onClose} style={styles.close}><Ionicons name="close" size={22} color="#fff" /></Pressable></View>
       <View style={styles.tabs}>{(["rules","runs","audit"] as const).map((item)=><Pressable key={item} onPress={()=>setSection(item)} style={[styles.tab,section===item&&styles.tabActive]}><Text style={[styles.tabText,section===item&&styles.tabTextActive]}>{item.toUpperCase()}</Text></Pressable>)}</View>
       <ScrollView contentContainerStyle={styles.content}>
         {section === "rules" && <>

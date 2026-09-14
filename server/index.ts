@@ -1,5 +1,6 @@
-import { randomUUID } from "node:crypto";
-import { loadBackgroundRemovalConfig, runSelfHostedBackgroundRemoval, runSelfHostedProductPhotoAnalysis } from "./backgroundRemoval";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   claimNextProductPhotoBatch,
   cleanupExpiredProductPhotoBatches,
@@ -14,17 +15,19 @@ import {
   startProductPhotoBatch,
   uploadProductPhotoBatchItem,
 } from "./productPhotoBatches";
+import { loadBackgroundRemovalConfig, runSelfHostedBackgroundRemoval, runSelfHostedProductPhotoAnalysis } from "./backgroundRemoval";
 
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
-import { communityBudgetStatus } from "./aiCostControls";
-import { AI_CREDIT_PACKS, applyStripeCreditReversal, creditBalance, getCreditPack, grantPurchasedCredits } from "./aiCredits";
 import { runAiGateway } from "./aiPlatform";
+import { cancelMediaJob, generateMedia, getMediaJob, mediaProviderCapabilities } from "./mediaGeneration";
 import {
   constantTimeEqual,
-  isConfiguredAdmin,
   requireProjectAccess,
   requireWorkspaceAccess,
 } from "./authorization";
+import { AI_CREDIT_PACKS, applyStripeCreditReversal, creditBalance, getCreditPack, grantPurchasedCredits } from "./aiCredits";
+import { communityBudgetStatus } from "./aiCostControls";
+import { deleteProviderCredential, listProviderCredentials, loadProviderCredential, rotateProviderCredentials, saveProviderCredential, testProviderCredential } from "./providerVault";
 import {
   PLAN_CATALOG,
   resolveEntitlements,
@@ -45,9 +48,10 @@ import {
   updatePresence,
 } from "./collaboration";
 import {
-  adminSummary,
+  organizationSummary,
   changeMemberRole,
   createShareLink,
+  resolveShareLink,
   inviteExistingUser,
   listNotifications,
   listOrganizationMembers,
@@ -68,29 +72,44 @@ import {
   createReferralCode,
   creatorDashboard,
   listCreatorProducts,
-  moderateCreatorProduct,
+  moderateCreatorProductAsAdmin,
   purchaseCreatorProduct,
   redeemReferralCode,
   submitCreatorProduct,
 } from "./creatorMarketplace";
 import { getDatabase } from "./database";
+import { createSpace, listUserSpaces, requireSpaceAccess, updateSpace } from "./spaces";
+import { createSpaceComment, createSpacePost, getSpaceSocial, toggleSpaceCommentReaction, toggleSpaceFollow } from "./spaceSocial";
+import { getPublicProfile, togglePublicFollow, getExploreFeed, searchSocial, getHashtagFeed } from "./social109";
+import { uploadSocialMedia, attachPostMedia, createStory, getActiveStories, viewStory, createHighlight, createReel, getReelsFeed } from "./social110";
+import { createCommunity, listCommunities, joinCommunity, createCommunityPost, moderateCommunity, createSocialPage, listSocialPages, createSocialEvent, listUpcomingEvents, rsvpEvent, createLiveSession, startLiveSession, endLiveSession, listLiveSessions, sendLiveChat, reactLive } from "./social111";
+import { createAiSocialProfile, listAiSocialProfiles, socialAiAssist, aiSocialSearch, aiSocialRecommendations, labelAiGeneratedPost, createAiModerationSuggestion } from "./social112";
+import { createMembershipPlan, listMembershipPlans, beginMembershipSubscription, createTip, setPaidPost, beginPaidPostUnlock, creatorEconomyDashboard, settleCreatorEconomyStripe, linkPaidCommunity } from "./social113";
+import { updateAdSettings, publicAdOffer, createAdCampaign, settleAdCampaignStripe, listCreatorAdCampaigns, decideAdCampaign, selectPublicAd, recordAdClick, creatorAdDashboard, visitorKey } from "./social114";
+import { createConversation, createOwnerConversation, getTrendingHashtags, listConversations, listGlobalDmInbox, listMessages, listSocialNotifications, markConversationRead, markNotificationRead, reportSocialContent, sendMessage, togglePostBookmark, togglePostReaction, togglePostRepost, toggleUserBlock } from "./social108";
+import { createSpaceAI, createSpaceCompute, createSpaceConnection, getSpaceResources } from "./spaceResources";
+import { getYaposanToolCatalog } from "./toolRegistry";
+import { createStudio, getStudio, getStudioRun, listStudioRuns, listStudios, planStudioRun, retryStudioRun, runStudio, updateStudio } from "./studioRuntime";
+import { getPublicCreator, publishSpace } from "./publicCreator";
+import { getSpacePrivacy, setResourceVisibility, updateConnectionDataGrant, updateSpacePrivacy, type PrivacyResourceType } from "./privacy";
+import { acceptSpaceInvite, createStoreOrder, createStoreProduct, getSpaceStore, getSpaceTeam, inviteSpaceMember, listMySpaceInvites, removeSpaceMember, revokeSpaceInvite, updateSpaceMemberRole, updateStoreProduct } from "./spaceCommerce";
+import { GPU_CREDIT_PACKS, attachMarketplaceCheckout, createMarketplaceOrder, creatorEarningsDashboard, gpuCreditBalance, grantPurchasedGPUCredits, installMarketplaceProduct, listMarketplace, myMarketplaceLibrary, myUsageAndBilling, settleMarketplaceCheckout } from "./commerce";
+import { authenticateAdmin, createAdminPrincipal, listAdminPrincipals, publicAdmin, requireAdmin, revokeAdminSession, setAdminPrincipalStatus, type AdminPermission } from "./adminAuth";
+import { adminAIGPU, adminAudit, adminFinance, adminInfrastructure, adminMarketplace, adminModeration, adminOverview, adminSecurity, adminSpaces, adminUsers, createCreatorPayout, moderateMarketplaceProduct, recordPlatformCost, setAdminSpaceStatus, setAdminUserStatus } from "./admin";
+import { adminPageTemplatePreview, adminPaymentHealth, adminSpacePreview, claimStripeWebhook, finishStripeWebhook, phase115SafetyMatrix, rejectRawPaymentData } from "./trustSafety";
+import { adFraudReview, createModerationAppeal, creatorPayoutSafety, enforceAdFraudHold, markAllNotificationsRead, notificationCenter, productionReadiness116, reconcileCreatorPayment, resolveModerationAppeal, setAgeSafetyProfile } from "./production";
 import {
-  createBackupSnapshot,
-  listOperationsAudit,
-  listOperationsJobs,
-  operationsSummary,
-  productionCertification,
-  scheduleAutomation,
-  updateOperationsJob,
-} from "./enterpriseOperations";
-import {
+  hashPassword,
   issueSession,
   provisionAccount,
+  provisionFederatedAccount,
   publicUser,
   verifyPassword,
   verifyToken,
 } from "./identity";
-import { cancelMediaJob, generateMedia, getMediaJob, mediaProviderCapabilities } from "./mediaGeneration";
+import { createUserSession, getOrCreateExternalSession, getSpaceSecurity, listUserSessions, requireActiveUserSession, requireSpaceSensitiveAction, revokeOtherSessions, revokeUserSession, rotateUserSession, securityEventPayload, updateSpaceSecurity } from "./accountSecurity";
+import { oidcClientMetadata, verifyOidcBearer } from "./oidcIdentity";
+import { adminResetPrincipalPassword, changePassword, requestAdminPasswordReset, requestPasswordReset, resetAdminPasswordWithToken, resetPasswordWithToken, sendVerificationEmail, verifyEmailToken } from "./authRecovery";
 import {
   buildReleaseEvidence,
   clientIp,
@@ -100,9 +119,14 @@ import {
   safeTokenEqual,
 } from "./operations";
 import {
-  createAICreditCheckoutSession,
   createBillingPortal,
   createCheckoutSession,
+  createAICreditCheckoutSession,
+  createGPUCreditCheckoutSession,
+  createMarketplaceCheckoutSession,
+  createCreatorOneTimeCheckoutSession,
+  createCreatorAdCheckoutSession,
+  createCreatorMembershipCheckoutSession,
   createCustomer,
   verifyStripeWebhook,
 } from "./payments";
@@ -114,7 +138,6 @@ import {
   retryExportJob,
   updateExportJob,
 } from "./productionExport";
-import { deleteProviderCredential, listProviderCredentials, loadProviderCredential, rotateProviderCredentials, saveProviderCredential, testProviderCredential } from "./providerVault";
 import {
   BoundedRateLimiter,
   inspectJsonComplexity,
@@ -127,16 +150,19 @@ import {
   passwordPolicy,
   securityHeaders,
   validateUpload,
+  fetchMetadataAllowed,
+  classifyUploadRisk,
 } from "./securityPlatform";
 import {
   LocalObjectStorage,
   R2ObjectStorage,
   type ObjectStorage,
+  storageKeyPrefix,
 } from "./storage";
 
 const config = loadCloudConfig();
 const runtimeMetrics = new RuntimeMetrics();
-const releaseVersion = "1.0.0";
+const releaseVersion = "119.10.4";
 
 const collaborationStoreReady = configureCollaborationStore({
   driver: config.collaborationDriver,
@@ -163,8 +189,9 @@ let storage: ObjectStorage =
         publicBaseUrl: config.publicAssetBaseUrl,
       })
     : new LocalObjectStorage(
-        undefined,
-        config.publicAssetBaseUrl
+        config.localStorageRoot,
+        config.publicAssetBaseUrl,
+        config.sessionSecret
       );
 
 export const setObjectStorage = (
@@ -258,6 +285,19 @@ const supportTicketLimiter = new BoundedRateLimiter({
   maxEntries: config.rateLimitMaxEntries,
 });
 
+const loginIpLimiter = new BoundedRateLimiter({ limit: 20, windowMs: 15 * 60_000, maxEntries: config.rateLimitMaxEntries });
+const loginAccountLimiter = new BoundedRateLimiter({ limit: 8, windowMs: 15 * 60_000, maxEntries: config.rateLimitMaxEntries });
+const authRecoveryIpLimiter = new BoundedRateLimiter({ limit: 12, windowMs: 15 * 60_000, maxEntries: config.rateLimitMaxEntries });
+const authRecoveryAccountLimiter = new BoundedRateLimiter({ limit: 4, windowMs: 15 * 60_000, maxEntries: config.rateLimitMaxEntries });
+const authTokenIpLimiter = new BoundedRateLimiter({ limit: 30, windowMs: 15 * 60_000, maxEntries: config.rateLimitMaxEntries });
+const registrationIpLimiter = new BoundedRateLimiter({ limit: 10, windowMs: 60 * 60_000, maxEntries: config.rateLimitMaxEntries });
+const registrationAccountLimiter = new BoundedRateLimiter({ limit: 3, windowMs: 60 * 60_000, maxEntries: config.rateLimitMaxEntries });
+const adminLoginIpLimiter = new BoundedRateLimiter({ limit: 12, windowMs: 15 * 60_000, maxEntries: config.rateLimitMaxEntries });
+const adminLoginAccountLimiter = new BoundedRateLimiter({ limit: 6, windowMs: 15 * 60_000, maxEntries: config.rateLimitMaxEntries });
+const authAccountKey=(value:string)=>createHash("sha256").update(value.trim().toLowerCase().slice(0,254)||"unknown").digest("hex");
+const publicPageLimiter = new BoundedRateLimiter({ limit: 90, windowMs: 60_000, maxEntries: config.rateLimitMaxEntries });
+const emitSecurityEvent=(event:ReturnType<typeof securityEventPayload>)=>{if(config.securityEventSink!=="off")console.warn(JSON.stringify(event));};
+
 const SUPPORT_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 const SUPPORT_ATTACHMENT_MIME_TYPES = new Set([
   "image/png", "image/jpeg", "image/webp", "image/gif",
@@ -286,6 +326,54 @@ const supportTicketStatuses = new Set(["open","in_progress","waiting_for_user","
 function rateLimit(ip: string) {
   return !requestLimiter.check(ip).allowed;
 }
+
+function isLoopbackAddress(value: string | undefined) {
+  const address = String(value ?? "").toLowerCase().replace(/^::ffff:/, "");
+  return address === "127.0.0.1" || address === "::1";
+}
+
+const localDevTokenPath=resolveLocalDevTokenPath();
+let localDevToken="";
+function resolveLocalDevTokenPath(){return String(process.env.YAPOSAN_LOCAL_DEV_TOKEN_PATH??".yaposan/local-dev-token").trim()||".yaposan/local-dev-token"}
+function initializeLocalDevToken(){
+  if(String(process.env.NODE_ENV??"development").trim().toLowerCase()==="production")return;
+  localDevToken=randomBytes(32).toString("hex");
+  const path=localDevTokenPath;
+  const slash=Math.max(path.lastIndexOf("/"),path.lastIndexOf("\\"));
+  if(slash>=0)mkdirSync(path.slice(0,slash),{recursive:true});
+  writeFileSync(path,localDevToken+"\n",{encoding:"utf8",mode:0o600});
+  try{chmodSync(path,0o600)}catch{}
+}
+function localDevAuthorized(req:IncomingMessage){
+  return isLoopbackAddress(req.socket.remoteAddress)&&!!localDevToken&&constantTimeEqual(String(req.headers["x-yaposan-local-dev"]??""),localDevToken);
+}
+
+const runtimeConfigKeys = JSON.parse(readFileSync(resolve(process.cwd(), "runtime-config-keys.json"),"utf8")) as string[];
+function localRuntimeConfigFingerprint() {
+  const api = String(process.env.EXPO_PUBLIC_API_URL ?? process.env.PUBLIC_API_URL ?? "http://localhost:4100").replace(/\/$/, "");
+  const web = String(process.env.PUBLIC_WEB_URL ?? process.env.PUBLIC_APP_URL ?? "http://localhost:8081").replace(/\/$/, "");
+  const origins = String(process.env.PUBLIC_ORIGINS ?? "http://localhost:8081,http://127.0.0.1:8081")
+    .split(",").map(x => x.trim().replace(/\/$/, "").toLowerCase()).filter(Boolean).join(",");
+  const effective=(key:string)=>{
+    if(key==="EXPO_PUBLIC_API_URL")return api;
+    if(key==="PUBLIC_API_URL")return String(process.env.PUBLIC_API_URL || api);
+    if(key==="PUBLIC_WEB_URL")return String(process.env.PUBLIC_WEB_URL || web);
+    if(key==="PUBLIC_APP_URL")return String(process.env.PUBLIC_APP_URL || web);
+    if(key==="PUBLIC_ORIGINS")return origins;
+    if(key==="PORT")return String(process.env.PORT ?? "4100");
+    if(key==="YAPOSAN_LOCAL_DB_PATH")return String(process.env.YAPOSAN_LOCAL_DB_PATH || ".yaposan/local-database.json");
+    if(key==="YAPOSAN_LOCAL_DB_LOCK_TIMEOUT_MS")return String(process.env.YAPOSAN_LOCAL_DB_LOCK_TIMEOUT_MS || "30000");
+    if(key==="YAPOSAN_LOCAL_DB_STALE_LOCK_MS")return String(process.env.YAPOSAN_LOCAL_DB_STALE_LOCK_MS || "300000");
+    if(key==="YAPOSAN_LOCAL_DB_WARN_BYTES")return String(process.env.YAPOSAN_LOCAL_DB_WARN_BYTES || "26214400");
+    if(key==="YAPOSAN_LOCAL_DEV_TOKEN_PATH")return String(process.env.YAPOSAN_LOCAL_DEV_TOKEN_PATH || ".yaposan/local-dev-token");
+    if(key==="NODE_ENV")return String(process.env.NODE_ENV || "development");
+    if(key==="REQUIRE_EMAIL_VERIFICATION")return String(process.env.REQUIRE_EMAIL_VERIFICATION || "true");
+    return String(process.env[key] ?? "");
+  };
+  const selected=Object.fromEntries([...runtimeConfigKeys].sort().map(key=>[key,createHash("sha256").update(`${key}\0${effective(key)}`).digest("hex")]));
+  return createHash("sha256").update(JSON.stringify(selected)).digest("hex").slice(0,24);
+}
+
 
 const match = (
   path: string,
@@ -323,6 +411,38 @@ export async function handleRequest(
     req,
     config.trustProxy
   );
+
+  // CORS must be established before auth, fetch-metadata checks,
+  // and every API error response. This ensures browser clients can read 401/403/404
+  // responses and allows the required OPTIONS preflight for JSON/admin requests.
+  const requestOrigin = String(req.headers.origin ?? "").trim() || undefined;
+  if (!isOriginAllowed(requestOrigin, securityConfig.publicOrigins)) {
+    return json(res,403,{error:{code:"ORIGIN_NOT_ALLOWED",message:"Request origin is not trusted"}},requestId);
+  }
+  if (requestOrigin) {
+    res.setHeader("access-control-allow-origin", requestOrigin);
+    res.setHeader("vary", "Origin");
+    res.setHeader("access-control-allow-credentials", "true");
+    res.setHeader("access-control-expose-headers", "x-request-id");
+  }
+  if (req.method === "OPTIONS") {
+    const requestedMethod = String(req.headers["access-control-request-method"] ?? "GET").toUpperCase();
+    const allowedMethods = ["GET","POST","PUT","PATCH","DELETE","OPTIONS"];
+    if (!allowedMethods.includes(requestedMethod)) {
+      return json(res,405,{error:{code:"CORS_METHOD_NOT_ALLOWED",message:"Requested CORS method is not allowed."}},requestId);
+    }
+    res.setHeader("access-control-allow-methods", allowedMethods.join(","));
+    res.setHeader("access-control-allow-headers", "Authorization, Content-Type, X-Requested-With, X-Yaposan-Admin-Authorization, X-CSRF-Token, X-Request-Id, X-Yaposan-Client-Request-Id");
+    res.setHeader("access-control-max-age", "600");
+    res.writeHead(204, securityHeaders(requestId));
+    res.end();
+    return;
+  }
+
+  if(!fetchMetadataAllowed({method:req.method,site:String(req.headers["sec-fetch-site"]??""),mode:String(req.headers["sec-fetch-mode"]??""),dest:String(req.headers["sec-fetch-dest"]??""),trustedOrigin:Boolean(requestOrigin)})){
+    emitSecurityEvent(securityEventPayload({type:"request.fetch_metadata_blocked",severity:"medium",requestId,ip,metadata:{method:req.method,path:url.pathname}}));
+    return json(res,403,{error:{code:"CROSS_SITE_REQUEST_BLOCKED",message:"Cross-site state-changing request blocked."}},requestId);
+  }
 
   const finishMetric =
     runtimeMetrics.begin(req.method);
@@ -372,53 +492,6 @@ export async function handleRequest(
       );
     }
 
-    if (
-      !isOriginAllowed(
-        String(req.headers.origin ?? "") ||
-          undefined,
-        securityConfig.publicOrigins
-      )
-    ) {
-      return json(
-        res,
-        403,
-        {
-          error: {
-            code: "ORIGIN_NOT_ALLOWED",
-            message:
-              "Request origin is not trusted",
-          },
-        },
-        requestId
-      );
-    }
-    const requestOrigin = String(req.headers.origin ?? "");
-
-    if (
-      requestOrigin &&
-      isOriginAllowed(requestOrigin, securityConfig.publicOrigins)
-    ) {
-      res.setHeader("Access-Control-Allow-Origin", requestOrigin);
-      res.setHeader("Vary", "Origin");
-      res.setHeader(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-      );
-      res.setHeader(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Authorization, X-CSRF-Token, X-Request-ID"
-      );
-      res.setHeader("Access-Control-Allow-Credentials", "true");
-    }
-
-    if (req.method === "OPTIONS") {
-      res.writeHead(204, {
-        ...securityHeaders(requestId),
-      });
-      res.end();
-      return;
-    }
-    
     if (rateLimit(ip)) {
       return json(
         res,
@@ -448,6 +521,8 @@ export async function handleRequest(
           uptimeSeconds:
             runtimeMetrics.snapshot()
               .uptimeSeconds,
+          runtimeConfigFingerprint:
+            process.env.NODE_ENV === "production" ? undefined : localRuntimeConfigFingerprint(),
         },
         requestId
       );
@@ -552,20 +627,80 @@ export async function handleRequest(
 
     const db = await getDatabase();
 
+    // bridge local CLI tools to the live development database.
+    // This route is impossible in production, accepts only loopback TCP clients,
+    // requires an explicit development header, and is only enabled when no persistent DB is configured.
+    if (req.method === "POST" && url.pathname === "/api/v1/dev/local-verify-user") {
+      if (String(process.env.NODE_ENV ?? "development").toLowerCase() === "production") {
+        return json(res,404,{error:{code:"NOT_FOUND",message:"Route not found."}},requestId);
+      }
+      if (String(process.env.DATABASE_URL ?? "").trim()) {
+        return json(res,409,{error:{code:"PERSISTENT_DATABASE_CONFIGURED",message:"Use the direct local verification command with the configured database."}},requestId);
+      }
+      if (!localDevAuthorized(req)) {
+        return json(res,403,{error:{code:"LOCAL_DEVELOPMENT_ONLY",message:"Local verification is available only to the localhost development CLI."}},requestId);
+      }
+      const b = await bodyJson(req);
+      const email = String(b.email ?? "").trim().toLowerCase();
+      if (!/^\S+@\S+\.\S+$/.test(email)) return json(res,400,{error:{code:"INVALID_EMAIL",message:"A valid customer email is required."}},requestId);
+      const matches = await db.find("users",u=>u.email.trim().toLowerCase()===email);
+      if (matches.length !== 1) return json(res,matches.length===0?404:409,{error:{code:matches.length===0?"USER_NOT_FOUND":"AMBIGUOUS_USER",message:matches.length===0?`No Yaposan customer account found for ${email}.`:`Refusing to continue: multiple users matched ${email}.`}},requestId);
+      const user = matches[0];
+      if ((user.identityProvider ?? "local") !== "local") return json(res,409,{error:{code:"NOT_LOCAL_PASSWORD_ACCOUNT",message:"This command is only for local-password customer accounts."}},requestId);
+      const now = new Date().toISOString();
+      const pending = await db.find("authTokens",t=>t.subjectType==="user"&&t.subjectId===user.id&&t.purpose==="email_verification"&&!t.usedAt);
+      for (const token of pending) await db.update("authTokens",token.id,{usedAt:now});
+      if (!user.emailVerified || !user.emailVerifiedAt) await db.update("users",user.id,{emailVerified:true,emailVerifiedAt:user.emailVerifiedAt??now});
+      await db.insert("auditEvents",{actorUserId:user.id,action:"user.email.verified_local_development",target:user.id,requestId,metadata:{method:"local_live_api_cli",invalidatedVerificationTokens:pending.length}});
+      return json(res,200,{verified:true,email,invalidatedVerificationTokens:pending.length},requestId);
+    }
+
+    // local diagnostics and recovery use the same live database as the API.
+    if (req.method === "POST" && url.pathname === "/api/v1/dev/local-user-status") {
+      if (String(process.env.NODE_ENV ?? "development").toLowerCase() === "production") return json(res,404,{error:{code:"NOT_FOUND",message:"Route not found."}},requestId);
+      if (!localDevAuthorized(req)) return json(res,403,{error:{code:"LOCAL_DEVELOPMENT_ONLY",message:"Local account diagnostics are available only to the localhost development CLI."}},requestId);
+      const b=await bodyJson(req);const email=String(b.email??"").trim().toLowerCase();
+      if(!/^\S+@\S+\.\S+$/.test(email))return json(res,400,{error:{code:"INVALID_EMAIL",message:"A valid customer email is required."}},requestId);
+      const matches=await db.find("users",u=>u.email.trim().toLowerCase()===email);
+      if(matches.length!==1)return json(res,matches.length===0?404:409,{error:{code:matches.length===0?"USER_NOT_FOUND":"AMBIGUOUS_USER",message:matches.length===0?`No Yaposan customer account found for ${email}.`:`Multiple users matched ${email}.`}},requestId);
+      const user=matches[0];const memberships=await db.find("memberships",m=>m.userId===user.id);const spaces=await db.find("spaces",sp=>sp.ownerUserId===user.id);const sessions=await db.find("userSessions",x=>x.userId===user.id&&!x.revokedAt);
+      return json(res,200,{email:user.email,emailVerified:user.emailVerified,emailVerifiedAt:user.emailVerifiedAt??null,status:user.status,identityProvider:user.identityProvider??"local",organizations:memberships.length,spaces:spaces.map(sp=>({id:sp.id,name:sp.name,slug:sp.slug,status:sp.status,visibility:sp.visibility})),activeSessions:sessions.length,databaseMode:String(process.env.DATABASE_URL??"").trim()?"postgres":(String(process.env.YAPOSAN_IN_MEMORY_ONLY??"").toLowerCase()==="true"?"memory":"local-json")},requestId);
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/v1/dev/local-user-password") {
+      if (String(process.env.NODE_ENV ?? "development").toLowerCase() === "production") return json(res,404,{error:{code:"NOT_FOUND",message:"Route not found."}},requestId);
+      if (!localDevAuthorized(req)) return json(res,403,{error:{code:"LOCAL_DEVELOPMENT_ONLY",message:"Local password recovery is available only to the localhost development CLI."}},requestId);
+      const b=await bodyJson(req);const email=String(b.email??"").trim().toLowerCase();const newPassword=String(b.newPassword??"");
+      if(!/^\S+@\S+\.\S+$/.test(email))return json(res,400,{error:{code:"INVALID_EMAIL",message:"A valid customer email is required."}},requestId);
+      const check=passwordPolicy(newPassword,email);if(!check.valid)return json(res,400,{error:{code:"PASSWORD_POLICY_FAILED",message:"New password does not meet Yaposan security requirements.",details:check.issues}},requestId);
+      const matches=await db.find("users",u=>u.email.trim().toLowerCase()===email);if(matches.length!==1)return json(res,matches.length===0?404:409,{error:{code:matches.length===0?"USER_NOT_FOUND":"AMBIGUOUS_USER",message:matches.length===0?`No Yaposan customer account found for ${email}.`:`Multiple users matched ${email}.`}},requestId);
+      const user=matches[0];if((user.identityProvider??"local")!=="local")return json(res,409,{error:{code:"NOT_LOCAL_PASSWORD_ACCOUNT",message:"This command is only for local-password customer accounts."}},requestId);
+      await db.update("users",user.id,{passwordHash:hashPassword(newPassword)});const now=new Date().toISOString();let revoked=0;for(const sess of await db.find("userSessions",x=>x.userId===user.id&&!x.revokedAt)){await db.update("userSessions",sess.id,{revokedAt:now});revoked++;}
+      await db.insert("auditEvents",{actorUserId:user.id,action:"user.password.reset_local_development",target:user.id,requestId,metadata:{method:"local_live_api_cli",revokedSessions:revoked}});
+      return json(res,200,{reset:true,email,revokedSessions:revoked},requestId);
+    }
+
+    if(req.method === "GET" && url.pathname === "/api/v1/auth/config"){
+      return json(res,200,{identityProvider:config.identityProvider,localPasswordEnabled:config.identityProvider==="local"&&!config.requireExternalIdentity,externalIdentityRequired:config.requireExternalIdentity,oidc:await oidcClientMetadata({issuer:config.oidcIssuer,clientId:config.oidcClientId,audience:config.oidcAudience}),recommendedPrimary:"passkey",fallback:"password + authenticator MFA",recovery:"recovery codes"},requestId);
+    }
+
     if (
       req.method === "POST" &&
       url.pathname ===
         "/api/v1/auth/register"
     ) {
+      if(config.identityProvider==="oidc"||config.requireExternalIdentity)return json(res,409,{error:{code:"EXTERNAL_IDENTITY_REQUIRED",message:"Use the configured identity provider to create your Yaposan account."}},requestId);
       const b = await bodyJson(req);
 
       const email = String(
         b.email ?? ""
-      ).toLowerCase();
+      ).trim().toLowerCase();
 
       const password = String(
         b.password ?? ""
       );
+
+      if(!registrationIpLimiter.check(ip).allowed||!registrationAccountLimiter.check(authAccountKey(email)).allowed){emitSecurityEvent(securityEventPayload({type:"auth.register.rate_limited",severity:"medium",requestId,ip,metadata:{accountPresented:Boolean(email)}}));return json(res,429,{error:{code:"REGISTRATION_RATE_LIMITED",message:"Too many registration attempts. Try again later."}},requestId);}
 
       const passwordCheck =
         passwordPolicy(password, email);
@@ -600,18 +735,7 @@ export async function handleRequest(
           )
         ).length
       ) {
-        return json(
-          res,
-          409,
-          {
-            error: {
-              code: "EMAIL_EXISTS",
-              message:
-                "Account already exists",
-            },
-          },
-          requestId
-        );
+        return json(res,202,{accepted:true,message:"If this address is eligible, account instructions will be sent."},requestId);
       }
 
       const account =
@@ -623,10 +747,7 @@ export async function handleRequest(
           region: b.region,
         });
 
-      const session = issueSession(
-        account.user.id,
-        identityConfig
-      );
+      const verification=await sendVerificationEmail(db,account.user);
 
       await db.insert(
         "auditEvents",
@@ -654,7 +775,13 @@ export async function handleRequest(
             account.organization,
           workspace:
             account.workspace,
-          ...session,
+          verificationRequired: config.requireEmailVerification,
+          message: !config.requireEmailVerification
+            ? "Account created. Email verification is disabled for this environment."
+            : verification.sent===false && process.env.NODE_ENV!=="production"
+              ? "Email delivery is not configured in this local environment. Use the development user verification command or configure Resend."
+              : "Check your email to verify your Yaposan account.",
+          verification,
         },
         requestId
       );
@@ -666,6 +793,7 @@ export async function handleRequest(
         "/api/v1/auth/login"
     ) {
       const b = await bodyJson(req);
+      if(config.identityProvider==="oidc"||config.requireExternalIdentity)return json(res,409,{error:{code:"EXTERNAL_IDENTITY_REQUIRED",message:"Use the configured identity provider to sign in."}},requestId);
 
       const user = (
         await db.find(
@@ -674,9 +802,12 @@ export async function handleRequest(
             u.email.toLowerCase() ===
             String(
               b.email ?? ""
-            ).toLowerCase()
+            ).trim().toLowerCase()
         )
       )[0];
+
+      const loginKey=String(b.email??"").trim().toLowerCase().slice(0,254);
+      if(!loginIpLimiter.check(ip).allowed||!loginAccountLimiter.check(authAccountKey(loginKey)).allowed){emitSecurityEvent(securityEventPayload({type:"auth.login.rate_limited",severity:"high",requestId,ip,metadata:{accountHash:loginKey?"present":"missing"}}));return json(res,429,{error:{code:"LOGIN_RATE_LIMITED",message:"Unable to sign in. Try again later."}},requestId);}
 
       if (
         !user ||
@@ -684,20 +815,7 @@ export async function handleRequest(
           String(b.password ?? ""),
           user.passwordHash
         )
-      ) {
-        return json(
-          res,
-          401,
-          {
-            error: {
-              code:
-                "INVALID_CREDENTIALS",
-              message:
-                "Invalid credentials",
-            },
-          },
-          requestId
-        );
+      ) {emitSecurityEvent(securityEventPayload({type:"auth.login.failed",severity:"medium",requestId,ip,metadata:{accountPresented:Boolean(loginKey)}}));return json(res,401,{error:{code:"INVALID_CREDENTIALS",message:"Invalid credentials"}},requestId);
       }
 
       if (user.status !== "active") {
@@ -716,15 +834,16 @@ export async function handleRequest(
         );
       }
 
+      if(config.requireEmailVerification&&!user.emailVerified){
+        return json(res,403,{error:{code:"EMAIL_VERIFICATION_REQUIRED",message:"Check your email to verify your Yaposan account before signing in."}},requestId);
+      }
+
       return json(
         res,
         200,
         {
           user: publicUser(user),
-          ...issueSession(
-            user.id,
-            identityConfig
-          ),
+          ...issueSession(user.id,identityConfig,(await createUserSession(db,user.id,{ip,userAgent:String(req.headers["user-agent"]??""),authMethod:"local_password",assurance:"password",refreshDays:config.refreshTokenDays})).id,1,"password"),
         },
         requestId
       );
@@ -737,7 +856,7 @@ export async function handleRequest(
     ) {
       const b = await bodyJson(req);
 
-      const claims = verifyToken(
+    const claims = verifyToken(
         String(
           b.refreshToken ?? ""
         ),
@@ -761,16 +880,7 @@ export async function handleRequest(
         );
       }
 
-      return json(
-        res,
-        200,
-        issueSession(
-          claims.sub,
-          identityConfig,
-          claims.sid
-        ),
-        requestId
-      );
+      try{const rotated=await rotateUserSession(db,claims);return json(res,200,issueSession(claims.sub,identityConfig,claims.sid,rotated.version,rotated.assurance),requestId)}catch{return json(res,401,{error:{code:"INVALID_REFRESH_TOKEN",message:"Refresh token is invalid, rotated, revoked, or expired"}},requestId)};
     }
 
     if (
@@ -884,9 +994,16 @@ export async function handleRequest(
       const event =
         JSON.parse(raw);
 
+      const claimed=await claimStripeWebhook(db,event);
+      if(claimed.duplicate)return json(res,200,{received:true,duplicate:true},requestId);
+      try {
       const creditGrant = await grantPurchasedCredits(db,event);
-      const creditReversal = creditGrant ? undefined : await applyStripeCreditReversal(db,event);
-      if (!creditGrant && !creditReversal && process.env.YAPOSAN_ENABLE_LEGACY_SUBSCRIPTIONS === "true") await syncStripeSubscription(
+      const gpuCreditGrant = creditGrant ? undefined : await grantPurchasedGPUCredits(db,event);
+      const creatorEconomySettlement = creditGrant || gpuCreditGrant ? undefined : await settleCreatorEconomyStripe(db,event);
+      const adSettlement = creditGrant || gpuCreditGrant || creatorEconomySettlement ? undefined : await settleAdCampaignStripe(db,event);
+      const marketplaceSettlement = creditGrant || gpuCreditGrant || creatorEconomySettlement || adSettlement ? undefined : await settleMarketplaceCheckout(db,event);
+      const creditReversal = creditGrant || gpuCreditGrant || marketplaceSettlement ? undefined : await applyStripeCreditReversal(db,event);
+      if (!creditGrant && !gpuCreditGrant && !creatorEconomySettlement && !marketplaceSettlement && !creditReversal && process.env.YAPOSAN_ENABLE_LEGACY_SUBSCRIPTIONS === "true") await syncStripeSubscription(
         db,
         event
       );
@@ -903,6 +1020,7 @@ export async function handleRequest(
           },
         }
       );
+      await finishStripeWebhook(db,String(event.id),true);
 
       return json(
         res,
@@ -910,6 +1028,7 @@ export async function handleRequest(
         { received: true },
         requestId
       );
+      } catch(error){await finishStripeWebhook(db,String(event.id),false,error);return json(res,500,{error:{code:"PAYMENT_WEBHOOK_PROCESSING_FAILED",message:"Payment event could not be processed safely. Stripe may retry."}},requestId)}
     }
 
     if (
@@ -1018,31 +1137,369 @@ export async function handleRequest(
       return json(res, 200, { job: processed }, requestId);
     }
 
-    const claims = verifyToken(
-      String(
-        req.headers.authorization ??
-          ""
-      ),
-      identityConfig.secret,
-      "access"
-    );
-
-    if (!claims) {
-      return json(
-        res,
-        401,
-        {
-          error: {
-            code: "UNAUTHORIZED",
-            message:
-              "Authentication required",
-          },
-        },
-        requestId
-      );
+    if (req.method === "GET" && url.pathname === "/api/v1/tools/catalog") {
+      return json(res, 200, { items: getYaposanToolCatalog() }, requestId);
     }
 
+    const localAssetRawMatch = url.pathname.match(/^\/api\/v1\/assets\/raw\/(.+)$/);
+    if (localAssetRawMatch && req.method === "GET" && storage instanceof LocalObjectStorage && process.env.NODE_ENV !== "production") {
+      try {
+        const key = decodeURIComponent(localAssetRawMatch[1]);
+        const bytes = await storage.get(key);
+        const asset = (await db.find("socialMediaAssets", row => row.storageKey === key))[0];
+        const contentType = asset?.mimeType || "application/octet-stream";
+        res.writeHead(200, { "content-type": contentType, "content-length": String(bytes.byteLength), ...securityHeaders(requestId) });
+        res.end(Buffer.from(bytes));
+        return;
+      } catch {
+        return json(res, 404, { error: { code: "ASSET_NOT_FOUND", message: "Asset not found." } }, requestId);
+      }
+    }
+    if (localAssetRawMatch && req.method === "PUT") {
+      if (!(storage instanceof LocalObjectStorage)) return json(res, 404, { error: { code: "ROUTE_NOT_FOUND", message: "Route not found." } }, requestId);
+      try {
+        const key = decodeURIComponent(localAssetRawMatch[1]);
+        const bytes = await readBody(req);
+        const size = Number(req.headers["x-yaposan-size"] ?? -1);
+        const expiresAt = String(req.headers["x-yaposan-upload-expires"] ?? "");
+        const token = String(req.headers["x-yaposan-upload-token"] ?? "");
+        const contentType = String(req.headers["content-type"] ?? "application/octet-stream");
+        const stored = await storage.putPlanned(key, bytes, { size, expiresAt, token, contentType });
+        return json(res, 201, { stored: { key: stored.key, size: stored.size, checksum: stored.checksum } }, requestId);
+      } catch (error) {
+        return json(res, 400, { error: { code: "LOCAL_ASSET_UPLOAD_REJECTED", message: error instanceof Error ? error.message : "Upload rejected." } }, requestId);
+      }
+    }
+
+    const publicShareMatch=url.pathname.match(/^\/api\/v1\/public\/share\/([^/]+)\/resolve$/);
+    if(publicShareMatch&&req.method==="POST"){
+      if(!publicPageLimiter.check(`${ip}:share:${publicShareMatch[1]}`).allowed)return json(res,429,{error:{code:"SHARE_RATE_LIMITED",message:"Too many share-link requests."}},requestId);
+      const b=await bodyJson(req) as {password?:string};
+      try{return json(res,200,await resolveShareLink(db,decodeURIComponent(publicShareMatch[1]),String(b.password??"")),requestId)}
+      catch(error){const code=error instanceof Error?error.message:"SHARE_LINK_NOT_FOUND";const status=code==="SHARE_PASSWORD_INVALID"?401:code==="SHARE_LINK_EXPIRED"?410:404;return json(res,status,{error:{code,message:code==="SHARE_PASSWORD_INVALID"?"Share-link password is incorrect.":code==="SHARE_LINK_EXPIRED"?"This share link has expired.":"Share link not found."}},requestId)}
+    }
+
+    const publicSocialMediaMatch=url.pathname.match(/^\/api\/v1\/public\/social-media\/([^/]+)$/);
+    if(publicSocialMediaMatch&&req.method==="GET"){
+      const asset=await db.get("socialMediaAssets",publicSocialMediaMatch[1]);
+      if(!asset)return json(res,404,{error:{code:"SOCIAL_MEDIA_NOT_FOUND",message:"Media not found."}},requestId);
+      const privacy=(await db.find("spacePrivacySettings",x=>x.spaceId===asset.spaceId))[0];
+      const publicPostLinks=await db.find("socialPostMedia",x=>x.mediaAssetId===asset.id);
+      const publicPosts=await db.find("spacePosts",x=>x.spaceId===asset.spaceId&&x.visibility==="public"&&publicPostLinks.some(link=>link.postId===x.id));
+      const publicStories=await db.find("socialStories",x=>x.spaceId===asset.spaceId&&x.mediaAssetId===asset.id&&x.visibility==="public"&&Date.parse(x.expiresAt)>Date.now());
+      const presentation=Boolean(privacy?.publicPageEnabled&&(privacy.avatarUri?.includes(asset.id)||privacy.coverUri?.includes(asset.id)));
+      if(!presentation&&!publicPosts.length&&!publicStories.length)return json(res,404,{error:{code:"SOCIAL_MEDIA_NOT_PUBLIC",message:"Media not found."}},requestId);
+      const bytes=await storage.get(asset.storageKey);res.writeHead(200,{"content-type":asset.mimeType||"application/octet-stream","content-length":String(bytes.byteLength),"cache-control":"public, max-age=300",...securityHeaders(requestId)});res.end(Buffer.from(bytes));return;
+    }
+    const publicCreatorMatch=url.pathname.match(/^\/api\/v1\/public\/creators\/([^/]+)$/);
+    if(publicCreatorMatch && req.method === "GET"){if(!publicPageLimiter.check(`${ip}:${publicCreatorMatch[1]}`).allowed)return json(res,429,{error:{code:"PUBLIC_PAGE_RATE_LIMITED",message:"Too many public page requests."}},requestId);try{return json(res,200,await getPublicCreator(await getDatabase(),decodeURIComponent(publicCreatorMatch[1])),requestId)}catch{return json(res,404,{error:{code:"PUBLIC_PAGE_NOT_FOUND",message:"Public creator page not found."}},requestId)}}
+    const publicAdOfferMatch=url.pathname.match(/^\/api\/v1\/public\/creators\/([^/]+)\/advertising$/);
+    if(publicAdOfferMatch&&req.method==="GET"){try{return json(res,200,await publicAdOffer(db,decodeURIComponent(publicAdOfferMatch[1])),requestId)}catch{return json(res,404,{error:{code:"AD_OFFER_NOT_FOUND",message:"Advertising is not available for this page."}},requestId)}}
+    const publicAdMatch=url.pathname.match(/^\/api\/v1\/public\/creators\/([^/]+)\/ad$/);
+    if(publicAdMatch&&req.method==="GET"){if(!publicPageLimiter.check(`${ip}:ad:${publicAdMatch[1]}`).allowed)return json(res,429,{error:{code:"AD_RATE_LIMITED",message:"Too many ad requests."}},requestId);try{const vk=visitorKey(ip,String(req.headers["user-agent"]??""),publicAdMatch[1]);return json(res,200,await selectPublicAd(db,decodeURIComponent(publicAdMatch[1]),vk),requestId)}catch{return json(res,200,{ad:null},requestId)}}
+    const publicAdClickMatch=url.pathname.match(/^\/api\/v1\/public\/ads\/([^/]+)\/click$/);
+    if(publicAdClickMatch&&req.method==="POST"){if(!publicPageLimiter.check(`${ip}:adclick:${publicAdClickMatch[1]}`).allowed)return json(res,429,{error:{code:"AD_CLICK_RATE_LIMITED",message:"Too many ad click requests."}},requestId);try{const vk=visitorKey(ip,String(req.headers["user-agent"]??""),publicAdClickMatch[1]);return json(res,200,await recordAdClick(db,publicAdClickMatch[1],vk),requestId)}catch(e){return json(res,400,{error:{code:"AD_CLICK_REJECTED",message:e instanceof Error?e.message:"Click rejected."}},requestId)}}
+
+    if(req.method==="POST"&&url.pathname==="/api/v1/auth/verify-email"){if(!authTokenIpLimiter.check(`${ip}:verify-email`).allowed)return json(res,429,{error:{code:"AUTH_RECOVERY_RATE_LIMITED",message:"Too many verification attempts. Try again later."}},requestId);const b=await bodyJson(req) as {token?:string};try{const result=await verifyEmailToken(db,String(b.token??""));return json(res,200,{verified:true,user:result.user?publicUser(result.user):undefined,message:"Email verified. You can now sign in."},requestId)}catch{return json(res,400,{error:{code:"VERIFICATION_TOKEN_INVALID",message:"This verification link is invalid or expired."}},requestId)}}
+    if(req.method==="POST"&&url.pathname==="/api/v1/auth/resend-verification"){const b=await bodyJson(req) as {email?:string};const email=String(b.email??"").trim().toLowerCase();if(!authRecoveryIpLimiter.check(`${ip}:resend-verification`).allowed||!authRecoveryAccountLimiter.check(`verify:${authAccountKey(email)}`).allowed)return json(res,429,{error:{code:"AUTH_RECOVERY_RATE_LIMITED",message:"Too many requests. Try again later."}},requestId);const deliveryConfigured=Boolean(process.env.RESEND_API_KEY&&process.env.EMAIL_FROM);const user=(await db.find("users",u=>u.email.toLowerCase()===email))[0];if(user&&!user.emailVerified&&deliveryConfigured){try{await sendVerificationEmail(db,user)}catch{}}const localDeliveryUnavailable=process.env.NODE_ENV!=="production"&&!deliveryConfigured;return json(res,202,{accepted:true,deliveryConfigured,message:localDeliveryUnavailable?"Email delivery is not configured in this local environment. Use the development verification command or configure Resend.":"If the account is eligible, a verification email will be sent."},requestId)}
+    if(req.method==="POST"&&url.pathname==="/api/v1/auth/forgot-password"){const b=await bodyJson(req) as {email?:string};const email=String(b.email??"").trim().toLowerCase();if(!authRecoveryIpLimiter.check(`${ip}:forgot-password`).allowed||!authRecoveryAccountLimiter.check(`reset:${authAccountKey(email)}`).allowed)return json(res,429,{error:{code:"AUTH_RECOVERY_RATE_LIMITED",message:"Too many requests. Try again later."}},requestId);try{await requestPasswordReset(db,email)}catch{}return json(res,202,{accepted:true,message:"If an account exists for that email, a password reset link will be sent."},requestId)}
+    if(req.method==="POST"&&url.pathname==="/api/v1/auth/reset-password"){if(!authTokenIpLimiter.check(`${ip}:reset-password`).allowed)return json(res,429,{error:{code:"AUTH_RECOVERY_RATE_LIMITED",message:"Too many reset attempts. Try again later."}},requestId);const b=await bodyJson(req) as {token?:string;password?:string;confirmPassword?:string};try{return json(res,200,await resetPasswordWithToken(db,String(b.token??""),String(b.password??""),String(b.confirmPassword??"")),requestId)}catch(error){const message=error instanceof Error?error.message:"RESET_FAILED";return json(res,400,{error:{code:"PASSWORD_RESET_FAILED",message:message.startsWith("PASSWORD_POLICY:")?message.slice(16):message==="PASSWORD_CONFIRMATION_MISMATCH"?"New password and confirmation do not match.":"This password reset link is invalid or expired."}},requestId)}}
+    if(req.method==="POST"&&url.pathname==="/api/v1/yaposan-admin/auth/forgot-password"){const b=await bodyJson(req) as {email?:string};const email=String(b.email??"").trim().toLowerCase();if(!authRecoveryIpLimiter.check(`${ip}:admin-forgot-password`).allowed||!authRecoveryAccountLimiter.check(`admin-reset:${authAccountKey(email)}`).allowed)return json(res,429,{error:{code:"AUTH_RECOVERY_RATE_LIMITED",message:"Too many requests. Try again later."}},requestId);try{await requestAdminPasswordReset(db,email)}catch{}return json(res,202,{accepted:true,message:"If an active Admin account exists for that email, a reset link will be sent."},requestId)}
+    if(req.method==="POST"&&url.pathname==="/api/v1/yaposan-admin/auth/reset-password"){if(!authTokenIpLimiter.check(`${ip}:admin-reset-password`).allowed)return json(res,429,{error:{code:"AUTH_RECOVERY_RATE_LIMITED",message:"Too many reset attempts. Try again later."}},requestId);const b=await bodyJson(req) as {token?:string;password?:string;confirmPassword?:string};try{return json(res,200,await resetAdminPasswordWithToken(db,String(b.token??""),String(b.password??""),String(b.confirmPassword??"")),requestId)}catch(error){const code=error instanceof Error?error.message:"RESET_FAILED";return json(res,400,{error:{code:"ADMIN_PASSWORD_RESET_FAILED",message:code==="PASSWORD_CONFIRMATION_MISMATCH"?"New password and confirmation do not match.":code==="ADMIN_PASSWORD_TOO_SHORT"?"Admin passwords must be at least 14 characters.":"This Admin reset link is invalid or expired."}},requestId)}}
+
+    // Yaposan Admin is a separate identity and authorization domain.
+    // Customer bearer tokens, organization roles, Space roles and ADMIN_EMAILS never authorize these routes.
+    if(req.method==="POST"&&url.pathname==="/api/v1/yaposan-admin/auth/login"){
+      const b=await bodyJson(req) as {email?:string;password?:string};const adminLoginKey=authAccountKey(String(b.email??""));
+      if(!adminLoginIpLimiter.check(ip).allowed||!adminLoginAccountLimiter.check(adminLoginKey).allowed){emitSecurityEvent(securityEventPayload({type:"admin.auth.login.rate_limited",severity:"high",requestId,ip,metadata:{accountPresented:Boolean(String(b.email??"").trim())}}));return json(res,429,{error:{code:"ADMIN_LOGIN_RATE_LIMITED",message:"Unable to sign in. Try again later."}},requestId)}
+      try{return json(res,200,await authenticateAdmin(db,{email:String(b.email??""),password:String(b.password??"")},{secret:config.adminSessionSecret,bootstrapEmail:config.adminBootstrapEmail,bootstrapPassword:config.adminBootstrapPassword,sessionHours:config.adminSessionHours},{ip,userAgent:String(req.headers["user-agent"]??"")}),requestId)}catch{return json(res,401,{error:{code:"ADMIN_INVALID_CREDENTIALS",message:"Yaposan Admin credentials are invalid."}},requestId)}
+    }
+    if(url.pathname.startsWith("/api/v1/yaposan-admin/")){
+      const adminToken=String(req.headers["x-yaposan-admin-authorization"]??"");
+      if(req.method==="POST"&&url.pathname==="/api/v1/yaposan-admin/auth/logout"){try{await revokeAdminSession(db,adminToken,config.adminSessionSecret);return json(res,200,{revoked:true},requestId)}catch{return json(res,401,{error:{code:"ADMIN_UNAUTHORIZED",message:"Yaposan Admin authentication required."}},requestId)}}
+      const runAdmin=async(permission:AdminPermission|undefined,work:(principal:Awaited<ReturnType<typeof requireAdmin>>["principal"])=>Promise<unknown>)=>{try{const auth=await requireAdmin(db,adminToken,config.adminSessionSecret,permission);return json(res,200,await work(auth.principal),requestId)}catch(error){const code=error instanceof Error?error.message:"ADMIN_REQUEST_FAILED";const status=code==="ADMIN_FORBIDDEN"?403:code==="ADMIN_UNAUTHORIZED"?401:400;const message=status===403?"Yaposan Admin permission required.":status===401?"Yaposan Admin authentication required.":code;return json(res,status,{error:{code,message}},requestId)}};
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/me") return runAdmin(undefined,async principal=>({admin:publicAdmin(principal)}));
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/admins") return runAdmin("security",async()=>({items:await listAdminPrincipals(db)}));
+      if(req.method==="POST"&&url.pathname==="/api/v1/yaposan-admin/admins"){const b=await bodyJson(req) as {email?:string;password?:string;role?:import("./database").AdminRole};return runAdmin("security",async principal=>({admin:await createAdminPrincipal(db,principal,{email:String(b.email??""),password:String(b.password??""),role:b.role??"support_admin"})}));}
+      const adminPrincipalStatus=url.pathname.match(/^\/api\/v1\/yaposan-admin\/admins\/([^/]+)\/status$/);if(adminPrincipalStatus&&req.method==="PATCH"){const b=await bodyJson(req) as {status?:string};return runAdmin("security",async principal=>({admin:await setAdminPrincipalStatus(db,principal,adminPrincipalStatus[1],b.status==="disabled"?"disabled":"active")}));}
+      const adminPrincipalPassword=url.pathname.match(/^\/api\/v1\/yaposan-admin\/admins\/([^/]+)\/reset-password$/);if(adminPrincipalPassword&&req.method==="POST"){const b=await bodyJson(req) as {password?:string;confirmPassword?:string;currentAdminPassword?:string};return runAdmin("security",async principal=>adminResetPrincipalPassword(db,principal,adminPrincipalPassword[1],String(b.password??""),String(b.confirmPassword??""),String(b.currentAdminPassword??"")));}
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/overview") return runAdmin("audit",async()=>adminOverview(db));
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/users") return runAdmin("users",async()=>({items:await adminUsers(db,String(url.searchParams.get("q")??""))}));
+      const adminUserStatus=url.pathname.match(/^\/api\/v1\/yaposan-admin\/users\/([^/]+)\/status$/);if(adminUserStatus&&req.method==="PATCH"){const b=await bodyJson(req) as {status?:string};return runAdmin("users",async principal=>({user:await setAdminUserStatus(db,principal,adminUserStatus[1],b.status==="disabled"?"disabled":"active",requestId)}));}
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/spaces") return runAdmin("spaces",async()=>({items:await adminSpaces(db)}));
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/preview-template") return runAdmin("spaces",async principal=>adminPageTemplatePreview(db,principal,requestId));
+      const adminSpacePreviewMatch=url.pathname.match(/^\/api\/v1\/yaposan-admin\/spaces\/([^/]+)\/preview$/);if(adminSpacePreviewMatch&&req.method==="GET")return runAdmin("spaces",async principal=>adminSpacePreview(db,principal,adminSpacePreviewMatch[1],requestId));
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/payment-health") return runAdmin("finance",async()=>adminPaymentHealth(db));
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/trust-safety") return runAdmin("security",async()=>phase115SafetyMatrix());
+      const adminSpaceStatus=url.pathname.match(/^\/api\/v1\/yaposan-admin\/spaces\/([^/]+)\/status$/);if(adminSpaceStatus&&req.method==="PATCH"){const b=await bodyJson(req) as {status?:string;reason?:string};return runAdmin("spaces",async principal=>({space:await setAdminSpaceStatus(db,principal,adminSpaceStatus[1],b.status==="archived"?"archived":"active",b.reason,requestId)}));}
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/marketplace") return runAdmin("marketplace",async()=>({items:await adminMarketplace(db)}));
+      const adminCreatorModeration=url.pathname.match(/^\/api\/v1\/yaposan-admin\/creator-marketplace\/products\/([^/]+)\/moderate$/);
+      if(adminCreatorModeration&&req.method==="POST"){const b=await bodyJson(req) as {approved?:boolean};return runAdmin("marketplace",async principal=>({product:await moderateCreatorProductAsAdmin(db,principal.id,adminCreatorModeration[1],Boolean(b.approved))}));}
+
+      const moderationProduct=url.pathname.match(/^\/api\/v1\/yaposan-admin\/marketplace\/products\/([^/]+)\/moderate$/);if(moderationProduct&&req.method==="POST"){const b=await bodyJson(req) as {action?:string;reason?:string};return runAdmin("moderation",async principal=>moderateMarketplaceProduct(db,principal,moderationProduct[1],{action:String(b.action??""),reason:b.reason},requestId));}
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/ai-gpu") return runAdmin("ai_gpu",async()=>adminAIGPU(db));
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/finance") return runAdmin("finance",async()=>adminFinance(db));
+      if(req.method==="POST"&&url.pathname==="/api/v1/yaposan-admin/finance/costs"){const b=await bodyJson(req);return runAdmin("finance",async principal=>({entry:await recordPlatformCost(db,principal,b,requestId)}));}
+      if(req.method==="POST"&&url.pathname==="/api/v1/yaposan-admin/payouts"){const b=await bodyJson(req) as {sellerUserId?:string;amountCents?:number;currency?:string;note?:string};return runAdmin("payouts",async principal=>({payout:await createCreatorPayout(db,principal,{sellerUserId:String(b.sellerUserId??""),amountCents:Number(b.amountCents??0),currency:b.currency,note:b.note},requestId)}));}
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/infrastructure") return runAdmin("infrastructure",async()=>adminInfrastructure(db));
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/moderation") return runAdmin("moderation",async()=>({items:await adminModeration(db,Number(url.searchParams.get("limit")??200))}));
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/audit") return runAdmin("audit",async()=>({items:await adminAudit(db,Number(url.searchParams.get("limit")??200))}));
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/security") return runAdmin("security",async()=>adminSecurity(db,validateProductionConfig(config)));
+      // admin operations belong inside the separate Yaposan Admin authorization domain.
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/production-readiness") return runAdmin("security",async()=>productionReadiness116(db));
+      if(req.method==="POST"&&url.pathname==="/api/v1/yaposan-admin/payments/reconcile") return runAdmin("finance",async principal=>{const b=await bodyJson(req);return reconcileCreatorPayment(db,principal,b as any,requestId)});
+      const payoutSafetyMatch=url.pathname.match(/^\/api\/v1\/yaposan-admin\/creators\/([^/]+)\/payout-safety$/);if(req.method==="GET"&&payoutSafetyMatch)return runAdmin("finance",async()=>creatorPayoutSafety(db,payoutSafetyMatch[1],String(url.searchParams.get("currency")??"USD").toUpperCase()));
+      const adFraudMatch=url.pathname.match(/^\/api\/v1\/yaposan-admin\/ads\/([^/]+)\/fraud-review$/);if(req.method==="GET"&&adFraudMatch)return runAdmin("moderation",async()=>adFraudReview(db,adFraudMatch[1]));if(req.method==="POST"&&adFraudMatch)return runAdmin("moderation",async principal=>enforceAdFraudHold(db,principal,adFraudMatch[1],requestId));
+      const appealResolveMatch=url.pathname.match(/^\/api\/v1\/yaposan-admin\/moderation\/appeals\/([^/]+)\/resolve$/);if(req.method==="POST"&&appealResolveMatch)return runAdmin("moderation",async principal=>{const b=await bodyJson(req);return resolveModerationAppeal(db,principal,appealResolveMatch[1],String(b.decision??"") as any,String(b.note??""),requestId)});
+      if(req.method==="GET"&&url.pathname==="/api/v1/yaposan-admin/support/tickets") return runAdmin("users",async()=>{const status=url.searchParams.get("status");const q=(url.searchParams.get("q")??"").toLowerCase();const items=(await db.find("supportTickets",t=>(!status||t.status===status)&&(!q||`${t.id} ${t.email} ${t.name} ${t.subject} ${t.category}`.toLowerCase().includes(q)))).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));return {items:items.slice(0,250).map(t=>({...t,attachmentStorageKey:undefined}))};});
+      const adminSupportMatch=url.pathname.match(/^\/api\/v1\/yaposan-admin\/support\/tickets\/([^/]+)$/);
+      if(adminSupportMatch&&req.method==="GET") return runAdmin("users",async()=>{const ticket=await db.get("supportTickets",adminSupportMatch[1]);if(!ticket)throw new Error("SUPPORT_TICKET_NOT_FOUND");const messages=(await db.find("supportTicketMessages",m=>m.ticketId===ticket.id)).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));return {ticket:{...ticket,attachmentStorageKey:undefined},messages:messages.map(m=>({...m,attachmentStorageKey:undefined}))};});
+      if(adminSupportMatch&&req.method==="PATCH"){const b=await bodyJson(req) as {status?:string};return runAdmin("users",async principal=>{const status=String(b.status??"");if(!supportTicketStatuses.has(status))throw new Error("SUPPORT_STATUS_INVALID");const ticket=await db.update("supportTickets",adminSupportMatch[1],{status:status as any});await db.insert("supportTicketMessages",{ticketId:ticket.id,authorType:"system",body:`Status changed to ${status.replaceAll("_"," ")} by Yaposan Admin ${principal.email}.`});return {ticket:{...ticket,attachmentStorageKey:undefined}};});}
+      const adminNoteMatch=url.pathname.match(/^\/api\/v1\/yaposan-admin\/support\/tickets\/([^/]+)\/messages$/);
+      if(adminNoteMatch&&req.method==="POST"){const b=await bodyJson(req) as {message?:string};return runAdmin("users",async principal=>{const ticket=await db.get("supportTickets",adminNoteMatch[1]);if(!ticket)throw new Error("SUPPORT_TICKET_NOT_FOUND");const body=String(b.message??"").trim().slice(0,10000);if(body.length<2)throw new Error("SUPPORT_REPLY_REQUIRED");const message=await db.insert("supportTicketMessages",{ticketId:ticket.id,authorType:"staff",body});await db.update("supportTickets",ticket.id,{status:"waiting_for_user"});await db.insert("adminAuditEvents",{principalId:principal.id,action:"support.ticket.reply",target:ticket.id,requestId,metadata:{messageId:message.id}});return {message};});}
+      return json(res,404,{error:{code:"ADMIN_ROUTE_NOT_FOUND",message:"Yaposan Admin route not found."}},requestId);
+    }
+
+    if (url.pathname.startsWith("/api/v1/admin/") || url.pathname.startsWith("/api/v1/enterprise-operations/")) {
+      return json(res, 404, { error: { code: "ROUTE_NOT_FOUND", message: "Route not found." } }, requestId);
+    }
+
+    let claims = verifyToken(String(req.headers.authorization ?? ""),identityConfig.secret,"access");
+    if(!claims&&config.identityProvider==="oidc"){
+      const external=await verifyOidcBearer(String(req.headers.authorization??""),{issuer:config.oidcIssuer,clientId:config.oidcClientId,audience:config.oidcAudience});
+      if(external&&external.email&&external.email_verified===true){
+        try{const account=await provisionFederatedAccount(db,{email:external.email,subject:external.sub,issuer:external.iss});const amr=Array.isArray(external.amr)&&external.amr.some(x=>/webauthn|passkey|fido/i.test(x))?"passkey":Array.isArray(external.amr)&&external.amr.some(x=>/mfa|otp|totp/i.test(x))?"mfa":"oidc";const key=createHash("sha256").update(`${external.iss}|${external.sid??external.sub}`).digest("hex");const mirror=await getOrCreateExternalSession(db,account.user.id,{externalSessionKey:key,ip,userAgent:String(req.headers["user-agent"]??""),assurance:amr,expiresAt:new Date(external.exp*1000).toISOString()});claims={sub:account.user.id,sid:mirror.id,type:"access",exp:external.exp*1000,ver:mirror.version,amr};}catch(error){emitSecurityEvent(securityEventPayload({type:"auth.oidc.binding_failed",severity:"high",requestId,ip,metadata:{reason:error instanceof Error?error.message:"unknown"}}));}
+      }
+    }
+    if(!claims)return json(res,401,{error:{code:"UNAUTHORIZED",message:"Authentication required"}},requestId);
+    try{await requireActiveUserSession(db,claims)}catch{return json(res,401,{error:{code:"SESSION_REVOKED",message:"This session is no longer active. Sign in again."}},requestId)}
     const userId = claims.sub;
+
+    if(req.method==="POST"&&url.pathname==="/api/v1/auth/logout"){await revokeUserSession(db,userId,claims.sid);return json(res,200,{revoked:true},requestId)}
+    if(req.method==="GET"&&url.pathname==="/api/v1/security/sessions"){return json(res,200,{items:await listUserSessions(db,userId,claims.sid)},requestId)}
+    const revokeSessionMatch=url.pathname.match(/^\/api\/v1\/security\/sessions\/([^/]+)\/revoke$/);if(revokeSessionMatch&&req.method==="POST"){try{return json(res,200,{session:await revokeUserSession(db,userId,revokeSessionMatch[1])},requestId)}catch{return json(res,404,{error:{code:"SESSION_NOT_FOUND",message:"Session not found."}},requestId)}}
+    if(req.method==="POST"&&url.pathname==="/api/v1/security/sessions/revoke-others"){return json(res,200,{revoked:await revokeOtherSessions(db,userId,claims.sid)},requestId)}
+    if(req.method==="POST"&&url.pathname==="/api/v1/security/change-password"){const b=await bodyJson(req) as {currentPassword?:string;newPassword?:string;confirmPassword?:string};try{return json(res,200,await changePassword(db,userId,String(b.currentPassword??""),String(b.newPassword??""),String(b.confirmPassword??"")),requestId)}catch(error){const code=error instanceof Error?error.message:"PASSWORD_CHANGE_FAILED";const message=code.startsWith("PASSWORD_POLICY:")?code.slice(16):code==="CURRENT_PASSWORD_INVALID"?"Current password is incorrect.":code==="PASSWORD_CONFIRMATION_MISMATCH"?"New password and confirmation do not match.":code==="PASSWORD_REUSE_NOT_ALLOWED"?"Choose a new password you are not currently using.":"Password could not be changed.";return json(res,400,{error:{code:"PASSWORD_CHANGE_FAILED",message}},requestId)}}
+
+    const authenticatedAssetRawMatch = url.pathname.match(/^\/api\/v1\/assets\/raw\/(.+)$/);
+    if (authenticatedAssetRawMatch && req.method === "GET") {
+      const key = decodeURIComponent(authenticatedAssetRawMatch[1]);
+      const asset = (await db.find("assets", row => row.storageKey === key && row.ownerUserId === userId))[0];
+      const socialAsset = asset ? undefined : (await db.find("socialMediaAssets", row => row.storageKey === key))[0];
+      if (!asset && !socialAsset) return json(res, 404, { error: { code: "ASSET_NOT_FOUND", message: "Asset not found." } }, requestId);
+      if (socialAsset && socialAsset.ownerUserId !== userId) { try { await requireSpaceAccess(db,userId,socialAsset.spaceId,"viewer"); } catch { return json(res,404,{error:{code:"ASSET_NOT_FOUND",message:"Asset not found."}},requestId); } }
+      const bytes = await storage.get(key);
+      res.writeHead(200, { "content-type": asset?.mimeType || socialAsset?.mimeType || "application/octet-stream", "content-length": String(bytes.byteLength), ...securityHeaders(requestId) });
+      res.end(Buffer.from(bytes));
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/v1/spaces") {
+      return json(res, 200, { items: await listUserSpaces(db, userId) }, requestId);
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/v1/spaces") {
+      const b = await bodyJson(req) as { organizationId?: string; name?: string; slug?: string; kind?: "personal"|"team"|"business"; visibility?: "private"|"team" };
+      const memberships = await db.find("memberships", row => row.userId === userId);
+      const organizationId = String(b.organizationId ?? memberships[0]?.organizationId ?? "");
+      if (!organizationId) return json(res, 400, { error: { code: "SPACE_ORGANIZATION_REQUIRED", message: "An organization is required to create an AI page." } }, requestId);
+      try {
+        const space = await createSpace(db, { userId, organizationId, name: String(b.name ?? "My AI Page"), slug: b.slug, kind: b.kind, visibility: b.visibility });
+        return json(res, 201, { space }, requestId);
+      } catch (error) {
+        return json(res, 400, { error: { code: "SPACE_CREATE_FAILED", message: error instanceof Error ? error.message : "Could not create AI page." } }, requestId);
+      }
+    }
+
+    const spaceMatch = url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)$/);
+    if (spaceMatch && req.method === "GET") {
+      try { return json(res, 200, { space: await requireSpaceAccess(db, userId, spaceMatch[1]) }, requestId); }
+      catch { return json(res, 404, { error: { code: "SPACE_NOT_FOUND", message: "AI page not found." } }, requestId); }
+    }
+    if (spaceMatch && req.method === "PATCH") {
+      const b = await bodyJson(req) as { name?: string; visibility?: "private"|"team"; status?: "active"|"archived" };
+      try { return json(res, 200, { space: await updateSpace(db, userId, spaceMatch[1], b) }, requestId); }
+      catch { return json(res, 403, { error: { code: "SPACE_UPDATE_DENIED", message: "You do not have permission to update this AI page." } }, requestId); }
+    }
+
+    const spaceSecurityMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/security$/);
+    if(spaceSecurityMatch&&req.method==="GET"){try{return json(res,200,{settings:await getSpaceSecurity(db,userId,spaceSecurityMatch[1])},requestId)}catch{return json(res,403,{error:{code:"SPACE_SECURITY_DENIED",message:"Space security settings access denied."}},requestId)}}
+    if(spaceSecurityMatch&&req.method==="PATCH"){const b=await bodyJson(req);try{await requireSpaceSensitiveAction(db,spaceSecurityMatch[1],claims,"team_admin");return json(res,200,{settings:await updateSpaceSecurity(db,userId,spaceSecurityMatch[1],b)},requestId)}catch(e){return json(res,403,{error:{code:"SPACE_SECURITY_UPDATE_DENIED",message:e instanceof Error?e.message:"Space security update denied."}},requestId)}}
+
+    const privacyMatch = url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/privacy$/);
+    if(privacyMatch && req.method === "GET"){try{return json(res,200,await getSpacePrivacy(db,userId,privacyMatch[1]),requestId)}catch{return json(res,403,{error:{code:"SPACE_PRIVACY_DENIED",message:"Privacy settings access denied."}},requestId)}}
+    if(privacyMatch && req.method === "PATCH"){const b=await bodyJson(req);try{return json(res,200,{settings:await updateSpacePrivacy(db,userId,privacyMatch[1],b)},requestId)}catch(e){return json(res,400,{error:{code:"SPACE_PRIVACY_UPDATE_FAILED",message:e instanceof Error?e.message:"Could not update privacy settings."}},requestId)}}
+    const privacyResourceMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/privacy\/resources\/(post|ai|studio|product|project)\/([^/]+)$/);
+    if(privacyResourceMatch && req.method === "PATCH"){const b=await bodyJson(req) as {visibility?:string;audienceUserIds?:string[]};try{if(["public","unlisted","paid"].includes(String(b.visibility)))await requireSpaceSensitiveAction(db,privacyResourceMatch[1],claims,"public_share");return json(res,200,{item:await setResourceVisibility(db,userId,privacyResourceMatch[1],privacyResourceMatch[2] as PrivacyResourceType,privacyResourceMatch[3],String(b.visibility??"private"),b.audienceUserIds)},requestId)}catch(e){const code=e instanceof Error?e.message:"RESOURCE_PRIVACY_UPDATE_FAILED";return json(res,code==="STEP_UP_REQUIRED"?403:400,{error:{code,message:code==="STEP_UP_REQUIRED"?"Passkey or MFA verification is required before public sharing.":code}},requestId)}}
+    const privacyGrantMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/privacy\/connections\/([^/]+)\/grant$/);
+    if(privacyGrantMatch && req.method === "PATCH"){const b=await bodyJson(req);try{return json(res,200,{grant:await updateConnectionDataGrant(db,userId,privacyGrantMatch[1],privacyGrantMatch[2],b)},requestId)}catch(e){return json(res,400,{error:{code:"CONNECTION_DATA_GRANT_FAILED",message:e instanceof Error?e.message:"Could not update connection data grant."}},requestId)}}
+
+    const resourcesMatch = url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/resources$/);
+    if(resourcesMatch && req.method === "GET"){try{return json(res,200,await getSpaceResources(db,userId,resourcesMatch[1]),requestId)}catch{return json(res,403,{error:{code:"SPACE_RESOURCES_DENIED",message:"AI Page access denied."}},requestId)}}
+    const aiResourceMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/ai$/); if(aiResourceMatch&&req.method==="POST"){const b=await bodyJson(req);try{return json(res,201,{item:await createSpaceAI(db,userId,aiResourceMatch[1],b)},requestId)}catch(e){return json(res,400,{error:{code:"SPACE_AI_FAILED",message:e instanceof Error?e.message:"Could not create AI."}},requestId)}}
+    const connectionResourceMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/connections$/); if(connectionResourceMatch&&req.method==="POST"){const b=await bodyJson(req);try{await requireSpaceSensitiveAction(db,connectionResourceMatch[1],claims,"external_connection");return json(res,201,{item:await createSpaceConnection(db,userId,connectionResourceMatch[1],b)},requestId)}catch(e){return json(res,403,{error:{code:"SPACE_CONNECTION_FAILED",message:e instanceof Error?e.message:"Could not add connection."}},requestId)}}
+    const computeResourceMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/compute$/); if(computeResourceMatch&&req.method==="POST"){const b=await bodyJson(req);try{return json(res,201,{item:await createSpaceCompute(db,userId,computeResourceMatch[1],b)},requestId)}catch(e){return json(res,400,{error:{code:"SPACE_COMPUTE_FAILED",message:e instanceof Error?e.message:"Could not add compute."}},requestId)}}
+
+    const publishSpaceMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/publish$/);
+    if(publishSpaceMatch && req.method === "POST"){try{await requireSpaceSensitiveAction(db,publishSpaceMatch[1],claims,"public_share");return json(res,200,await publishSpace(db,userId,publishSpaceMatch[1]),requestId)}catch(e){return json(res,403,{error:{code:"SPACE_PUBLISH_DENIED",message:e instanceof Error&&e.message==="STEP_UP_REQUIRED"?"Passkey or MFA verification is required before publishing this AI Page.":"Only a Space admin can publish this AI Page."}},requestId)}}
+
+    const studiosMatch = url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/studios$/);
+    if(studiosMatch && req.method === "GET"){try{return json(res,200,{items:await listStudios(db,userId,studiosMatch[1])},requestId)}catch{return json(res,403,{error:{code:"SPACE_STUDIOS_DENIED",message:"Studio access denied."}},requestId)}}
+    if(studiosMatch && req.method === "POST"){const b=await bodyJson(req);try{return json(res,201,{studio:await createStudio(db,userId,studiosMatch[1],b)},requestId)}catch(e){return json(res,400,{error:{code:"STUDIO_CREATE_FAILED",message:e instanceof Error?e.message:"Could not create Studio."}},requestId)}}
+    const studioMatch = url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/studios\/([^/]+)$/);
+    if(studioMatch && req.method === "GET"){try{return json(res,200,{studio:await getStudio(db,userId,studioMatch[1],studioMatch[2])},requestId)}catch{return json(res,404,{error:{code:"STUDIO_NOT_FOUND",message:"Studio not found."}},requestId)}}
+    if(studioMatch && req.method === "PATCH"){const b=await bodyJson(req);try{return json(res,200,{studio:await updateStudio(db,userId,studioMatch[1],studioMatch[2],b)},requestId)}catch(e){return json(res,400,{error:{code:"STUDIO_UPDATE_FAILED",message:e instanceof Error?e.message:"Could not update Studio."}},requestId)}}
+    const studioPlanMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/studios\/([^/]+)\/plan$/);
+    if(studioPlanMatch && req.method === "GET"){try{return json(res,200,{plan:await planStudioRun(db,userId,studioPlanMatch[1],studioPlanMatch[2])},requestId)}catch(e){return json(res,400,{error:{code:"STUDIO_PLAN_FAILED",message:e instanceof Error?e.message:"Could not plan Studio run."}},requestId)}}
+    const studioRunMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/studios\/([^/]+)\/run$/);
+    if(studioRunMatch && req.method === "POST"){const b=await bodyJson(req) as {input?:unknown;approvedNodeIds?:string[];executionKey?:string};try{return json(res,201,{run:await runStudio(db,userId,studioRunMatch[1],studioRunMatch[2],b.input??{},{approvedNodeIds:b.approvedNodeIds,executionKey:b.executionKey})},requestId)}catch(e){const m=e instanceof Error?e.message:"Studio run failed.";return json(res,m.startsWith("STUDIO_APPROVAL_REQUIRED")?409:m==="STUDIO_RUN_RATE_LIMITED"?429:400,{error:{code:m.startsWith("STUDIO_APPROVAL_REQUIRED")?"STUDIO_APPROVAL_REQUIRED":m==="STUDIO_RUN_RATE_LIMITED"?"STUDIO_RUN_RATE_LIMITED":"STUDIO_RUN_FAILED",message:m}},requestId)}}
+    const studioRunsMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/studios\/([^/]+)\/runs$/);
+    if(studioRunsMatch && req.method === "GET"){try{return json(res,200,{items:await listStudioRuns(db,userId,studioRunsMatch[1],studioRunsMatch[2])},requestId)}catch{return json(res,403,{error:{code:"STUDIO_RUNS_DENIED",message:"Studio run access denied."}},requestId)}}
+    const studioRunDetailMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/studios\/([^/]+)\/runs\/([^/]+)$/);
+    if(studioRunDetailMatch && req.method === "GET"){try{return json(res,200,{run:await getStudioRun(db,userId,studioRunDetailMatch[1],studioRunDetailMatch[2],studioRunDetailMatch[3])},requestId)}catch{return json(res,404,{error:{code:"STUDIO_RUN_NOT_FOUND",message:"Studio run not found."}},requestId)}}
+    const studioRunRetryMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/studios\/([^/]+)\/runs\/([^/]+)\/retry$/);
+    if(studioRunRetryMatch && req.method === "POST"){const b=await bodyJson(req) as {approvedNodeIds?:string[]};try{return json(res,201,{run:await retryStudioRun(db,userId,studioRunRetryMatch[1],studioRunRetryMatch[2],studioRunRetryMatch[3],b.approvedNodeIds??[])},requestId)}catch(e){return json(res,400,{error:{code:"STUDIO_RUN_RETRY_FAILED",message:e instanceof Error?e.message:"Could not retry Studio run."}},requestId)}}
+
+    if(url.pathname==="/api/v1/space-invites"&&req.method==="GET") return json(res,200,{items:await listMySpaceInvites(db,userId)},requestId);
+    const acceptInviteMatch=url.pathname.match(/^\/api\/v1\/space-invites\/([^/]+)\/accept$/);
+    if(acceptInviteMatch&&req.method==="POST"){try{return json(res,200,{membership:await acceptSpaceInvite(db,userId,acceptInviteMatch[1])},requestId)}catch(e){return json(res,400,{error:{code:"SPACE_INVITE_ACCEPT_FAILED",message:e instanceof Error?e.message:"Could not accept invite."}},requestId)}}
+
+    const teamMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/team$/);
+    if(teamMatch&&req.method==="GET"){try{return json(res,200,await getSpaceTeam(db,userId,teamMatch[1]),requestId)}catch{return json(res,403,{error:{code:"SPACE_TEAM_DENIED",message:"Team access denied."}},requestId)}}
+    const teamInviteMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/team\/invites$/);
+    if(teamInviteMatch&&req.method==="POST"){const b=await bodyJson(req) as {email?:string;role?:string};try{return json(res,201,await inviteSpaceMember(db,userId,teamInviteMatch[1],String(b.email||""),String(b.role||"viewer")),requestId)}catch(e){return json(res,400,{error:{code:"SPACE_INVITE_FAILED",message:e instanceof Error?e.message:"Could not invite member."}},requestId)}}
+    const teamInviteDeleteMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/team\/invites\/([^/]+)$/);
+    if(teamInviteDeleteMatch&&req.method==="DELETE"){try{return json(res,200,{invite:await revokeSpaceInvite(db,userId,teamInviteDeleteMatch[1],teamInviteDeleteMatch[2])},requestId)}catch(e){return json(res,400,{error:{code:"SPACE_INVITE_REVOKE_FAILED",message:e instanceof Error?e.message:"Could not revoke invite."}},requestId)}}
+    const teamMemberMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/team\/members\/([^/]+)$/);
+    if(teamMemberMatch&&req.method==="PATCH"){const b=await bodyJson(req) as {role?:string};try{return json(res,200,{member:await updateSpaceMemberRole(db,userId,teamMemberMatch[1],teamMemberMatch[2],String(b.role||"viewer"))},requestId)}catch(e){return json(res,400,{error:{code:"SPACE_MEMBER_UPDATE_FAILED",message:e instanceof Error?e.message:"Could not update member."}},requestId)}}
+    if(teamMemberMatch&&req.method==="DELETE"){try{return json(res,200,await removeSpaceMember(db,userId,teamMemberMatch[1],teamMemberMatch[2]),requestId)}catch(e){return json(res,400,{error:{code:"SPACE_MEMBER_REMOVE_FAILED",message:e instanceof Error?e.message:"Could not remove member."}},requestId)}}
+
+    const storeMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/store$/);
+    if(storeMatch&&req.method==="GET"){try{return json(res,200,await getSpaceStore(db,userId,storeMatch[1]),requestId)}catch{return json(res,403,{error:{code:"SPACE_STORE_DENIED",message:"Store access denied."}},requestId)}}
+    const storeProductsMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/store\/products$/);
+    if(storeProductsMatch&&req.method==="POST"){const b=await bodyJson(req);try{return json(res,201,{product:await createStoreProduct(db,userId,storeProductsMatch[1],b)},requestId)}catch(e){return json(res,400,{error:{code:"STORE_PRODUCT_CREATE_FAILED",message:e instanceof Error?e.message:"Could not create product."}},requestId)}}
+    const storeProductMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/store\/products\/([^/]+)$/);
+    if(storeProductMatch&&req.method==="PATCH"){const b=await bodyJson(req);try{return json(res,200,{product:await updateStoreProduct(db,userId,storeProductMatch[1],storeProductMatch[2],b)},requestId)}catch(e){return json(res,400,{error:{code:"STORE_PRODUCT_UPDATE_FAILED",message:e instanceof Error?e.message:"Could not update product."}},requestId)}}
+    const storeOrderMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/store\/products\/([^/]+)\/orders$/);
+    if(storeOrderMatch&&req.method==="POST"){try{return json(res,201,{order:await createStoreOrder(db,userId,storeOrderMatch[1],storeOrderMatch[2])},requestId)}catch(e){return json(res,400,{error:{code:"STORE_ORDER_CREATE_FAILED",message:e instanceof Error?e.message:"Could not create order."}},requestId)}}
+
+    const publicProfileMatch=url.pathname.match(/^\/api\/v1\/social\/profiles\/([^/]+)$/);
+    if(publicProfileMatch&&req.method==="GET"){try{return json(res,200,await getPublicProfile(db,userId,publicProfileMatch[1]),requestId)}catch(e){return json(res,403,{error:{code:"SOCIAL_PROFILE_DENIED",message:e instanceof Error?e.message:"Profile unavailable."}},requestId)}}
+    const publicFollowMatch=url.pathname.match(/^\/api\/v1\/social\/profiles\/([^/]+)\/follow$/);
+    if(publicFollowMatch&&req.method==="POST"){try{return json(res,200,await togglePublicFollow(db,userId,publicFollowMatch[1]),requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_FOLLOW_FAILED",message:e instanceof Error?e.message:"Could not follow."}},requestId)}}
+    if(url.pathname==="/api/v1/social/feed"&&req.method==="GET"){const mode=(url.searchParams.get("mode")||"explore") as "explore"|"following"|"saved";try{return json(res,200,{posts:await getExploreFeed(db,userId,mode)},requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_FEED_FAILED",message:e instanceof Error?e.message:"Could not load feed."}},requestId)}}
+    if(url.pathname==="/api/v1/social/search"&&req.method==="GET"){return json(res,200,await searchSocial(db,userId,url.searchParams.get("q")||""),requestId)}
+    const globalTagMatch=url.pathname.match(/^\/api\/v1\/social\/hashtags\/([^/]+)$/);
+    if(globalTagMatch&&req.method==="GET"){return json(res,200,{posts:await getHashtagFeed(db,userId,decodeURIComponent(globalTagMatch[1]))},requestId)}
+    if(url.pathname==="/api/v1/social/communities"&&req.method==="GET"){return json(res,200,{communities:await listCommunities(db,userId)},requestId)}
+    const communityCreateMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/communities$/);
+    if(communityCreateMatch&&req.method==="POST"){const b=await bodyJson(req) as any;try{return json(res,201,{community:await createCommunity(db,userId,communityCreateMatch[1],b)},requestId)}catch(e){return json(res,400,{error:{code:"COMMUNITY_CREATE_FAILED",message:e instanceof Error?e.message:"Could not create community."}},requestId)}}
+    const communityJoinMatch=url.pathname.match(/^\/api\/v1\/social\/communities\/([^/]+)\/join$/);
+    if(communityJoinMatch&&req.method==="POST"){try{return json(res,200,{membership:await joinCommunity(db,userId,communityJoinMatch[1])},requestId)}catch(e){return json(res,400,{error:{code:"COMMUNITY_JOIN_FAILED",message:e instanceof Error?e.message:"Could not join community."}},requestId)}}
+    const communityPostsMatch=url.pathname.match(/^\/api\/v1\/social\/communities\/([^/]+)\/posts$/);
+    if(communityPostsMatch&&req.method==="POST"){const b=await bodyJson(req) as {body?:string};try{return json(res,201,{post:await createCommunityPost(db,userId,communityPostsMatch[1],String(b.body??""))},requestId)}catch(e){return json(res,400,{error:{code:"COMMUNITY_POST_FAILED",message:e instanceof Error?e.message:"Could not post to community."}},requestId)}}
+    const communityModerateMatch=url.pathname.match(/^\/api\/v1\/social\/communities\/([^/]+)\/moderation$/);
+    if(communityModerateMatch&&req.method==="POST"){const b=await bodyJson(req) as any;try{return json(res,201,{action:await moderateCommunity(db,userId,communityModerateMatch[1],b)},requestId)}catch(e){return json(res,403,{error:{code:"COMMUNITY_MODERATION_DENIED",message:e instanceof Error?e.message:"Moderation denied."}},requestId)}}
+    if(url.pathname==="/api/v1/social/pages"&&req.method==="GET"){return json(res,200,{pages:await listSocialPages(db)},requestId)}
+    const pageCreateMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/social\/pages$/);
+    if(pageCreateMatch&&req.method==="POST"){const b=await bodyJson(req) as any;try{return json(res,201,{page:await createSocialPage(db,userId,pageCreateMatch[1],b)},requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_PAGE_CREATE_FAILED",message:e instanceof Error?e.message:"Could not create page."}},requestId)}}
+    if(url.pathname==="/api/v1/social/events"&&req.method==="GET"){return json(res,200,{events:await listUpcomingEvents(db,userId)},requestId)}
+    const eventCreateMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/social\/events$/);
+    if(eventCreateMatch&&req.method==="POST"){const b=await bodyJson(req) as any;try{return json(res,201,{event:await createSocialEvent(db,userId,eventCreateMatch[1],b)},requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_EVENT_CREATE_FAILED",message:e instanceof Error?e.message:"Could not create event."}},requestId)}}
+    const eventRsvpMatch=url.pathname.match(/^\/api\/v1\/social\/events\/([^/]+)\/rsvp$/);
+    if(eventRsvpMatch&&req.method==="POST"){const b=await bodyJson(req) as {response?:string};try{return json(res,200,{rsvp:await rsvpEvent(db,userId,eventRsvpMatch[1],String(b.response??"interested"))},requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_EVENT_RSVP_FAILED",message:e instanceof Error?e.message:"Could not RSVP."}},requestId)}}
+    if(url.pathname==="/api/v1/social/live"&&req.method==="GET"){return json(res,200,{sessions:await listLiveSessions(db)},requestId)}
+    const liveCreateMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/social\/live$/);
+    if(liveCreateMatch&&req.method==="POST"){const b=await bodyJson(req) as any;try{return json(res,201,await createLiveSession(db,userId,liveCreateMatch[1],b),requestId)}catch(e){return json(res,400,{error:{code:"LIVE_CREATE_FAILED",message:e instanceof Error?e.message:"Could not create live session."}},requestId)}}
+    const liveStartMatch=url.pathname.match(/^\/api\/v1\/social\/live\/([^/]+)\/start$/);
+    if(liveStartMatch&&req.method==="POST"){try{return json(res,200,{session:await startLiveSession(db,userId,liveStartMatch[1])},requestId)}catch(e){return json(res,403,{error:{code:"LIVE_START_DENIED",message:e instanceof Error?e.message:"Could not start live."}},requestId)}}
+    const liveEndMatch=url.pathname.match(/^\/api\/v1\/social\/live\/([^/]+)\/end$/);
+    if(liveEndMatch&&req.method==="POST"){try{return json(res,200,{session:await endLiveSession(db,userId,liveEndMatch[1])},requestId)}catch(e){return json(res,403,{error:{code:"LIVE_END_DENIED",message:e instanceof Error?e.message:"Could not end live."}},requestId)}}
+    const liveChatMatch=url.pathname.match(/^\/api\/v1\/social\/live\/([^/]+)\/chat$/);
+    if(liveChatMatch&&req.method==="POST"){const b=await bodyJson(req) as {body?:string};try{return json(res,201,{message:await sendLiveChat(db,userId,liveChatMatch[1],String(b.body??""))},requestId)}catch(e){return json(res,400,{error:{code:"LIVE_CHAT_FAILED",message:e instanceof Error?e.message:"Could not send live chat."}},requestId)}}
+    const liveReactionMatch=url.pathname.match(/^\/api\/v1\/social\/live\/([^/]+)\/reactions$/);
+    if(liveReactionMatch&&req.method==="POST"){const b=await bodyJson(req) as {kind?:string};try{return json(res,201,{reaction:await reactLive(db,userId,liveReactionMatch[1],String(b.kind??"like"))},requestId)}catch(e){return json(res,400,{error:{code:"LIVE_REACTION_FAILED",message:e instanceof Error?e.message:"Could not react."}},requestId)}}
+
+    if(url.pathname==="/api/v1/social/ai/profiles"&&req.method==="GET"){return json(res,200,{profiles:await listAiSocialProfiles(db)},requestId)}
+    const aiProfileCreateMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/social\/ai\/profiles$/);
+    if(aiProfileCreateMatch&&req.method==="POST"){const b=await bodyJson(req) as {agentId?:string;displayName?:string;handle?:string;bio?:string};try{return json(res,201,{profile:await createAiSocialProfile(db,userId,aiProfileCreateMatch[1],{agentId:String(b.agentId??""),displayName:b.displayName,handle:b.handle,bio:b.bio})},requestId)}catch(e){return json(res,400,{error:{code:"AI_SOCIAL_PROFILE_FAILED",message:e instanceof Error?e.message:"Could not create AI profile."}},requestId)}}
+    if(url.pathname==="/api/v1/social/ai/assist"&&req.method==="POST"){const b=await bodyJson(req) as any;try{return json(res,200,await socialAiAssist(db,userId,b),requestId)}catch(e){return json(res,400,{error:{code:"AI_SOCIAL_ASSIST_FAILED",message:e instanceof Error?e.message:"AI social assistance failed."}},requestId)}}
+    if(url.pathname==="/api/v1/social/ai/search"&&req.method==="GET"){return json(res,200,await aiSocialSearch(db,userId,String(url.searchParams.get("q")??"")),requestId)}
+    if(url.pathname==="/api/v1/social/ai/recommendations"&&req.method==="GET"){return json(res,200,{items:await aiSocialRecommendations(db,userId)},requestId)}
+    const aiDisclosureMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/posts\/([^/]+)\/ai-disclosure$/);
+    if(aiDisclosureMatch&&req.method==="POST"){const b=await bodyJson(req) as {agentId?:string;disclosure?:string};try{return json(res,200,{post:await labelAiGeneratedPost(db,userId,aiDisclosureMatch[1],aiDisclosureMatch[2],b)},requestId)}catch(e){return json(res,400,{error:{code:"AI_DISCLOSURE_FAILED",message:e instanceof Error?e.message:"Could not label AI content."}},requestId)}}
+    const aiModerationMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/social\/ai\/moderation$/);
+    if(aiModerationMatch&&req.method==="POST"){const b=await bodyJson(req) as {resourceType?:string;resourceId?:string;text?:string};try{return json(res,201,{suggestion:await createAiModerationSuggestion(db,userId,aiModerationMatch[1],{resourceType:b.resourceType,resourceId:String(b.resourceId??""),text:b.text})},requestId)}catch(e){return json(res,400,{error:{code:"AI_MODERATION_SUGGESTION_FAILED",message:e instanceof Error?e.message:"Could not create moderation suggestion."}},requestId)}}
+
+    const socialMatch = url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/social$/);
+    if (socialMatch && req.method === "GET") { try { return json(res,200,await getSpaceSocial(db,userId,socialMatch[1]),requestId); } catch { return json(res,403,{error:{code:"SPACE_SOCIAL_DENIED",message:"AI Page access denied."}},requestId); } }
+    const audienceCandidatesMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/audience-candidates$/);
+    if(audienceCandidatesMatch&&req.method==="GET"){try{const page=await requireSpaceAccess(db,userId,audienceCandidatesMatch[1],"admin");const [users,follows,members]=await Promise.all([db.find('users',u=>u.status==='active'&&u.id!==userId),db.find('spaceFollows',f=>f.spaceId===page.id),db.find('spaceMemberships',m=>m.spaceId===page.id)]);const ids=new Set([...follows.map(f=>f.followerUserId),...members.map(m=>m.userId)]);const items=users.filter(u=>ids.has(u.id)).slice(0,200).map(u=>({id:u.id,email:u.email,following:follows.some(f=>f.followerUserId===u.id),member:members.some(m=>m.userId===u.id)}));return json(res,200,{items},requestId)}catch(e){return json(res,403,{error:{code:'AUDIENCE_CANDIDATES_DENIED',message:e instanceof Error?e.message:'Could not load audience.'}},requestId)}}
+    const postsMatch = url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/posts$/);
+    if (postsMatch && req.method === "POST") { const b=await bodyJson(req) as {body?:string;visibility?:string;audienceUserIds?:string[];mediaUrl?:string;mediaType?:string;quotePostId?:string;mediaAssetIds?:string[]}; try{const post=await createSpacePost(db,userId,postsMatch[1],String(b.body??""),b.visibility,b.mediaUrl,b.mediaType,b.quotePostId,b.audienceUserIds);const media=Array.isArray(b.mediaAssetIds)&&b.mediaAssetIds.length?await attachPostMedia(db,userId,postsMatch[1],post.id,b.mediaAssetIds):[];return json(res,201,{post:{...post,media}},requestId)}catch(e){return json(res,400,{error:{code:"SPACE_POST_FAILED",message:e instanceof Error?e.message:"Could not post."}},requestId)} }
+    const commentsMatch = url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/posts\/([^/]+)\/comments$/);
+    if (commentsMatch && req.method === "POST") { const b=await bodyJson(req) as {body?:string;parentCommentId?:string}; try{return json(res,201,{comment:await createSpaceComment(db,userId,commentsMatch[1],commentsMatch[2],String(b.body??""),b.parentCommentId?String(b.parentCommentId):undefined)},requestId)}catch(e){return json(res,400,{error:{code:"SPACE_COMMENT_FAILED",message:e instanceof Error?e.message:"Could not comment."}},requestId)} }
+    const commentReactionMatch = url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/comments\/([^/]+)\/reaction$/);
+    if(commentReactionMatch&&req.method==="POST"){const b=await bodyJson(req) as {kind?:string};try{return json(res,200,await toggleSpaceCommentReaction(db,userId,commentReactionMatch[1],commentReactionMatch[2],String(b.kind??"like")),requestId)}catch(e){return json(res,400,{error:{code:"COMMENT_REACTION_FAILED",message:e instanceof Error?e.message:"Could not react to comment."}},requestId)}}
+    const followMatch = url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/follow$/);
+    if (followMatch && req.method === "POST") { try{return json(res,200,await toggleSpaceFollow(db,userId,followMatch[1]),requestId)}catch{return json(res,403,{error:{code:"SPACE_FOLLOW_DENIED",message:"Could not update follow state."}},requestId)} }
+    const reactionMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/posts\/([^/]+)\/reaction$/);
+    if(reactionMatch&&req.method==="POST"){const b=await bodyJson(req) as {kind?:string};try{return json(res,200,await togglePostReaction(db,userId,reactionMatch[1],reactionMatch[2],String(b.kind??"like")),requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_REACTION_FAILED",message:e instanceof Error?e.message:"Could not react."}},requestId)}}
+    const bookmarkMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/posts\/([^/]+)\/bookmark$/);
+    if(bookmarkMatch&&req.method==="POST"){try{return json(res,200,await togglePostBookmark(db,userId,bookmarkMatch[1],bookmarkMatch[2]),requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_BOOKMARK_FAILED",message:e instanceof Error?e.message:"Could not bookmark."}},requestId)}}
+    const repostMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/posts\/([^/]+)\/repost$/);
+    if(repostMatch&&req.method==="POST"){try{return json(res,200,await togglePostRepost(db,userId,repostMatch[1],repostMatch[2]),requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_REPOST_FAILED",message:e instanceof Error?e.message:"Could not repost."}},requestId)}}
+    const hashtagMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/hashtags\/trending$/);
+    if(hashtagMatch&&req.method==="GET"){try{return json(res,200,{hashtags:await getTrendingHashtags(db,userId,hashtagMatch[1])},requestId)}catch{return json(res,403,{error:{code:"SOCIAL_HASHTAGS_DENIED",message:"Could not load hashtags."}},requestId)}}
+    const notificationsMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/notifications$/);
+    if(notificationsMatch&&req.method==="GET"){try{return json(res,200,{notifications:await listSocialNotifications(db,userId,notificationsMatch[1])},requestId)}catch{return json(res,403,{error:{code:"SOCIAL_NOTIFICATIONS_DENIED",message:"Could not load notifications."}},requestId)}}
+    const notificationReadMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/notifications\/([^/]+)\/read$/);
+    if(notificationReadMatch&&req.method==="POST"){try{return json(res,200,{notification:await markNotificationRead(db,userId,notificationReadMatch[1],notificationReadMatch[2])},requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_NOTIFICATION_FAILED",message:e instanceof Error?e.message:"Could not update notification."}},requestId)}}
+    if(url.pathname==="/api/v1/social/dm/inbox"&&req.method==="GET"){try{return json(res,200,{items:await listGlobalDmInbox(db,userId)},requestId)}catch(e){return json(res,400,{error:{code:"DM_INBOX_FAILED",message:e instanceof Error?e.message:"Could not load DMs."}},requestId)}}
+    const dmReadMatch=url.pathname.match(/^\/api\/v1\/social\/dm\/conversations\/([^/]+)\/read$/);
+    if(dmReadMatch&&req.method==="POST"){try{return json(res,200,{member:await markConversationRead(db,userId,dmReadMatch[1])},requestId)}catch(e){return json(res,403,{error:{code:"DM_READ_FAILED",message:e instanceof Error?e.message:"Could not mark DM read."}},requestId)}}
+    const pageSummaryMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/summary$/);
+    if(pageSummaryMatch&&req.method==="GET"){try{const page=await requireSpaceAccess(db,userId,pageSummaryMatch[1],"viewer");const [ai,studios,projects,posts,products,privacyRows]=await Promise.all([db.find("spaceAIAgents",x=>x.spaceId===page.id&&x.enabled),db.find("spaceStudios",x=>x.spaceId===page.id),db.find("projects",x=>x.spaceId===page.id&&!x.deletedAt),db.find("spacePosts",x=>x.spaceId===page.id),db.find("spaceStoreProducts",x=>x.spaceId===page.id&&x.status==="active"),db.find("spacePrivacySettings",x=>x.spaceId===page.id)]);const publishable=new Set(["public","unlisted","paid"]);const published=ai.filter(x=>publishable.has(x.visibility)).length+studios.filter(x=>x.status==="published"&&publishable.has(x.visibility)).length+posts.filter(x=>x.visibility==="public"||x.visibility==="unlisted").length+products.filter(x=>x.visibility==="public").length+projects.filter(x=>publishable.has(String((x.payload as any)?.publication?.visibility))).length+(privacyRows[0]?.publicPageEnabled?1:0);return json(res,200,{summary:{aiModels:ai.length,studios:studios.length,creations:projects.length,published}},requestId)}catch(e){return json(res,403,{error:{code:"PAGE_SUMMARY_DENIED",message:e instanceof Error?e.message:"Could not load Page summary."}},requestId)}}
+    const dmOwnerMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/dm-owner$/);
+    if(dmOwnerMatch&&req.method==="POST"){try{return json(res,201,{conversation:await createOwnerConversation(db,userId,dmOwnerMatch[1])},requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_DM_FAILED",message:e instanceof Error?e.message:"Could not start DM."}},requestId)}}
+    const conversationsMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/conversations$/);
+    if(conversationsMatch&&req.method==="GET"){try{return json(res,200,{conversations:await listConversations(db,userId,conversationsMatch[1])},requestId)}catch{return json(res,403,{error:{code:"SOCIAL_CONVERSATIONS_DENIED",message:"Could not load conversations."}},requestId)}}
+    if(conversationsMatch&&req.method==="POST"){const b=await bodyJson(req) as {participantUserIds?:string[]};try{return json(res,201,{conversation:await createConversation(db,userId,conversationsMatch[1],Array.isArray(b.participantUserIds)?b.participantUserIds:[])},requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_CONVERSATION_FAILED",message:e instanceof Error?e.message:"Could not create conversation."}},requestId)}}
+    const messagesMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/conversations\/([^/]+)\/messages$/);
+    if(messagesMatch&&req.method==="GET"){try{return json(res,200,{messages:await listMessages(db,userId,messagesMatch[1],messagesMatch[2])},requestId)}catch(e){return json(res,403,{error:{code:"SOCIAL_MESSAGES_DENIED",message:e instanceof Error?e.message:"Could not load messages."}},requestId)}}
+    if(messagesMatch&&req.method==="POST"){const b=await bodyJson(req) as {body?:string};try{return json(res,201,{message:await sendMessage(db,userId,messagesMatch[1],messagesMatch[2],String(b.body??""))},requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_MESSAGE_FAILED",message:e instanceof Error?e.message:"Could not send message."}},requestId)}}
+    const blockMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/blocks\/([^/]+)$/);
+    if(blockMatch&&req.method==="POST"){try{return json(res,200,await toggleUserBlock(db,userId,blockMatch[1],blockMatch[2]),requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_BLOCK_FAILED",message:e instanceof Error?e.message:"Could not update block."}},requestId)}}
+    const reportMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/reports$/);
+    if(reportMatch&&req.method==="POST"){const b=await bodyJson(req) as {resourceType?:string;resourceId?:string;reason?:string};try{return json(res,201,{report:await reportSocialContent(db,userId,reportMatch[1],String(b.resourceType??"post"),String(b.resourceId??""),String(b.reason??""))},requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_REPORT_FAILED",message:e instanceof Error?e.message:"Could not report."}},requestId)}}
+
+    const socialMediaUploadMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/social\/media\/uploads$/);
+    if(socialMediaUploadMatch&&req.method==="POST"){try{const mimeType=String(req.headers["content-type"]??"").toLowerCase();const name=String(req.headers["x-file-name"]??"social-media");const bytes=await readBody(req);const asset=await uploadSocialMedia(db,storage,userId,socialMediaUploadMatch[1],{name,mimeType,bytes,caption:String(req.headers["x-media-caption"]??""),altText:String(req.headers["x-media-alt"]??"")});return json(res,201,{asset},requestId)}catch(e){return json(res,400,{error:{code:"SOCIAL_MEDIA_UPLOAD_FAILED",message:e instanceof Error?e.message:"Could not upload media."}},requestId)}}
+    if(url.pathname==="/api/v1/creator-economy/dashboard"&&req.method==="GET"){return json(res,200,await creatorEconomyDashboard(db,userId),requestId)}
+    if(url.pathname==="/api/v1/creator-economy/membership-plans"&&req.method==="GET"){return json(res,200,{items:await listMembershipPlans(db,String(url.searchParams.get("spaceId")??""))},requestId)}
+    if(url.pathname==="/api/v1/creator-economy/membership-plans"&&req.method==="POST"){const b=await bodyJson(req) as any;try{return json(res,201,{plan:await createMembershipPlan(db,userId,b)},requestId)}catch(e){return json(res,400,{error:{code:"CREATOR_PLAN_FAILED",message:e instanceof Error?e.message:"Could not create plan."}},requestId)}}
+    if(url.pathname==="/api/v1/creator-economy/subscribe"&&req.method==="POST"){const b=await bodyJson(req) as any;try{try{await rejectRawPaymentData(db,userId,b)}catch{return json(res,400,{error:{code:"RAW_PAYMENT_DATA_NOT_ACCEPTED",message:"For your security, enter card details only on the hosted Stripe checkout page. Yaposan does not accept or store card numbers or CVC."}},requestId)}const sub=await beginMembershipSubscription(db,userId,String(b.planId??""));const plan=await db.get("creatorMembershipPlans",sub.planId);if(!plan)return json(res,404,{error:{code:"PLAN_NOT_FOUND",message:"Membership plan not found."}},requestId);const successUrl=String(b.successUrl??""),cancelUrl=String(b.cancelUrl??"");for(const candidate of [successUrl,cancelUrl]){let target:URL;try{target=new URL(candidate)}catch{return json(res,400,{error:{code:"INVALID_RETURN_URL",message:"A valid checkout return URL is required."}},requestId)}if(!isOriginAllowed(target.origin,securityConfig.publicOrigins))return json(res,400,{error:{code:"UNTRUSTED_RETURN_URL",message:"Checkout return URL is not allowed."}},requestId)}const session=await createCreatorMembershipCheckoutSession({amountCents:plan.monthlyCents,currency:plan.currency,name:plan.name,successUrl,cancelUrl,sourceId:sub.id,subscriberUserId:userId});await db.update("creatorMembershipSubscriptions",sub.id,{providerCheckoutSessionId:String(session.id)});return json(res,200,{subscription:await db.get("creatorMembershipSubscriptions",sub.id),checkout:{id:session.id,url:session.url}},requestId)}catch(e){return json(res,400,{error:{code:"CREATOR_SUBSCRIBE_FAILED",message:e instanceof Error?e.message:"Could not subscribe."}},requestId)}}
+    if(url.pathname==="/api/v1/creator-economy/tips/checkout"&&req.method==="POST"){const b=await bodyJson(req) as any;try{try{await rejectRawPaymentData(db,userId,b)}catch{return json(res,400,{error:{code:"RAW_PAYMENT_DATA_NOT_ACCEPTED",message:"For your security, enter card details only on the hosted Stripe checkout page. Yaposan does not accept or store card numbers or CVC."}},requestId)}const tip=await createTip(db,userId,b);const successUrl=String(b.successUrl??""),cancelUrl=String(b.cancelUrl??"");for(const candidate of [successUrl,cancelUrl]){let target:URL;try{target=new URL(candidate)}catch{return json(res,400,{error:{code:"INVALID_RETURN_URL",message:"A valid checkout return URL is required."}},requestId)}if(!isOriginAllowed(target.origin,securityConfig.publicOrigins))return json(res,400,{error:{code:"UNTRUSTED_RETURN_URL",message:"Checkout return URL is not allowed."}},requestId)}const session=await createCreatorOneTimeCheckoutSession({amountCents:tip.amountCents,currency:tip.currency,name:"Creator tip",successUrl,cancelUrl,purpose:"creator_tip",sourceId:tip.id,buyerUserId:userId});await db.update("creatorTips",tip.id,{providerCheckoutSessionId:String(session.id)});return json(res,200,{tip:await db.get("creatorTips",tip.id),checkout:{id:session.id,url:session.url}},requestId)}catch(e){return json(res,400,{error:{code:"CREATOR_TIP_FAILED",message:e instanceof Error?e.message:"Could not create tip."}},requestId)}}
+    const paidCommunityMatch=url.pathname.match(/^\/api\/v1\/creator-economy\/communities\/([^/]+)\/membership-plan$/);if(paidCommunityMatch&&req.method==="PUT"){const b=await bodyJson(req) as any;try{return json(res,200,{community:await linkPaidCommunity(db,userId,paidCommunityMatch[1],String(b.planId??""))},requestId)}catch(e){return json(res,400,{error:{code:"PAID_COMMUNITY_FAILED",message:e instanceof Error?e.message:"Could not configure paid community."}},requestId)}}
+    const paidPostMatch=url.pathname.match(/^\/api\/v1\/creator-economy\/posts\/([^/]+)\/paid$/);if(paidPostMatch&&req.method==="PUT"){const b=await bodyJson(req) as any;try{return json(res,200,{post:await setPaidPost(db,userId,String(b.spaceId??""),paidPostMatch[1],Number(b.priceCents??0))},requestId)}catch(e){return json(res,400,{error:{code:"PAID_POST_FAILED",message:e instanceof Error?e.message:"Could not set paid post."}},requestId)}}
+    const unlockPostMatch=url.pathname.match(/^\/api\/v1\/creator-economy\/posts\/([^/]+)\/unlock$/);if(unlockPostMatch&&req.method==="POST"){const b=await bodyJson(req) as any;try{try{await rejectRawPaymentData(db,userId,b)}catch{return json(res,400,{error:{code:"RAW_PAYMENT_DATA_NOT_ACCEPTED",message:"For your security, enter card details only on the hosted Stripe checkout page. Yaposan does not accept or store card numbers or CVC."}},requestId)}const access=await beginPaidPostUnlock(db,userId,unlockPostMatch[1]);const successUrl=String(b.successUrl??""),cancelUrl=String(b.cancelUrl??"");for(const candidate of [successUrl,cancelUrl]){let target:URL;try{target=new URL(candidate)}catch{return json(res,400,{error:{code:"INVALID_RETURN_URL",message:"A valid checkout return URL is required."}},requestId)}if(!isOriginAllowed(target.origin,securityConfig.publicOrigins))return json(res,400,{error:{code:"UNTRUSTED_RETURN_URL",message:"Checkout return URL is not allowed."}},requestId)}const session=await createCreatorOneTimeCheckoutSession({amountCents:access.priceCents,currency:access.currency,name:"Paid creator post",successUrl,cancelUrl,purpose:"paid_post",sourceId:access.id,buyerUserId:userId});await db.update("paidContentAccess",access.id,{providerCheckoutSessionId:String(session.id)});return json(res,200,{access:await db.get("paidContentAccess",access.id),checkout:{id:session.id,url:session.url}},requestId)}catch(e){return json(res,400,{error:{code:"PAID_POST_UNLOCK_FAILED",message:e instanceof Error?e.message:"Could not unlock post."}},requestId)}}
+    const adSettingsMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/ads\/settings$/);
+    if(adSettingsMatch&&req.method==="PUT"){const b=await bodyJson(req) as any;try{return json(res,200,{settings:await updateAdSettings(db,userId,adSettingsMatch[1],b)},requestId)}catch(e){return json(res,400,{error:{code:"AD_SETTINGS_FAILED",message:e instanceof Error?e.message:"Could not update ad settings."}},requestId)}}
+    const adDashboardMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/ads\/dashboard$/);
+    if(adDashboardMatch&&req.method==="GET"){try{return json(res,200,await creatorAdDashboard(db,userId,adDashboardMatch[1]),requestId)}catch(e){return json(res,403,{error:{code:"AD_DASHBOARD_DENIED",message:e instanceof Error?e.message:"Access denied."}},requestId)}}
+    const adDecisionMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/ads\/campaigns\/([^/]+)\/(approve|reject|pause)$/);
+    if(adDecisionMatch&&req.method==="POST"){try{return json(res,200,{campaign:await decideAdCampaign(db,userId,adDecisionMatch[1],adDecisionMatch[2],adDecisionMatch[3] as any)},requestId)}catch(e){return json(res,400,{error:{code:"AD_DECISION_FAILED",message:e instanceof Error?e.message:"Could not update campaign."}},requestId)}}
+    if(url.pathname==="/api/v1/creator-ads/campaigns/checkout"&&req.method==="POST"){const b=await bodyJson(req) as any;try{try{await rejectRawPaymentData(db,userId,b)}catch{return json(res,400,{error:{code:"RAW_PAYMENT_DATA_NOT_ACCEPTED",message:"For your security, enter card details only on the hosted Stripe checkout page. Yaposan does not accept or store card numbers or CVC."}},requestId)}const campaign=await createAdCampaign(db,userId,b);const successUrl=String(b.successUrl??""),cancelUrl=String(b.cancelUrl??"");for(const candidate of [successUrl,cancelUrl]){let target:URL;try{target=new URL(candidate)}catch{return json(res,400,{error:{code:"INVALID_RETURN_URL",message:"A valid checkout return URL is required."}},requestId)}if(!isOriginAllowed(target.origin,securityConfig.publicOrigins))return json(res,400,{error:{code:"UNTRUSTED_RETURN_URL",message:"Checkout return URL is not allowed."}},requestId)}const session=await createCreatorAdCheckoutSession({amountCents:campaign.budgetCents,successUrl,cancelUrl,campaignId:campaign.id,advertiserUserId:userId});await db.update("creatorAdCampaigns",campaign.id,{providerCheckoutSessionId:String(session.id)});return json(res,200,{campaign:await db.get("creatorAdCampaigns",campaign.id),checkout:{id:session.id,url:session.url}},requestId)}catch(e){return json(res,400,{error:{code:"AD_CAMPAIGN_FAILED",message:e instanceof Error?e.message:"Could not create ad campaign."}},requestId)}}
+    if(url.pathname==="/api/v1/social/stories"&&req.method==="GET"){return json(res,200,{stories:await getActiveStories(db,userId)},requestId)}
+    const storyCreateMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/stories$/);
+    if(storyCreateMatch&&req.method==="POST"){const b=await bodyJson(req) as {mediaAssetId?:string;body?:string;visibility?:string;highlightId?:string};try{return json(res,201,{story:await createStory(db,userId,storyCreateMatch[1],b)},requestId)}catch(e){return json(res,400,{error:{code:"STORY_CREATE_FAILED",message:e instanceof Error?e.message:"Could not create story."}},requestId)}}
+    const storyViewMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/stories\/([^/]+)\/view$/);
+    if(storyViewMatch&&req.method==="POST"){try{return json(res,200,{view:await viewStory(db,userId,storyViewMatch[1],storyViewMatch[2])},requestId)}catch(e){return json(res,400,{error:{code:"STORY_VIEW_FAILED",message:e instanceof Error?e.message:"Could not view story."}},requestId)}}
+    const highlightMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/highlights$/);
+    if(highlightMatch&&req.method==="POST"){const b=await bodyJson(req) as {name?:string;coverMediaAssetId?:string};try{return json(res,201,{highlight:await createHighlight(db,userId,highlightMatch[1],String(b.name??""),b.coverMediaAssetId)},requestId)}catch(e){return json(res,400,{error:{code:"HIGHLIGHT_CREATE_FAILED",message:e instanceof Error?e.message:"Could not create highlight."}},requestId)}}
+    if(url.pathname==="/api/v1/social/reels"&&req.method==="GET"){return json(res,200,{reels:await getReelsFeed(db,userId)},requestId)}
+    const reelCreateMatch=url.pathname.match(/^\/api\/v1\/spaces\/([^/]+)\/reels$/);
+    if(reelCreateMatch&&req.method==="POST"){const b=await bodyJson(req) as {mediaAssetId?:string;caption?:string;audioTitle?:string;durationMs?:number;visibility?:string};try{return json(res,201,{reel:await createReel(db,userId,reelCreateMatch[1],{mediaAssetId:String(b.mediaAssetId??""),caption:b.caption,audioTitle:b.audioTitle,durationMs:b.durationMs,visibility:b.visibility})},requestId)}catch(e){return json(res,400,{error:{code:"REEL_CREATE_FAILED",message:e instanceof Error?e.message:"Could not create reel."}},requestId)}}
 
     if (req.method === "POST" && url.pathname === "/api/v1/support/uploads") {
       const mimeType=String(req.headers["content-type"] ?? "application/octet-stream").toLowerCase();
@@ -1088,47 +1545,7 @@ export async function handleRequest(
     }
 
 
-    const currentUser=await db.get("users",userId);
-    const isSupportAdmin=isConfiguredAdmin(currentUser?.email,config.adminEmails);
-    if (req.method === "GET" && url.pathname === "/api/v1/admin/support/tickets") {
-      if(!isSupportAdmin) return json(res,403,{error:{code:"ADMIN_REQUIRED",message:"Administrator access required."}},requestId);
-      const status=url.searchParams.get("status"); const q=(url.searchParams.get("q")??"").toLowerCase();
-      const items=(await db.find("supportTickets",t=>(!status||t.status===status)&&(!q||`${t.id} ${t.email} ${t.name} ${t.subject} ${t.category}`.toLowerCase().includes(q)))).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
-      return json(res,200,{items:items.slice(0,250).map(t=>({...t,attachmentStorageKey:undefined}))},requestId);
-    }
-
-    const adminSupportMatch=url.pathname.match(/^\/api\/v1\/admin\/support\/tickets\/([^/]+)$/);
-    if (adminSupportMatch && req.method === "GET") {
-      if(!isSupportAdmin) return json(res,403,{error:{code:"ADMIN_REQUIRED",message:"Administrator access required."}},requestId);
-      const ticket=await db.get("supportTickets",adminSupportMatch[1]); if(!ticket) return json(res,404,{error:{code:"SUPPORT_TICKET_NOT_FOUND",message:"Support ticket not found."}},requestId);
-      const messages=(await db.find("supportTicketMessages",m=>m.ticketId===ticket.id)).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
-      return json(res,200,{ticket:{...ticket,attachmentStorageKey:undefined},messages:messages.map(m=>({...m,attachmentStorageKey:undefined}))},requestId);
-    }
-    const adminAttachmentMatch=url.pathname.match(/^\/api\/v1\/admin\/support\/tickets\/([^/]+)\/attachment$/);
-    if(req.method==="GET"&&adminAttachmentMatch){
-      if(!isSupportAdmin) return json(res,403,{error:{code:"ADMIN_REQUIRED",message:"Administrator access required."}},requestId);
-      const ticket=await db.get("supportTickets",adminAttachmentMatch[1]); if(!ticket?.attachmentStorageKey) return json(res,404,{error:{code:"SUPPORT_ATTACHMENT_NOT_FOUND",message:"Attachment not found."}},requestId);
-      const bytes=await storage.get(ticket.attachmentStorageKey);
-      res.writeHead(200,{"content-type":ticket.attachmentMimeType??"application/octet-stream","content-disposition":`attachment; filename="${String(ticket.attachmentName??"support-attachment").replace(/[\r\n"]/g,"")}"`,...securityHeaders(requestId)});res.end(Buffer.from(bytes));return;
-    }
-
-    if (adminSupportMatch && req.method === "PATCH") {
-      if(!isSupportAdmin) return json(res,403,{error:{code:"ADMIN_REQUIRED",message:"Administrator access required."}},requestId);
-      const b=await bodyJson(req) as {status?:string}; const status=String(b.status??"");
-      if(!supportTicketStatuses.has(status)) return json(res,400,{error:{code:"SUPPORT_STATUS_INVALID",message:"Invalid support ticket status."}},requestId);
-      const ticket=await db.update("supportTickets",adminSupportMatch[1],{status:status as any});
-      await db.insert("supportTicketMessages",{ticketId:ticket.id,authorUserId:userId,authorType:"system",body:`Status changed to ${status.replaceAll("_"," ")}.`});
-      return json(res,200,{ticket:{...ticket,attachmentStorageKey:undefined}},requestId);
-    }
-    const adminNoteMatch=url.pathname.match(/^\/api\/v1\/admin\/support\/tickets\/([^/]+)\/messages$/);
-    if (adminNoteMatch && req.method === "POST") {
-      if(!isSupportAdmin) return json(res,403,{error:{code:"ADMIN_REQUIRED",message:"Administrator access required."}},requestId);
-      const ticket=await db.get("supportTickets",adminNoteMatch[1]); if(!ticket) return json(res,404,{error:{code:"SUPPORT_TICKET_NOT_FOUND",message:"Support ticket not found."}},requestId);
-      const b=await bodyJson(req) as {message?:string}; const body=String(b.message??"").trim().slice(0,10000); if(body.length<2) return json(res,400,{error:{code:"SUPPORT_REPLY_REQUIRED",message:"Message cannot be empty."}},requestId);
-      const message=await db.insert("supportTicketMessages",{ticketId:ticket.id,authorUserId:userId,authorType:"staff",body});
-      await db.update("supportTickets",ticket.id,{status:"waiting_for_user"});
-      return json(res,201,{message},requestId);
-    }
+    // staff support moved to the dedicated /api/v1/yaposan-admin/* security domain.
 
     if (req.method === "POST" && url.pathname === "/api/v1/image/product-photo-analyze") {
       const body = await bodyJson(req) as { imageBase64?: string; mimeType?: string; categoryHint?: "auto" | "hard-goods" | "footwear" | "apparel" | "furniture" | "thin-structures" | "hair-fur" | "glass-transparent" | "jewelry" | "general-merchandise" };
@@ -1483,197 +1900,51 @@ export async function handleRequest(
       );
     }
 
-    if (
-      req.method === "GET" &&
-      url.pathname ===
-        "/api/v1/admin/summary"
-    ) {
-      return json(
-        res,
-        200,
-        await adminSummary(
-          db,
-          userId,
-          config.adminEmails
-        ),
-        requestId
-      );
+    if (req.method === "GET" && url.pathname === "/api/v1/team/summary") {
+      return json(res, 200, await organizationSummary(db, userId), requestId);
     }
 
-    if (
-      req.method === "GET" &&
-      url.pathname ===
-        "/api/v1/enterprise-operations/summary"
-    ) {
-      return json(
-        res,
-        200,
-        await operationsSummary(
-          db,
-          userId,
-          config.adminEmails
-        ),
-        requestId
-      );
+    // legacy platform-admin and enterprise-operations customer-token routes were removed.
+    // Platform-wide administration is available only through /api/v1/yaposan-admin/* with a dedicated Admin session.
+
+    // customer commerce domain. These routes expose customer charges, balances,
+    // entitlements, and creator proceeds only. Company operating expenses are never projected.
+    if (req.method === "GET" && url.pathname === "/api/v1/marketplace") {
+      return json(res,200,await listMarketplace(db,userId,String(url.searchParams.get("q")??""),url.searchParams.get("kind")??undefined),requestId);
     }
-
-    if (
-      req.method === "GET" &&
-      url.pathname ===
-        "/api/v1/enterprise-operations/jobs"
-    ) {
-      return json(
-        res,
-        200,
-        {
-          items:
-            await listOperationsJobs(
-              db,
-              userId,
-              config.adminEmails,
-              {
-                status:
-                  url.searchParams.get(
-                    "status"
-                  ) ?? undefined,
-                kind:
-                  url.searchParams.get(
-                    "kind"
-                  ) ?? undefined,
-                limit: Number(
-                  url.searchParams.get(
-                    "limit"
-                  ) ?? 100
-                ),
-              }
-            ),
-        },
-        requestId
-      );
+    if (req.method === "GET" && url.pathname === "/api/v1/marketplace/library") {
+      return json(res,200,await myMarketplaceLibrary(db,userId),requestId);
     }
-
-    if (
-      req.method === "GET" &&
-      url.pathname ===
-        "/api/v1/enterprise-operations/audit"
-    ) {
-      return json(
-        res,
-        200,
-        {
-          items:
-            await listOperationsAudit(
-              db,
-              userId,
-              config.adminEmails,
-              Number(
-                url.searchParams.get(
-                  "limit"
-                ) ?? 100
-              )
-            ),
-        },
-        requestId
-      );
+    const marketplaceInstall=url.pathname.match(/^\/api\/v1\/marketplace\/products\/([^/]+)\/install$/);
+    if (marketplaceInstall && req.method === "POST") {
+      try{return json(res,201,{entitlement:await installMarketplaceProduct(db,userId,marketplaceInstall[1])},requestId)}catch(error){return json(res,400,{error:{code:"MARKETPLACE_INSTALL_FAILED",message:error instanceof Error?error.message:"Install failed"}},requestId)}
     }
-
-    if (
-      req.method === "GET" &&
-      url.pathname ===
-        "/api/v1/enterprise-operations/certification"
-    ) {
-      return json(
-        res,
-        200,
-        await productionCertification(
-          db,
-          userId,
-          config.adminEmails,
-          validateProductionConfig(
-            config
-          )
-        ),
-        requestId
-      );
+    const marketplaceCheckout=url.pathname.match(/^\/api\/v1\/marketplace\/products\/([^/]+)\/checkout$/);
+    if (marketplaceCheckout && req.method === "POST") {
+      const b=await bodyJson(req); try{await rejectRawPaymentData(db,userId,b)}catch{return json(res,400,{error:{code:"RAW_PAYMENT_DATA_NOT_ACCEPTED",message:"For your security, enter card details only on the hosted Stripe checkout page. Yaposan does not accept or store card numbers or CVC."}},requestId)} const successUrl=String(b.successUrl??""),cancelUrl=String(b.cancelUrl??"");
+      for(const candidate of [successUrl,cancelUrl]){let target:URL;try{target=new URL(candidate)}catch{return json(res,400,{error:{code:"INVALID_RETURN_URL",message:"A valid marketplace return URL is required."}},requestId)}if(!isOriginAllowed(target.origin,securityConfig.publicOrigins))return json(res,400,{error:{code:"UNTRUSTED_RETURN_URL",message:"Marketplace return URL is not allowed."}},requestId)}
+      try{const created=await createMarketplaceOrder(db,userId,marketplaceCheckout[1]);if(('free' in created&&created.free)||('alreadyOwned' in created&&created.alreadyOwned))return json(res,200,created,requestId);if(!created.order)return json(res,409,{error:{code:"MARKETPLACE_ORDER_REQUIRED",message:"Marketplace order could not be created."}},requestId);const product=await db.get("spaceStoreProducts",created.order.productId);if(!product)return json(res,404,{error:{code:"MARKETPLACE_PRODUCT_NOT_FOUND",message:"Marketplace product not found."}},requestId);const membership=(await db.find("memberships",m=>m.userId===userId))[0];const sub=membership?(await db.find("subscriptions",x=>x.organizationId===membership.organizationId))[0]:undefined;const session=await createMarketplaceCheckoutSession({customerId:sub?.providerCustomerId,amountCents:created.order.grossCents,currency:created.order.currency,productName:product.name,successUrl,cancelUrl,orderId:created.order.id,buyerUserId:userId});await attachMarketplaceCheckout(db,created.order.id,String(session.id));return json(res,200,{order:await db.get("spaceStoreOrders",created.order.id),checkout:{id:session.id,url:session.url}},requestId)}catch(error){return json(res,400,{error:{code:"MARKETPLACE_CHECKOUT_FAILED",message:error instanceof Error?error.message:"Checkout failed"}},requestId)}
     }
-
-    if (
-      req.method === "POST" &&
-      url.pathname ===
-        "/api/v1/enterprise-operations/automations"
-    ) {
-      const b = await bodyJson(req);
-
-      return json(
-        res,
-        201,
-        {
-          job:
-            await scheduleAutomation(
-              db,
-              userId,
-              config.adminEmails,
-              {
-                name: b.name,
-                task: b.task,
-                schedule:
-                  b.schedule,
-                payload:
-                  b.payload,
-              }
-            ),
-        },
-        requestId
-      );
+    if (req.method === "GET" && url.pathname === "/api/v1/my-usage") {
+      try{return json(res,200,await myUsageAndBilling(db,userId),requestId)}catch(error){return json(res,400,{error:{code:"USAGE_BILLING_UNAVAILABLE",message:error instanceof Error?error.message:"Usage unavailable"}},requestId)}
     }
-
-    if (
-      req.method === "POST" &&
-      url.pathname ===
-        "/api/v1/enterprise-operations/backups"
-    ) {
-      return json(
-        res,
-        201,
-        {
-          snapshot:
-            await createBackupSnapshot(
-              db,
-              userId,
-              config.adminEmails
-            ),
-        },
-        requestId
-      );
+    if (req.method === "GET" && url.pathname === "/api/v1/subscription/plans") {
+      return json(res,200,{items:Object.values(PLAN_CATALOG).map(plan=>({id:plan.id,name:plan.name,monthlyCents:plan.monthlyCents,features:plan.features,limits:{storageBytes:plan.storageBytes,aiCredits:plan.aiCredits,seats:plan.seats}}))},requestId);
     }
-
-    const operationsJobAction =
-      match(
-        url.pathname,
-        /^\/api\/v1\/enterprise-operations\/jobs\/([^/]+)\/(cancel|retry)$/
-      );
-
-    if (
-      operationsJobAction &&
-      req.method === "POST"
-    ) {
-      return json(
-        res,
-        200,
-        {
-          job:
-            await updateOperationsJob(
-              db,
-              userId,
-              config.adminEmails,
-              operationsJobAction[1],
-              operationsJobAction[2] as
-                | "cancel"
-                | "retry"
-            ),
-        },
-        requestId
-      );
+    if (req.method === "GET" && url.pathname === "/api/v1/subscription/status") {
+      try{const usage=await myUsageAndBilling(db,userId);return json(res,200,usage.subscription,requestId)}catch(error){return json(res,400,{error:{code:"SUBSCRIPTION_STATUS_UNAVAILABLE",message:error instanceof Error?error.message:"Subscription unavailable"}},requestId)}
+    }
+    if (req.method === "GET" && url.pathname === "/api/v1/gpu-credits/packs") {
+      return json(res,200,{items:Object.values(GPU_CREDIT_PACKS).map(({stripePriceEnv,...pack})=>pack)},requestId);
+    }
+    if (req.method === "GET" && url.pathname === "/api/v1/gpu-credits/balance") {
+      const membership=(await db.find("memberships",m=>m.userId===userId))[0];if(!membership)return json(res,404,{error:{code:"NO_ORGANIZATION",message:"Organization not found"}},requestId);return json(res,200,{balance:await gpuCreditBalance(db,membership.organizationId)},requestId);
+    }
+    if (req.method === "POST" && url.pathname === "/api/v1/gpu-credits/checkout") {
+      const b=await bodyJson(req);try{await rejectRawPaymentData(db,userId,b)}catch{return json(res,400,{error:{code:"RAW_PAYMENT_DATA_NOT_ACCEPTED",message:"For your security, enter card details only on the hosted Stripe checkout page. Yaposan does not accept or store card numbers or CVC."}},requestId)}const pack=GPU_CREDIT_PACKS[String(b.pack??"") as keyof typeof GPU_CREDIT_PACKS];if(!pack)return json(res,400,{error:{code:"INVALID_GPU_CREDIT_PACK",message:"Choose a valid GPU credit pack."}},requestId);const successUrl=String(b.successUrl??""),cancelUrl=String(b.cancelUrl??"");for(const candidate of [successUrl,cancelUrl]){let target:URL;try{target=new URL(candidate)}catch{return json(res,400,{error:{code:"INVALID_RETURN_URL",message:"A valid checkout return URL is required."}},requestId)}if(!isOriginAllowed(target.origin,securityConfig.publicOrigins))return json(res,400,{error:{code:"UNTRUSTED_RETURN_URL",message:"Checkout return URL is not allowed."}},requestId)}const membership=(await db.find("memberships",m=>m.userId===userId))[0];if(!membership)return json(res,404,{error:{code:"NO_ORGANIZATION",message:"Organization not found"}},requestId);const priceId=process.env[pack.stripePriceEnv];if(!priceId)return json(res,503,{error:{code:"GPU_CREDITS_NOT_CONFIGURED",message:"GPU credit checkout is not configured on this deployment."}},requestId);const sub=(await db.find("subscriptions",x=>x.organizationId===membership.organizationId))[0];const session=await createGPUCreditCheckoutSession({customerId:sub?.providerCustomerId,priceId,successUrl,cancelUrl,organizationId:membership.organizationId,pack:pack.id});return json(res,200,{id:session.id,url:session.url},requestId);
+    }
+    if (req.method === "GET" && url.pathname === "/api/v1/creator/earnings") {
+      return json(res,200,await creatorEarningsDashboard(db,userId),requestId);
     }
 
     if (
@@ -1748,34 +2019,7 @@ export async function handleRequest(
       );
     }
 
-    const creatorModeration =
-      match(
-        url.pathname,
-        /^\/api\/v1\/creator-marketplace\/products\/([^/]+)\/moderate$/
-      );
-
-    if (
-      creatorModeration &&
-      req.method === "POST"
-    ) {
-      const b = await bodyJson(req);
-
-      return json(
-        res,
-        200,
-        {
-          product:
-            await moderateCreatorProduct(
-              db,
-              userId,
-              creatorModeration[1],
-              Boolean(b.approved),
-              config.adminEmails
-            ),
-        },
-        requestId
-      );
-    }
+    // creator marketplace moderation is Yaposan-Admin-only.
 
     const creatorPurchase =
       match(
@@ -2065,11 +2309,7 @@ export async function handleRequest(
             {
               user:
                 publicUser(user),
-              isAdmin:
-                isConfiguredAdmin(
-                  user.email,
-                  config.adminEmails
-                ),
+              isAdmin: false,
             },
             requestId
           )
@@ -2114,97 +2354,9 @@ export async function handleRequest(
       );
     }
 
-    if (
-      req.method === "GET" &&
-      url.pathname ===
-        "/api/v1/admin/commercial-diagnostics"
-    ) {
-      const user =
-        await db.get(
-          "users",
-          userId
-        );
 
-      if (
-        !user ||
-        !isConfiguredAdmin(
-          user.email,
-          config.adminEmails
-        )
-      ) {
-        return json(
-          res,
-          403,
-          {
-            error: {
-              code:
-                "ADMIN_REQUIRED",
-              message:
-                "Administrator access required",
-            },
-          },
-          requestId
-        );
-      }
 
-      return json(
-        res,
-        200,
-        {
-          diagnostics:
-            commercialDiagnostics(),
-        },
-        requestId
-      );
-    }
 
-    if (
-      req.method === "GET" &&
-      url.pathname ===
-        "/api/v1/admin/status"
-    ) {
-      const user =
-        await db.get(
-          "users",
-          userId
-        );
-
-      if (
-        !user ||
-        !isConfiguredAdmin(
-          user.email,
-          config.adminEmails
-        )
-      ) {
-        return json(
-          res,
-          403,
-          {
-            error: {
-              code:
-                "ADMIN_REQUIRED",
-              message:
-                "Administrator access required",
-            },
-          },
-          requestId
-        );
-      }
-
-      return json(
-        res,
-        200,
-        {
-          admin: true,
-          email: user.email,
-          configurationIssues:
-            validateProductionConfig(
-              config
-            ),
-        },
-        requestId
-      );
-    }
 
     if (
       req.method === "GET" &&
@@ -2631,12 +2783,8 @@ export async function handleRequest(
           }
         );
 
-      return json(
-        res,
-        201,
-        { upload: plan },
-        requestId
-      );
+      const uploadSecurity=classifyUploadRisk({name:String(b.name??""),contentType:String(b.contentType??"application/octet-stream"),size:Number(b.size??0)},Boolean(config.malwareScannerUrl));
+      return json(res,201,{upload:plan,security:uploadSecurity},requestId);
     }
 
     if (
@@ -2652,6 +2800,22 @@ export async function handleRequest(
         String(b.workspaceId),
         true
       );
+
+      const workspaceId = String(b.workspaceId ?? "");
+      const storageKey = String(b.key ?? "");
+      if (!storageKey || !storageKey.startsWith(`${storageKeyPrefix(workspaceId)}/`)) {
+        return json(res, 400, { error: { code: "ASSET_STORAGE_KEY_INVALID", message: "Uploaded object does not belong to this workspace." } }, requestId);
+      }
+      let storedObject: { size: number; checksum?: string; contentType?: string };
+      try { storedObject = await storage.stat(storageKey); }
+      catch { return json(res, 400, { error: { code: "ASSET_UPLOAD_NOT_FOUND", message: "The uploaded object could not be verified." } }, requestId); }
+      const declaredSize = Math.max(0, Number(b.size) || 0);
+      if (storedObject.size !== declaredSize) {
+        return json(res, 400, { error: { code: "ASSET_SIZE_MISMATCH", message: "Uploaded object size does not match the upload metadata." } }, requestId);
+      }
+      if (b.checksum && storedObject.checksum && String(b.checksum).toLowerCase() !== storedObject.checksum.toLowerCase()) {
+        return json(res, 400, { error: { code: "ASSET_CHECKSUM_MISMATCH", message: "Uploaded object checksum does not match." } }, requestId);
+      }
 
       const currentStorage = (
         await db.find(
@@ -2670,11 +2834,7 @@ export async function handleRequest(
         0
       );
 
-      const incomingSize =
-        Math.max(
-          0,
-          Number(b.size) || 0
-        );
+      const incomingSize = storedObject.size;
 
       const storageLimit =
         entitlementsForUser?.limits
@@ -2717,10 +2877,10 @@ export async function handleRequest(
                 b.contentType
               ),
             size: incomingSize,
-            storageKey:
-              String(b.key),
-            checksum:
-              b.checksum,
+            storageKey,
+            checksum: storedObject.checksum ?? b.checksum,
+            securityStatus: classifyUploadRisk({name:String(b.name??""),contentType:String(b.contentType??"application/octet-stream"),size:incomingSize},Boolean(config.malwareScannerUrl)).requiresMalwareScan ? "pending" : "clean",
+            securityReason: classifyUploadRisk({name:String(b.name??""),contentType:String(b.contentType??"application/octet-stream"),size:incomingSize},Boolean(config.malwareScannerUrl)).requiresMalwareScan ? "Quarantined pending malware scan" : undefined,
           }
         );
 
@@ -3082,7 +3242,7 @@ export async function handleRequest(
     }
 
     if (req.method === "POST" && url.pathname === "/api/v1/ai-credits/checkout") {
-      const b=await bodyJson(req); const pack=getCreditPack(String(b.pack??""));
+      const b=await bodyJson(req); try{await rejectRawPaymentData(db,userId,b)}catch{return json(res,400,{error:{code:"RAW_PAYMENT_DATA_NOT_ACCEPTED",message:"For your security, enter card details only on the hosted Stripe checkout page. Yaposan does not accept or store card numbers or CVC."}},requestId)} const pack=getCreditPack(String(b.pack??""));
       if(!pack)return json(res,400,{error:{code:"INVALID_CREDIT_PACK",message:"Choose a valid AI credit pack."}},requestId);
       for(const candidate of [String(b.successUrl??""),String(b.cancelUrl??"")]){let target:URL;try{target=new URL(candidate)}catch{return json(res,400,{error:{code:"INVALID_RETURN_URL",message:"A valid checkout return URL is required."}},requestId)}if(!isOriginAllowed(target.origin,securityConfig.publicOrigins))return json(res,400,{error:{code:"UNTRUSTED_RETURN_URL",message:"Checkout return URL is not allowed."}},requestId)}
       const membership=(await db.find("memberships",m=>m.userId===userId))[0];
@@ -3099,6 +3259,7 @@ export async function handleRequest(
         "/api/v1/billing/checkout"
     ) {
       const b = await bodyJson(req);
+      try{await rejectRawPaymentData(db,userId,b)}catch{return json(res,400,{error:{code:"RAW_PAYMENT_DATA_NOT_ACCEPTED",message:"For your security, enter card details only on the hosted Stripe checkout page. Yaposan does not accept or store card numbers or CVC."}},requestId)}
 
       for (const candidate of [
         String(
@@ -3723,7 +3884,7 @@ export async function handleRequest(
     ) {
       const b = await bodyJson(req);
 
-      await requireProjectAccess(
+      const exportProject = await requireProjectAccess(
         db,
         userId,
         String(b.projectId),
@@ -3733,7 +3894,7 @@ export async function handleRequest(
       await requireWorkspaceAccess(
         db,
         userId,
-        String(b.workspaceId),
+        exportProject.workspaceId,
         false
       );
 
@@ -3746,6 +3907,7 @@ export async function handleRequest(
               db,
               {
                 ...b,
+                workspaceId: exportProject.workspaceId,
                 userId,
               }
             ),
@@ -3874,6 +4036,14 @@ export async function handleRequest(
       );
     }
 
+
+    // Yaposan 116.0 — production completion, payment integrity and trust/safety.
+    if(req.method==="GET"&&url.pathname==="/api/v1/social/notifications/center") return json(res,200,await notificationCenter(db,userId,Number(url.searchParams.get("limit")??50)),requestId);
+    if(req.method==="POST"&&url.pathname==="/api/v1/social/notifications/read-all") return json(res,200,await markAllNotificationsRead(db,userId),requestId);
+    if(req.method==="POST"&&url.pathname==="/api/v1/social/moderation/appeals"){const b=await bodyJson(req);return json(res,201,{appeal:await createModerationAppeal(db,userId,b as any)},requestId);}
+    if(req.method==="PUT"&&url.pathname==="/api/v1/social/safety-profile"){const b=await bodyJson(req);return json(res,200,{profile:await setAgeSafetyProfile(db,userId,String(b.ageBand??"") as any,Boolean(b.guardianConsent))},requestId);}
+    if(req.method==="GET"&&url.pathname==="/api/v1/creator/payout-safety") return json(res,200,await creatorPayoutSafety(db,userId,String(url.searchParams.get("currency")??"USD").toUpperCase()),requestId);
+
     return json(
       res,
       404,
@@ -4001,6 +4171,10 @@ async function startApiServer() {
   server.keepAliveTimeout =
     5000;
 
+  initializeLocalDevToken();
+  const cleanupLocalDevToken=()=>{if(localDevToken){try{rmSync(localDevTokenPath,{force:true})}catch{};localDevToken=""}};
+  process.once("exit",cleanupLocalDevToken);
+
   // Verify database connectivity before Render marks the API as running.
   const db =
     await getDatabase();
@@ -4038,15 +4212,11 @@ async function startApiServer() {
   );
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url.endsWith(
-    process.argv[1].replace(
-      /\\/g,
-      "/"
-    )
-  )
-) {
+const isDirectExecution = Boolean(
+  process.argv[1] && /(?:^|[\\/])server[\\/]index\.(?:ts|js|mjs|cjs)$/.test(process.argv[1])
+);
+
+if (isDirectExecution) {
   startApiServer().catch(
     (error) => {
       console.error(

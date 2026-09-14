@@ -332,7 +332,7 @@ export default function EditorToolbar(props: Props) {
 
   const textSelected = selectedText?.type === "text";
   const fontFamilies = availableFontFamilies?.length ? availableFontFamilies : FONT_FAMILIES;
-  // Phase 92.7.1 compatibility marker: FONT_FAMILIES.map is now superseded by the merged runtime list.
+  // compatibility marker: FONT_FAMILIES.map is now superseded by the merged runtime list.
   const fontFamily = selectedText?.fontFamily ?? FONT_FAMILIES[0];
   const fontSize = selectedText?.fontSize ?? 24;
   const normalizedFontSearch = fontSearch.trim().toLowerCase();
@@ -1193,6 +1193,7 @@ const styles = StyleSheet.create({
   underline: { textDecorationLine: "underline" },
   strike: { textDecorationLine: "line-through" },
   iconGrid: { flexDirection: "row", flexWrap: "wrap", width: 188, gap: 2 },
+  groupsRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 },
   objectRow: { flexDirection: "row", alignItems: "center" },
   arrangeGrid: { flexDirection: "row", flexWrap: "wrap", width: 195, gap: 2 },
   zoomTile: { width: 72, height: 54, borderRadius: 4, backgroundColor: "#EEF2F6", alignItems: "center", justifyContent: "center" },

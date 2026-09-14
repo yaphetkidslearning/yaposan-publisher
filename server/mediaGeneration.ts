@@ -9,7 +9,7 @@ function configFor(kind: MediaKind) {
   return { endpoint: process.env[`${prefix}_URL`] ?? "", apiKey: process.env[`${prefix}_API_KEY`] ?? "", model: process.env[`${prefix}_MODEL`] ?? "", provider: process.env[`${prefix}_NAME`] ?? kind };
 }
 
-function authHeaders(apiKey: string) {
+function authHeaders(apiKey: string): Record<string, string> {
   return apiKey ? { authorization: `Bearer ${apiKey}` } : {};
 }
 

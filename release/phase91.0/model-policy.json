@@ -1,8 +1,0 @@
-{
-  "phase": "91.0",
-  "standardModel": {"name": "u2net", "purpose": "fast standard product cutout", "weightsBundled": false},
-  "detailModel": {"name": "birefnet-general", "purpose": "difficult/high-detail cutout with alpha matting", "weightsBundled": false},
-  "downloadBehavior": "rembg downloads configured model weights into the service cache on first use",
-  "commercialReleaseRequirement": "Confirm and record the exact model-weight license/version before public commercial deployment. Do not substitute non-commercial models such as BRIA RMBG without a commercial agreement.",
-  "productPixelPolicy": "Background removal and manual keep/remove correction must not generatively replace product pixels."
-}

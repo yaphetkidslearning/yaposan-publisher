@@ -102,14 +102,14 @@ export function commitRasterStroke(element:PublisherElement,session:RasterStroke
 
 export function auditPhase1712(element: PublisherElement): { severity: "error" | "warning" | "info"; message: string }[] {
   const issues: { severity: "error" | "warning" | "info"; message: string }[] = [];
-  if (element.type !== "image") issues.push({ severity: "error", message: "Phase 17.12 requires an image element." });
+  if (element.type !== "image") issues.push({ severity: "error", message: "requires an image element." });
   if (!getRasterSourceUri(element)) issues.push({ severity: "error", message: "Original raster source is missing." });
   if ((element.rasterSelections ?? []).some((selection) => !Array.isArray(selection.points))) issues.push({ severity: "error", message: "A raster selection has invalid points." });
   if ((element.rasterRetouchStrokes ?? []).some((stroke) => !Array.isArray(stroke.points) || stroke.points.length < 2)) issues.push({ severity: "warning", message: "A raster stroke has fewer than two points." });
-  if (!issues.length) issues.push({ severity: "info", message: "Phase 17.12 canvas raster state is valid." });
+  if (!issues.length) issues.push({ severity: "info", message: "canvas raster state is valid." });
   return issues;
 }
 
-export function auditPhase1713(element:PublisherElement){const issues:{severity:"error"|"warning"|"info";message:string}[]=[];if(element.type!=="image")issues.push({severity:"error",message:"Phase 17.13 requires an image element."});if(!getRasterSourceUri(element))issues.push({severity:"error",message:"Original raster source is missing."});if(!nativeCodec && typeof (globalThis as any).document==="undefined")issues.push({severity:"warning",message:"Native runtime needs a registered raster codec adapter."});if((element.rasterColorProfile?.bitDepth??8)>8&&!nativeCodec)issues.push({severity:"warning",message:"Browser preview is 8-bit; register a native/WASM codec for 16/32-bit file output."});if(!issues.length)issues.push({severity:"info",message:"Phase 17.13 active selections, direct canvas tools, masks, non-destructive render, jobs and export bridge are configured."});return issues;}
+export function auditPhase1713(element:PublisherElement){const issues:{severity:"error"|"warning"|"info";message:string}[]=[];if(element.type!=="image")issues.push({severity:"error",message:"requires an image element."});if(!getRasterSourceUri(element))issues.push({severity:"error",message:"Original raster source is missing."});if(!nativeCodec && typeof (globalThis as any).document==="undefined")issues.push({severity:"warning",message:"Native runtime needs a registered raster codec adapter."});if((element.rasterColorProfile?.bitDepth??8)>8&&!nativeCodec)issues.push({severity:"warning",message:"Browser preview is 8-bit; register a native/WASM codec for 16/32-bit file output."});if(!issues.length)issues.push({severity:"info",message:"active selections, direct canvas tools, masks, non-destructive render, jobs and export bridge are configured."});return issues;}
 
 export const auditPhase1711 = auditPhase1712;

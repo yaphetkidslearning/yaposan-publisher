@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { PHASE47_ASSETS, PHASE47_ASSET_TYPES, phase47CatalogStats, searchPhase47Assets, togglePhase47Favorite, type Phase47AssetType } from "../utils/phase47ProfessionalAssetMarketplace";
+import { PHASE47_ASSETS, PHASE47_ASSET_TYPES, phase47CatalogStats, searchPhase47Assets, togglePhase47Favorite, type Phase47AssetType } from "../utils/professionalAssetMarketplace";
 
 export default function AssetMarketplace() {
   const router = useRouter();
@@ -13,7 +13,7 @@ export default function AssetMarketplace() {
   const assets = useMemo(() => searchPhase47Assets(PHASE47_ASSETS,{ query,type,premium:proOnly ? true : undefined,sort:"popular" }),[query,type,proOnly]);
   const stats = phase47CatalogStats(PHASE47_ASSETS);
   return <SafeAreaView style={s.root}>
-    <View style={s.top}><Pressable onPress={() => router.back()} style={s.back}><Ionicons name="arrow-back" size={23} color="#0f172a" /></Pressable><View style={{flex:1}}><Text style={s.title}>Professional Asset Marketplace</Text><Text style={s.sub}>Phase 47 · Search, license, organize, and insert creative assets</Text></View><View style={s.favoritePill}><Ionicons name="heart" size={16} color="#be123c"/><Text style={s.favoriteText}>{favorites.length} favorites</Text></View></View>
+    <View style={s.top}><Pressable onPress={() => router.back()} style={s.back}><Ionicons name="arrow-back" size={23} color="#0f172a" /></Pressable><View style={{flex:1}}><Text style={s.title}>Professional Asset Marketplace</Text><Text style={s.sub}>Search, license, organize, and insert creative assets</Text></View><View style={s.favoritePill}><Ionicons name="heart" size={16} color="#be123c"/><Text style={s.favoriteText}>{favorites.length} favorites</Text></View></View>
     <ScrollView contentContainerStyle={s.content}>
       <View style={s.hero}><View style={{flex:1}}><Text style={s.kicker}>CREATIVE ASSET PLATFORM</Text><Text style={s.heroTitle}>Everything your designs need, in one professional library.</Text><Text style={s.heroText}>Icons, illustrations, photos, videos, audio, fonts, frames, backgrounds, stickers, and mockups with searchable metadata and clear licensing.</Text></View><Ionicons name="storefront-outline" size={92} color="#f59e0b"/></View>
       <View style={s.stats}>{[["Assets",stats.total],["Asset types",stats.types],["Featured",stats.featured],["Creators",stats.creators]].map(([label,value]) => <View key={String(label)} style={s.stat}><Text style={s.statValue}>{value}</Text><Text style={s.statLabel}>{label}</Text></View>)}</View>

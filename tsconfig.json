@@ -18,15 +18,17 @@
     ]
   },
   "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
     "server/**/*.ts",
-    "scripts/export-worker.ts",
-    "scripts/phase75-launch-audit.ts",
-    ".expo/types/**/*.ts",
+    "scripts/**/*.ts",
     "expo-env.d.ts"
   ],
   "exclude": [
     "tests",
-    "src",
-    "node_modules"
+    "node_modules",
+    "dist",
+    ".expo",
+    "release/history"
   ]
 }

@@ -18,7 +18,7 @@ import {
 } from "../../constants/publisher";
 import { autoFitTableContents, clearSelectedCells, deleteSelectedColumns, deleteSelectedRows, distributeTableColumns, distributeTableRows, formatSelectedCells, getSelectedRange, insertColumnAtSelection, insertRowAtSelection, mergeSelectedCells, splitSelectedCells } from "../../utils/advancedTableEngine";
 import { applyColumnFilters, applyMultiColumnSort, mergeRangePreservingContents, splitMergeRestoringContents } from "../../utils/professionalTableEngine";
-import { recalculateTable, regenerateCalendarElement, updateChartElement } from "../../utils/phase15FunctionalCompletionEngine";
+import { recalculateTable, regenerateCalendarElement, updateChartElement } from "../../utils/functionalCompletionEngine";
 import type {
     ImageFit,
     PageOrientation,

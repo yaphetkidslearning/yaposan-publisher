@@ -13,5 +13,5 @@ export function createObjectStorage(config: CloudConfig): ObjectStorage {
       publicBaseUrl: config.publicAssetBaseUrl,
     });
   }
-  return new LocalObjectStorage(config.localStorageRoot, config.publicAssetBaseUrl);
+  return new LocalObjectStorage(config.localStorageRoot, config.publicAssetBaseUrl, config.sessionSecret);
 }

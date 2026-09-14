@@ -14,7 +14,7 @@ export const SOCIAL_PLATFORM_PRESETS: SocialPlatformPreset[] = [
 
 export const recommendMarketingTemplates = (templates: ProfessionalTemplate[], query: string, limit = 12): ProfessionalTemplate[] => {
   const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
-  return templates.map((template) => ({ template, score: tokens.reduce((score, token) => score + [template.metadata.name, template.metadata.description, ...(template.metadata.tags ?? [])].some((value) => value.toLowerCase().includes(token)) ? score + 1 : score, 0) })).sort((a, b) => b.score - a.score).slice(0, limit).map((item) => item.template);
+  return templates.map((template) => ({ template, score: tokens.reduce((score, token) => score + ([template.metadata.name, template.metadata.description, ...(template.metadata.tags ?? [])].some((value) => value.toLowerCase().includes(token)) ? 1 : 0), 0) })).sort((a, b) => b.score - a.score).slice(0, limit).map((item) => item.template);
 };
 
 export const createCampaignBundle = (template: ProfessionalTemplate, presetIds: string[]) => presetIds.map((presetId) => {

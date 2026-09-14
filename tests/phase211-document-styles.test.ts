@@ -1,9 +1,0 @@
-import assert from "node:assert/strict";
-import test from "node:test";
-import type { PublisherProject } from "../src/types/publisher";
-import { addDocumentStyle, applyDocumentStyle, collectStyleUsage, deleteDocumentStyle, normalizeDocumentStyles, resolveDocumentStyle, updateDocumentStyle } from "../src/utils/documentStyleEngine";
-const project:PublisherProject={id:"p",name:"Test",createdAt:1,updatedAt:1,version:2,autoSave:true,activePageId:"pg",pages:[{id:"pg",name:"Page",width:800,height:600,orientation:"portrait",sizeKey:"letter",backgroundColor:"#fff",margin:20,bleed:0,elements:[{id:"e",name:"Text",type:"text",x:0,y:0,width:100,height:30,rotation:0,zIndex:0,opacity:1,text:"Hello"}]}]};
-test("migrates to 21.1 with built-in styles",()=>{const p=normalizeDocumentStyles(project);assert.equal(p.phase21Version,"21.1");assert.ok(p.documentStyles!.styles.length>=6)});
-test("resolves inheritance and applies globally",()=>{let p=normalizeDocumentStyles(project);p=addDocumentStyle(p,{name:"Child",kind:"paragraph",basedOnId:"style-heading-1",updates:{fontSize:32}});const id=p.documentStyles!.styles.at(-1)!.id;assert.equal(resolveDocumentStyle(p.documentStyles!,id).fontWeight,"700");p=applyDocumentStyle(p,id,["e"]);assert.equal(p.pages[0].elements[0].fontSize,32);assert.equal(collectStyleUsage(p).find(x=>x.styleId===id)!.count,1)});
-test("global style update preserves style link",()=>{let p=normalizeDocumentStyles(project);p=applyDocumentStyle(p,"style-body",["e"]);p=updateDocumentStyle(p,"style-body",{updates:{fontSize:13}});p=applyDocumentStyle(p,"style-body",["e"]);assert.equal(p.pages[0].elements[0].documentStyleId,"style-body");assert.equal(p.pages[0].elements[0].fontSize,13)});
-test("protects built-in styles from deletion",()=>{assert.throws(()=>deleteDocumentStyle(normalizeDocumentStyles(project),"style-body"))});

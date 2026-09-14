@@ -95,9 +95,9 @@ export default function ProfessionalRasterManagerModal({ visible, project, eleme
   const renderPreviewNow = async () => {
     if (!image) return;
     try {
-      setRenderStatus("Running Phase 17.13 non-destructive pipeline…");
+      setRenderStatus("Running non-destructive pipeline…");
       const next = await renderNonDestructivePreview(ensureNonDestructiveRasterSource(image));
-      onChange(recordRasterHistory(next, "Rendered Phase 17.13 non-destructive preview"));
+      onChange(recordRasterHistory(next, "Rendered non-destructive preview"));
       setRenderStatus("Preview rendered; original source preserved");
     } catch (error) { setRenderStatus(error instanceof Error ? error.message : String(error)); }
   };

@@ -18,7 +18,7 @@ async function get(url) {
   }
 }
 
-const home = await get(`${base}/?phase9014=${Date.now()}`);
+const home = await get(`${base}/?verify=${Date.now()}`);
 if (home.status >= 400) throw new Error(`Home failed: HTTP ${home.status}`);
 const html = await home.text();
 const titleMatch = html.match(/<title\b[^>]*>([^<]+)<\/title>/i);
@@ -52,8 +52,13 @@ if (api) {
   const healthPath = process.env.YAPOSAN_API_HEALTH_PATH || "/health";
   const response = await get(api + healthPath);
   if (response.status >= 400) throw new Error(`API health failed: HTTP ${response.status}`);
+  const ready = await get(api + "/ready");
+  if (ready.status !== 200) throw new Error(`API readiness failed: HTTP ${ready.status}`);
+  for (const header of ["strict-transport-security", "x-content-type-options", "content-security-policy"]) {
+    if (!ready.headers.get(header)) throw new Error(`API readiness response is missing security header: ${header}`);
+  }
 }
 
 console.log(`Production title: ${titleMatch[1].trim()}`);
 console.log(`Production sitemap: ${sitemapUrl}`);
-console.log("Phase 90.14 read-only production SEO/startup checks passed.");
+console.log("Yaposan 117.4 live production readiness checks passed.");

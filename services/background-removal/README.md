@@ -61,3 +61,9 @@ npm run benchmark:phase91.5 -- path/to/benchmark.csv --write release/phase91.5/l
 ```
 
 A result can support a comparable-quality statement only for the tested workload; it does not certify universal parity with PhotoRoom, remove.bg, Removal.AI, or any other provider.
+
+## Background Removal Phase 1 competitive hardening
+
+Phase 1 adds configurable specialist model lanes, an `ultra` quality mode, a ground-truth benchmark with objective alpha metrics, and a checkpoint license-certification manifest. See `BACKGROUND-REMOVAL-PHASE1.md`.
+
+The specialist lanes intentionally inherit the existing detail model by default. A deployment must select and license exact specialist/matting checkpoints before claiming those lanes use distinct proprietary or third-party models.

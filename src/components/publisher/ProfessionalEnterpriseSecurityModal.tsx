@@ -10,7 +10,7 @@ export default function ProfessionalEnterpriseSecurityModal({ visible, projectNa
   const audit = useMemo(() => auditEnterpriseSecurity(workspace), [workspace]);
   return <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
     <View style={styles.root}>
-      <View style={styles.header}><View><Text style={styles.title}>Enterprise Security & Compliance Center</Text><Text style={styles.subtitle}>{projectName} · Phase 25.9</Text></View><Pressable onPress={onClose} style={styles.close}><Ionicons name="close" size={22} color="#fff" /></Pressable></View>
+      <View style={styles.header}><View><Text style={styles.title}>Enterprise Security & Compliance Center</Text><Text style={styles.subtitle}>{projectName} · </Text></View><Pressable onPress={onClose} style={styles.close}><Ionicons name="close" size={22} color="#fff" /></Pressable></View>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}><View><Text style={styles.eyebrow}>SECURITY READINESS</Text><Text style={styles.score}>{audit.score}</Text><Text style={styles.muted}>Identity, data protection, sharing, and compliance score</Text></View><Ionicons name="shield-checkmark" size={68} color="#34d399" /></View>
         <View style={styles.cards}>{[["Protected Members", `${audit.protectedMembers}/${workspace.members.filter((m) => !m.suspended).length}`], ["Compliance", `${audit.complianceCoverage}%`], ["Unresolved Events", audit.unresolvedEvents], ["Warnings", audit.warnings], ["Failed Controls", audit.failed]].map(([label, value]) => <View key={String(label)} style={styles.card}><Text style={styles.cardValue}>{value}</Text><Text style={styles.cardLabel}>{label}</Text></View>)}</View>

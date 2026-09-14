@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
-import { DEFAULT_LICENSED_ASSETS, DEFAULT_RIGHTS_RULES, DEFAULT_USAGE_REQUESTS, PHASE55_CAPABILITIES, PHASE55_RIGHTS_LICENSING, rightsBlockers, rightsComplianceScore, updateRightsStatus, updateUsageRequest, type LicensedAsset, type UsageRequest } from "../utils/phase55RightsLicensingEngine";
+import { DEFAULT_LICENSED_ASSETS, DEFAULT_RIGHTS_RULES, DEFAULT_USAGE_REQUESTS, PHASE55_CAPABILITIES, PHASE55_RIGHTS_LICENSING, rightsBlockers, rightsComplianceScore, updateRightsStatus, updateUsageRequest, type LicensedAsset, type UsageRequest } from "../utils/rightsLicensingEngine";
 
 const ASSET_KEY = "yaposan.phase55.licensedAssets";
 const REQUEST_KEY = "yaposan.phase55.usageRequests";
@@ -20,7 +20,7 @@ export default function RightsLicensingScreen() {
   const blockers = useMemo(() => rightsBlockers(assets, requests, DEFAULT_RIGHTS_RULES), [assets, requests]);
 
   return <SafeAreaView style={styles.root}>
-    <View style={styles.header}><Pressable onPress={() => router.back()} style={styles.back}><Ionicons name="arrow-back" size={22} color="#0f172a" /></Pressable><View style={{flex:1}}><Text style={styles.title}>Rights & Licensing</Text><Text style={styles.subtitle}>Phase 55 · Clear assets before publishing</Text></View></View>
+    <View style={styles.header}><Pressable onPress={() => router.back()} style={styles.back}><Ionicons name="arrow-back" size={22} color="#0f172a" /></Pressable><View style={{flex:1}}><Text style={styles.title}>Rights & Licensing</Text><Text style={styles.subtitle}>Clear assets before publishing</Text></View></View>
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.hero}><View style={styles.scoreRing}><Text style={styles.score}>{score}%</Text><Text style={styles.scoreLabel}>rights health</Text></View><View style={{flex:1}}><Text style={styles.heroTitle}>{PHASE55_RIGHTS_LICENSING.label}</Text><Text style={styles.heroText}>{PHASE55_RIGHTS_LICENSING.summary}</Text></View></View>
 

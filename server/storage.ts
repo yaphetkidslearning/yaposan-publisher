@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
@@ -8,10 +8,13 @@ export interface ObjectStorage {
   put(input: { workspaceId: string; name: string; contentType: string; body: Uint8Array }): Promise<StoredObject>;
   get(key: string): Promise<Uint8Array>;
   delete(key: string): Promise<void>;
+  stat(key: string): Promise<{ size: number; checksum?: string; contentType?: string }>;
   createUploadPlan(input: { workspaceId: string; name: string; contentType: string; size: number }): Promise<UploadPlan>;
 }
 
-const clean = (value: string) => value.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 120);
+
+export const storageKeyPrefix = (value: string) => value.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 120);
+const clean = storageKeyPrefix;
 const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
 const hmac = (key: Buffer | string, value: string) => createHmac("sha256", key).update(value).digest();
 const encodePath = (key: string) => key.split("/").map(encodeURIComponent).join("/");
@@ -19,20 +22,39 @@ const encodePath = (key: string) => key.split("/").map(encodeURIComponent).join(
 export class LocalObjectStorage implements ObjectStorage {
   private readonly root: string;
   private readonly publicBaseUrl: string;
-  constructor(root = join(process.cwd(), ".yaposan-storage"), publicBaseUrl = "http://localhost:4100/api/v1/assets/raw") { this.root = root; this.publicBaseUrl = publicBaseUrl; }
-  private path(key: string) { return join(this.root, ...key.split("/")); }
+  private readonly uploadSecret: string;
+  constructor(root = join(process.cwd(), ".yaposan-storage"), publicBaseUrl = "http://localhost:4100/api/v1/assets/raw", uploadSecret = "development-local-upload-secret") { this.root = root; this.publicBaseUrl = publicBaseUrl; this.uploadSecret = uploadSecret; }
+  private path(key: string) {
+    const parts = key.split("/").filter(Boolean);
+    if (!parts.length || parts.some(part => part === "." || part === ".." || /[\\]/.test(part))) throw new Error("INVALID_STORAGE_KEY");
+    return join(this.root, ...parts);
+  }
+  private token(key: string, size: number, expiresAt: string) { return createHmac("sha256", this.uploadSecret).update(`${key}|${size}|${expiresAt}`).digest("base64url"); }
   async put(input: { workspaceId: string; name: string; contentType: string; body: Uint8Array }) {
     const key = `${clean(input.workspaceId)}/${randomUUID()}-${clean(input.name)}`;
     const path = this.path(key);
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, input.body);
-    return { key, size: input.body.byteLength, checksum: sha256(input.body), contentType: input.contentType, url: `${this.publicBaseUrl}/${encodeURIComponent(key)}` };
+    return { key, size: input.body.byteLength, checksum: sha256(input.body), contentType: input.contentType, url: `${this.publicBaseUrl}/${encodePath(key)}` };
+  }
+  async putPlanned(key: string, body: Uint8Array, input: { size: number; expiresAt: string; token: string; contentType: string }) {
+    if (Date.parse(input.expiresAt) < Date.now()) throw new Error("UPLOAD_PLAN_EXPIRED");
+    if (body.byteLength !== input.size) throw new Error("UPLOAD_SIZE_MISMATCH");
+    const expected = Buffer.from(this.token(key, input.size, input.expiresAt));
+    const provided = Buffer.from(input.token);
+    if (expected.length !== provided.length || !timingSafeEqual(expected, provided)) throw new Error("UPLOAD_PLAN_INVALID");
+    const path = this.path(key);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, body);
+    return { key, size: body.byteLength, checksum: sha256(body), contentType: input.contentType, url: `${this.publicBaseUrl}/${encodePath(key)}` };
   }
   async get(key: string) { return new Uint8Array(await readFile(this.path(key))); }
+  async stat(key: string) { const bytes = new Uint8Array(await readFile(this.path(key))); return { size: bytes.byteLength, checksum: sha256(bytes) }; }
   async delete(key: string) { await rm(this.path(key), { force: true }); }
   async createUploadPlan(input: { workspaceId: string; name: string; contentType: string; size: number }) {
     const key = `${clean(input.workspaceId)}/${randomUUID()}-${clean(input.name)}`;
-    return { key, method: "PUT" as const, uploadUrl: `${this.publicBaseUrl}/${encodeURIComponent(key)}`, headers: { "content-type": input.contentType, "x-yaposan-size": String(input.size) }, expiresAt: new Date(Date.now() + 15 * 60_000).toISOString() };
+    const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString();
+    return { key, method: "PUT" as const, uploadUrl: `${this.publicBaseUrl}/${encodePath(key)}`, headers: { "content-type": input.contentType, "x-yaposan-size": String(input.size), "x-yaposan-upload-expires": expiresAt, "x-yaposan-upload-token": this.token(key, input.size, expiresAt) }, expiresAt };
   }
 }
 
@@ -54,7 +76,7 @@ export class R2ObjectStorage implements ObjectStorage {
     const kService = hmac(kRegion, "s3");
     return hmac(kService, "aws4_request");
   }
-  private presign(method: "GET" | "PUT" | "DELETE", key: string, contentType?: string): { url: string; headers: Record<string, string> } {
+  private presign(method: "GET" | "PUT" | "DELETE" | "HEAD", key: string, contentType?: string): { url: string; headers: Record<string, string> } {
     const now = new Date();
     const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
     const date = amzDate.slice(0, 8);
@@ -88,6 +110,11 @@ export class R2ObjectStorage implements ObjectStorage {
   async delete(key: string) {
     const response = await fetch(this.presign("DELETE", key).url, { method: "DELETE" });
     if (!response.ok && response.status !== 404) throw new Error(`R2_DELETE_FAILED_${response.status}`);
+  }
+  async stat(key: string) {
+    const response = await fetch(this.presign("HEAD", key).url, { method: "HEAD" });
+    if (!response.ok) throw new Error(`R2_HEAD_FAILED_${response.status}`);
+    return { size: Number(response.headers.get("content-length") ?? 0), contentType: response.headers.get("content-type") ?? undefined };
   }
   async createUploadPlan(input: { workspaceId: string; name: string; contentType: string; size: number }) {
     const key = `${clean(input.workspaceId)}/${randomUUID()}-${clean(input.name)}`;

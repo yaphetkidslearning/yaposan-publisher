@@ -47,6 +47,6 @@ export * from "./comprehensiveTemplateLibrary";
 
 export * from "./masterTemplateSystem";
 
-export * from "./phase2513TemplateMegaLibrary";
+export * from "./templateCatalog2513TemplateMegaLibrary";
 
-export * from "./phase2518TemplateExpansion";
+export * from "./templateCatalog2518TemplateExpansion";

@@ -65,7 +65,7 @@ export default function WorkspaceDashboard({ title, subtitle, accent = "#0f9f95"
           </Pressable>
           <View>
             <Text style={styles.brand}>Yaposan Creative Suite</Text>
-            <Text style={styles.eyebrow}>Phase 24.1D professional workspace</Text>
+            <Text style={styles.eyebrow}>professional workspace</Text>
           </View>
           <View style={styles.spacer} />
           <View style={styles.status}>

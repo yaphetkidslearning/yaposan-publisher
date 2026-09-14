@@ -2,8 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { createAgentWorkflow } from "../services/phase9110CreationPlatform";
-import { saveAgent } from "../services/phase9112AgentStore";
+import { createAgentWorkflow } from "../services/creationPlatform";
+import { saveAgent } from "../services/agentStore";
 
 function inferSteps(prompt: string) {
   const p = prompt.toLowerCase();
@@ -26,7 +26,7 @@ export default function AgentStudio() {
   const workflow = useMemo(() => prompt.trim() ? createAgentWorkflow(prompt.trim().slice(0, 64), inferSteps(prompt), trigger, trigger === "schedule" ? "Configure schedule" : undefined) : null, [prompt, trigger]);
 
   return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.page}>
-    <View style={s.top}><Pressable onPress={() => router.back()} style={s.back}><Ionicons name="arrow-back" size={20} color="#fff" /></Pressable><View><Text style={s.brand}>Agent Studio</Text><Text style={s.sub}>Phase 91.12 · Persistent AI agents and cross-studio workflows</Text></View></View>
+    <View style={s.top}><Pressable onPress={() => router.back()} style={s.back}><Ionicons name="arrow-back" size={20} color="#fff" /></Pressable><View><Text style={s.brand}>Agent Studio</Text><Text style={s.sub}>Persistent AI agents and cross-studio workflows</Text></View></View>
     <View style={s.panel}><Text style={s.title}>What should this agent do?</Text><TextInput multiline value={prompt} onChangeText={setPrompt} placeholder="Every Monday create three social posts from our newest products..." style={s.input} />
       <View style={s.row}>{(["manual","schedule","event"] as const).map(x => <Pressable key={x} onPress={() => setTrigger(x)} style={[s.chip, trigger === x && s.chipOn]}><Text style={[s.chipText, trigger === x && s.chipTextOn]}>{x}</Text></Pressable>)}</View>
     </View>

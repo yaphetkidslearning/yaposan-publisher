@@ -2,7 +2,7 @@
   "expo": {
     "name": "Yaposan",
     "slug": "Yaposan",
-    "version": "1.0.0",
+    "version": "119.10.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "yaposan",
@@ -39,6 +39,6 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "description": "Create, edit, collaborate, and publish professional content with Yaposan Creative Suite."
+    "description": "Create your own AI-powered page with Yaposan. Connect your preferred AI provider or local AI, publish content, use creative tools, and build your digital space in one place."
   }
 }

@@ -16,7 +16,7 @@ import {
   workflowCompletion,
   type AutomationJob,
   type DocumentWorkflow,
-} from "../utils/phase53DocumentAutomationEngine";
+} from "../utils/documentAutomationEngine";
 
 const WORKFLOW_KEY = "yaposan.phase53.workflows";
 const JOB_KEY = "yaposan.phase53.jobs";
@@ -48,7 +48,7 @@ export default function AutomationCenter() {
   return <SafeAreaView style={styles.root}>
     <View style={styles.header}>
       <Pressable onPress={() => router.back()} style={styles.back}><Ionicons name="arrow-back" size={22} color="#0f172a" /></Pressable>
-      <View style={{ flex: 1 }}><Text style={styles.title}>Automation Center</Text><Text style={styles.subtitle}>Phase 53 · Build, run, monitor, and approve professional document workflows</Text></View>
+      <View style={{ flex: 1 }}><Text style={styles.title}>Automation Center</Text><Text style={styles.subtitle}>Build, run, monitor, and approve professional document workflows</Text></View>
     </View>
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.hero}>

@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import type { DatabaseAdapter, MembershipRecord, ProjectRecord } from "./database";
 
 export type ProjectLifecycle = { archived?: boolean; favorite?: boolean; tags?: string[]; trashedAt?: string };
@@ -92,13 +92,38 @@ export async function restoreProjectVersion(db: DatabaseAdapter, userId: string,
 export async function createShareLink(db: DatabaseAdapter, userId: string, input: { projectId: string; access?: "view" | "download"; expiresAt?: string; password?: string }) {
   const project = await db.get("projects", input.projectId);
   if (!project || project.ownerUserId !== userId) throw new Error("PROJECT_NOT_FOUND");
-  const rawToken = randomBytes(24).toString("base64url");
+  const rawToken = randomBytes(32).toString("base64url");
   const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+  const password = String(input.password ?? "");
+  const passwordSalt = password ? randomBytes(16).toString("hex") : undefined;
+  const passwordHash = password && passwordSalt ? scryptSync(password, passwordSalt, 32).toString("hex") : undefined;
   const record = await db.insert("auditEvents", {
     actorUserId: userId, action: "share.link.created", target: project.id,
-    metadata: { tokenHash, access: input.access ?? "view", expiresAt: input.expiresAt, passwordHash: input.password ? createHash("sha256").update(input.password).digest("hex") : undefined, revoked: false }
+    metadata: { tokenHash, access: input.access ?? "view", expiresAt: input.expiresAt, passwordSalt, passwordHash, passwordKdf: passwordHash ? "scrypt" : undefined, revoked: false }
   });
-  return { id: record.id, token: rawToken, access: input.access ?? "view", expiresAt: input.expiresAt };
+  return { id: record.id, token: rawToken, access: input.access ?? "view", expiresAt: input.expiresAt, passwordProtected: Boolean(passwordHash) };
+}
+
+export async function resolveShareLink(db: DatabaseAdapter, rawToken: string, password = "") {
+  const tokenHash = createHash("sha256").update(String(rawToken)).digest("hex");
+  const event = (await db.find("auditEvents", row => row.action === "share.link.created" && row.metadata?.tokenHash === tokenHash))[0];
+  if (!event || !event.target || event.metadata?.revoked === true) throw new Error("SHARE_LINK_NOT_FOUND");
+  const expiresAt = typeof event.metadata?.expiresAt === "string" ? event.metadata.expiresAt : undefined;
+  if (expiresAt && Date.parse(expiresAt) <= Date.now()) throw new Error("SHARE_LINK_EXPIRED");
+  const passwordHash = typeof event.metadata?.passwordHash === "string" ? event.metadata.passwordHash : undefined;
+  const passwordSalt = typeof event.metadata?.passwordSalt === "string" ? event.metadata.passwordSalt : undefined;
+  if (passwordHash) {
+    if (!passwordSalt || event.metadata?.passwordKdf !== "scrypt") throw new Error("SHARE_LINK_LEGACY_PASSWORD_UNSUPPORTED");
+    const actual = scryptSync(String(password), passwordSalt, 32);
+    const expected = Buffer.from(passwordHash, "hex");
+    if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) throw new Error("SHARE_PASSWORD_INVALID");
+  }
+  const project = await db.get("projects", event.target);
+  if (!project || project.deletedAt) throw new Error("SHARE_PROJECT_NOT_FOUND");
+  return {
+    share: { id: event.id, access: event.metadata?.access === "download" ? "download" : "view", expiresAt, passwordProtected: Boolean(passwordHash) },
+    project: { id: project.id, name: project.name, revision: project.revision, payload: project.payload, updatedAt: project.updatedAt },
+  };
 }
 
 export async function listNotifications(db: DatabaseAdapter, userId: string) {
@@ -109,18 +134,32 @@ export async function listNotifications(db: DatabaseAdapter, userId: string) {
   }));
 }
 
-export async function adminSummary(db: DatabaseAdapter, userId: string, adminEmails: string[] = []) {
-  const user = await db.get("users", userId);
+export async function organizationSummary(db: DatabaseAdapter, userId: string) {
   const { organization, membership } = await organizationContext(db, userId);
-  const globalAdmin = Boolean(user && adminEmails.map(x => x.toLowerCase()).includes(user.email.toLowerCase()));
-  if (!globalAdmin && !(["owner", "admin"] as string[]).includes(membership.role)) throw new Error("ADMIN_REQUIRED");
-  const [users, organizations, projects, assets, subscriptions, jobs, events] = await Promise.all([
-    db.find("users", () => true), db.find("organizations", () => true), db.find("projects", () => true), db.find("assets", () => true), db.find("subscriptions", () => true), db.find("jobs", () => true), db.find("auditEvents", () => true)
-  ]);
-  const scopedProjects = globalAdmin ? projects : projects.filter(project => project.workspaceId && project.ownerUserId && project.deletedAt === undefined);
+  if (!( ["owner", "admin"] as string[] ).includes(membership.role)) throw new Error("ORGANIZATION_ADMIN_REQUIRED");
+  const memberships = await db.find("memberships", row => row.organizationId === organization.id);
+  const memberIds = new Set(memberships.map(row => row.userId));
+  const workspaces = await db.find("workspaces", row => row.organizationId === organization.id);
+  const workspaceIds = new Set(workspaces.map(row => row.id));
+  const projects = await db.find("projects", row => workspaceIds.has(row.workspaceId));
+  const assets = await db.find("assets", row => workspaceIds.has(row.workspaceId));
+  const subscriptions = await db.find("subscriptions", row => row.organizationId === organization.id);
+  const jobs = await db.find("jobs", row => {
+    const payload = row.payload && typeof row.payload === "object" ? row.payload as Record<string, unknown> : {};
+    return payload.organizationId === organization.id || (typeof payload.workspaceId === "string" && workspaceIds.has(payload.workspaceId));
+  });
+  const events = await db.find("auditEvents", row => row.organizationId === organization.id || Boolean(row.actorUserId && memberIds.has(row.actorUserId)));
   return {
-    scope: globalAdmin ? "global" : organization.name,
-    totals: { users: globalAdmin ? users.length : (await db.find("memberships", row => row.organizationId === organization.id)).length, organizations: globalAdmin ? organizations.length : 1, projects: scopedProjects.filter(p => !p.deletedAt).length, trashedProjects: scopedProjects.filter(p => Boolean(p.deletedAt)).length, storageBytes: assets.reduce((sum, asset) => sum + Number(asset.size || 0), 0), activeSubscriptions: subscriptions.filter(sub => ["active", "trialing"].includes(sub.status)).length, queuedJobs: jobs.filter(job => ["queued", "running"].includes(job.status)).length },
-    recentActivity: events.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20)
+    scope: organization.name,
+    totals: {
+      users: memberships.length,
+      organizations: 1,
+      projects: projects.filter(p => !p.deletedAt).length,
+      trashedProjects: projects.filter(p => Boolean(p.deletedAt)).length,
+      storageBytes: assets.reduce((sum, asset) => sum + Math.max(0, Number(asset.size) || 0), 0),
+      activeSubscriptions: subscriptions.filter(sub => ["active", "trialing"].includes(sub.status)).length,
+      queuedJobs: jobs.filter(job => ["queued", "running"].includes(job.status)).length,
+    },
+    recentActivity: events.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20),
   };
 }

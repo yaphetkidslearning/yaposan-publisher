@@ -13,7 +13,7 @@ import {
   type TemplateViewMode,
 } from "../templates/professionalTemplateBrowser";
 import type { ProfessionalTemplate } from "../templates/types";
-import { PHASE2513_CATEGORY_GROUPS } from "../templates/phase2513TemplateMegaLibrary";
+import { PHASE2513_CATEGORY_GROUPS } from "../templates/templateCatalog2513TemplateMegaLibrary";
 import { savePublisherProject } from "../utils/publisherStorage";
 
 const MENU_ALIASES: Record<string, readonly string[]> = {

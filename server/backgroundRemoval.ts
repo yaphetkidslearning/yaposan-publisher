@@ -41,6 +41,8 @@ export type BackgroundRemovalResult = {
   maskDiagnostics: Record<string, number>;
   engineVersion: string;
   category: string;
+  subjectLane: "person" | "product" | "ambiguous";
+  classificationMethod: string;
   visualConditions: string[];
   usedStrategy: string;
   foregroundGeometry: Record<string, number>;
@@ -67,11 +69,11 @@ export type ProductPhotoAnalysisResult = {
 const ALLOWED_MIME = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 export function loadBackgroundRemovalConfig(env = process.env): BackgroundRemovalConfig {
-  const timeout = Number(env.BACKGROUND_REMOVAL_TIMEOUT_MS ?? 90000);
+  const timeout = Number(env.BACKGROUND_REMOVAL_TIMEOUT_MS ?? 300000);
   const maxBytes = Number(env.BACKGROUND_REMOVAL_MAX_IMAGE_BYTES ?? 50_000_000);
   return {
     serviceUrl: env.BACKGROUND_REMOVAL_URL?.trim() || undefined,
-    timeoutMs: Number.isFinite(timeout) && timeout >= 1000 ? Math.min(timeout, 180000) : 90000,
+    timeoutMs: Number.isFinite(timeout) && timeout >= 1000 ? Math.min(timeout, 600000) : 300000,
     maxImageBytes: Number.isFinite(maxBytes) && maxBytes > 0 ? Math.min(maxBytes, 50_000_000) : 50_000_000,
   };
 }
@@ -170,6 +172,8 @@ export async function runSelfHostedBackgroundRemoval(
       maskDiagnostics: data.mask_diagnostics && typeof data.mask_diagnostics === "object" ? Object.fromEntries(Object.entries(data.mask_diagnostics as Record<string, unknown>).map(([k,v]) => [k, Number(v)])) : {},
       engineVersion: String(data.engine_version ?? "unknown"),
       category: String(data.category ?? "general-merchandise"),
+      subjectLane: data.subject_lane === "person" ? "person" : data.subject_lane === "product" ? "product" : "ambiguous",
+      classificationMethod: String(data.classification_method ?? "unknown"),
       visualConditions: Array.isArray(data.visual_conditions) ? data.visual_conditions.map(String) : [],
       usedStrategy: String(data.used_strategy ?? "unknown"),
       foregroundGeometry: data.foreground_geometry && typeof data.foreground_geometry === "object" ? Object.fromEntries(Object.entries(data.foreground_geometry as Record<string, unknown>).map(([k,v]) => [k, Number(v)])) : {},

@@ -1,2 +1,0 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
-test('Phase 29 Audio Studio is integrated',()=>{const e=fs.readFileSync('src/utils/audioStudioEngine.ts','utf8');for(const t of ['voice','music','effects','dialogue','waveformBars','updateAudioTrack'])assert.match(e,new RegExp(t));const page=fs.readFileSync('src/app/audio-studio.tsx','utf8');assert.match(page,/YAPOSAN PHASE 29/);assert.match(page,/Noise removal/);assert.match(fs.readFileSync('src/app/index.tsx','utf8'),/audio-studio/);});

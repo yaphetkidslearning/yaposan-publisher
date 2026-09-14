@@ -1,7 +1,7 @@
 {
-  "name": "Yaposan \u2014 AI Creative Design & Productivity Suite",
+  "name": "Yaposan — Create Your Own AI Page & Social Space",
   "short_name": "Yaposan",
-  "description": "Create designs, edit photos, build websites, generate content with AI, and manage creative projects in one Yaposan workspace.",
+  "description": "Create your own AI-powered page on Yaposan. Build AI, chat, post, comment, share videos, livestream, advertise, grow followers, and create with built-in creative tools.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#071725",

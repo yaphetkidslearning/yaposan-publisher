@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import type { DatabaseAdapter, MembershipRecord, ProjectRecord, WorkspaceRecord } from "./database";
+import { canAccessSpace } from "./spaces";
 
 export function constantTimeEqual(left: string | undefined, right: string | undefined) {
   if (!left || !right) return false;
@@ -8,9 +9,13 @@ export function constantTimeEqual(left: string | undefined, right: string | unde
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-export function isConfiguredAdmin(email: string | undefined, adminEmails: string[]) {
-  return Boolean(email && adminEmails.includes(email.trim().toLowerCase()));
+export function isConfiguredAdmin(email: string | undefined, configuredAdminEmails: readonly string[]) {
+  if (!email) return false;
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) return false;
+  return configuredAdminEmails.some(configuredEmail => configuredEmail.trim().toLowerCase() === normalizedEmail);
 }
+
 
 export async function getUserMemberships(db: DatabaseAdapter, userId: string) {
   return db.find("memberships", membership => membership.userId === userId);
@@ -27,6 +32,7 @@ export async function canAccessProject(db: DatabaseAdapter, userId: string, proj
   const project = await db.get("projects", projectId);
   if (!project || project.deletedAt) return false;
   if (project.ownerUserId === userId) return true;
+  if (project.spaceId && await canAccessSpace(db, userId, project.spaceId, write ? "editor" : "viewer")) return true;
   return canAccessWorkspace(db, userId, project.workspaceId, write);
 }
 

@@ -2,6 +2,7 @@ export type PublisherElementType =
   | "text"
   | "rectangle"
   | "circle"
+  | "ellipse"
   | "line"
   | "triangle"
   | "arrow"
@@ -132,12 +133,20 @@ export type PublisherElement = {
   textPathMode?: "none" | "arc-up" | "arc-down" | "wave";
 
   fillColor?: string;
+  strokeColor?: string;
   borderColor?: string;
   borderWidth?: number;
   borderRadius?: number;
+  shadowColor?: string;
+  shadowOpacity?: number;
+  shadowRadius?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
 
   imageUri?: string;
   imageFit?: ImageFit;
+  imagePositionX?: number;
+  imagePositionY?: number;
   originalImageUri?: string;
   rasterOriginalImageUri?: string;
   rasterPreviewImageUri?: string;
@@ -194,7 +203,7 @@ export type PublisherElement = {
   fillGradient?: { type: "linear" | "radial"; startColor: string; endColor: string; angle?: number };
   mergeBinding?: import("../utils/mailMergeEngine").MergeElementBinding;
 
-  // Phase 15 professional tables, charts, calendars, diagrams and linked data.
+  // professional tables, charts, calendars, diagrams and linked data.
   accessibilityLabel?: string;
   chartType?: import("../utils/dataVisualizationEngine").ChartType;
   chartTitle?: string;
@@ -225,7 +234,7 @@ export type PublisherElement = {
   tableRepeatHeader?: boolean;
   tableAllowPageSplit?: boolean;
 
-  // Phase 16 professional vector drawing and illustration.
+  // professional vector drawing and illustration.
   vectorNodes?: Array<{ x:number; y:number; inX?:number; inY?:number; outX?:number; outY?:number; kind?:"corner"|"smooth"|"symmetric"; pressure?:number }>;
   vectorPoints?: Array<{ x:number; y:number; inX?:number; inY?:number; outX?:number; outY?:number; kind?:"corner"|"smooth"|"symmetric"; pressure?:number }>;
   points?: Array<{ x:number; y:number; pressure?:number }>;
@@ -269,7 +278,7 @@ export type PublisherElement = {
   vectorKnifeCutAt?: number;
   vectorErasedAt?: number;
 
-  // Phase 18 professional painting engine.
+  // professional painting engine.
   paintSettings?: import("../utils/paintingEngine").PaintingSettings;
   paintBlendMode?: import("../utils/paintingEngine").PaintBlendMode;
   paintTexture?: "none" | "paper" | "canvas" | "grain";
@@ -340,7 +349,7 @@ export type PublisherProject = {
   phase124Data?: import("../utils/layoutInteractionEngine").Phase124ProjectData;
   prepressSettings?: import("../utils/prepressEngine").PrepressSettings;
   lastPrepressReport?: import("../utils/prepressEngine").PrepressReport;
-  dataSourceRegistry?: import("../utils/phase15FunctionalCompletionEngine").DataSourceRegistry;
+  dataSourceRegistry?: import("../utils/functionalCompletionEngine").DataSourceRegistry;
   phase15Version?: "15.8";
   phase16Version?: "16.0" | "16.1" | "16.2" | "16.3" | "16.4";
   phase17Version?: "17.0" | "17.1" | "17.2" | "17.3" | "17.8" | "17.9" | "17.10" | "17.11" | "17.12" | "17.13";
@@ -353,7 +362,7 @@ export type PublisherProject = {
   documentReferences?: import("../utils/documentReferenceEngine").DocumentReferenceState;
   documentVariables?: import("../utils/documentVariableEngine").DocumentVariableState;
   publicationCompletion?: import("../utils/publicationCompletionEngine").PublicationCompletionState;
-  phase21Closure?: import("../utils/phase21ClosureEngine").Phase21ClosureState;
+  phase21Closure?: import("../utils/closureEngine").Phase21ClosureState;
   phase21Version?: "21.0" | "21.1" | "21.2" | "21.3" | "21.4" | "21.5";
   digitalPublishingFoundation?: import("../utils/digitalPublishingFoundationEngine").DigitalPublishingFoundationState;
   responsiveWebPublishing?: import("../utils/responsiveWebPublishingEngine").ResponsiveWebPublishingState;

@@ -6,7 +6,7 @@ import { creativeSuiteStorage,DEFAULT_BRANDS,type BrandKitRecord } from "../util
 const uid=()=>`brand-${Date.now()}`;
 export default function Brand(){
  const [kits,setKits]=useState<BrandKitRecord[]>([]),[selected,setSelected]=useState<string>(""),[notice,setNotice]=useState("Brand system ready");
- useEffect(()=>{creativeSuiteStorage.loadBrands().then(v=>{setKits(v);setSelected(v[0]?.id??"")})},[]); useEffect(()=>{if(kits.length) void creativeSuiteStorage.saveBrands(kits)},[kits]);
+ useEffect(()=>{queueMicrotask(()=>{void creativeSuiteStorage.loadBrands().then(v=>{setKits(v);setSelected(v[0]?.id??"")})})},[]); useEffect(()=>{if(kits.length) void creativeSuiteStorage.saveBrands(kits)},[kits]);
  const kit=kits.find(x=>x.id===selected)??kits[0]; const update=(patch:Partial<BrandKitRecord>)=>setKits(v=>v.map(x=>x.id===kit?.id?{...x,...patch}:x));
  const add=()=>{const x={...DEFAULT_BRANDS[0],id:uid(),name:"New Brand Kit",active:false};setKits(v=>[...v,x]);setSelected(x.id);setNotice("New Brand Kit created.")};
  const apply=()=>{setKits(v=>v.map(x=>({...x,active:x.id===kit?.id})));setNotice(`${kit?.name} is now the active brand.`)};

@@ -1,8 +1,0 @@
-Yaposan Phase 34.0 validation
-- Packages 34.0 through 34.12 registered
-- Commercial Release workspace added
-- Persistent release queue added
-- Social, commerce, website and app channels registered
-- Free, Creator, Professional and Enterprise plans registered
-- Home navigation integrated
-- Phase 34 source-validation tests added

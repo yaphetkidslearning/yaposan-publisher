@@ -37,7 +37,7 @@ const safeEqual = (a: string, b: string) => {
 export function loadSecurityEnvironment(env = process.env): SecurityEnvironment {
   return {
     nodeEnv: env.NODE_ENV,
-    publicOrigins: String(env.PUBLIC_ORIGINS ?? "http://localhost:8081,http://localhost:19006")
+    publicOrigins: String(env.PUBLIC_ORIGINS ?? "http://localhost:8081,http://127.0.0.1:8081,http://localhost:19006,http://127.0.0.1:19006")
       .split(",")
       .map(normalizeOrigin)
       .filter(Boolean),
@@ -183,4 +183,33 @@ export function certifyLaunch(checks: LaunchCheck[]) {
     checksum: createHash("sha256").update(payload).digest("hex"),
     generatedAt: new Date().toISOString(),
   };
+}
+
+export function fetchMetadataAllowed(input:{method?:string;site?:string;mode?:string;dest?:string;trustedOrigin?:boolean}){
+  const method=String(input.method??"GET").toUpperCase();
+  const safe=new Set(["GET","HEAD","OPTIONS"]);
+  const site=String(input.site??"").toLowerCase();
+  // an Origin that already passed the explicit allowlist is trusted for
+  // state-changing browser requests. This keeps Fetch Metadata protection for
+  // untrusted/cross-site requests without blocking the localhost Admin frontend.
+  if(input.trustedOrigin===true)return true;
+  if(!site||site==="same-origin")return true;
+  if((site==="same-site"||site==="cross-site")&&!safe.has(method))return false;
+  if(input.mode==="navigate"&&input.dest==="document"&&safe.has(method))return true;
+  return safe.has(method);
+}
+
+export function classifyUploadRisk(input:{name:string;contentType:string;size:number},scannerConfigured=false){
+  const extension=input.name.toLowerCase().split(".").pop()??"";
+  const active=new Set(["svg","zip","html","htm","xml"]);
+  const mime=input.contentType.toLowerCase();
+  const requiresMalwareScan=active.has(extension)||mime==="application/zip"||mime==="image/svg+xml"||input.size>25*1024*1024;
+  return {
+    risk:requiresMalwareScan?"elevated":"standard",
+    quarantine:requiresMalwareScan,
+    requiresMalwareScan,
+    scannerConfigured,
+    publishAllowed:!requiresMalwareScan||scannerConfigured,
+    reason:requiresMalwareScan&&!scannerConfigured?"Active/archive or large uploads require malware scanning before publication.":undefined,
+  } as const;
 }

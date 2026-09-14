@@ -12,7 +12,7 @@ Priorities:
 - clear Help/FAQ/troubleshooting content
 - performance on large projects and template libraries
 - safe open-source security boundaries
-- documentation that lets a first-time contributor succeed without reading historical phase files
+- documentation that lets a first-time contributor succeed without reading obsolete development files
 
 ## Next: strengthen the creative ecosystem
 

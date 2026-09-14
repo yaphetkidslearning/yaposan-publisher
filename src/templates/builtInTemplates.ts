@@ -1,30 +1,30 @@
 import { BUSINESS_CARD_TEMPLATES } from "./businessCardLibrary";
 import { PHASE242Q_NON_CARD_TEMPLATES } from "./comprehensiveTemplateLibrary";
 import { REAL_PROFESSIONAL_TEMPLATES } from "./realProfessionalTemplates";
-import { PHASE243D_PREMIUM_TEMPLATES } from "./phase243dPremiumTemplates";
+import { PHASE243D_PREMIUM_TEMPLATES } from "./templateCatalog243dPremiumTemplates";
 import { BUSINESS_DOCUMENT_TEMPLATES } from "./businessDocumentLibrary";
 import { MARKETING_SOCIAL_TEMPLATES } from "./marketingSocialLibrary";
 import { templateRegistry } from "./templateRegistry";
-import { PHASE2513_TEMPLATES } from "./phase2513TemplateMegaLibrary";
-import { PHASE2518_TEMPLATES } from "./phase2518TemplateExpansion";
-import { PHASE2519_TEMPLATES } from "./phase2519TemplateExpansion";
-import { PHASE2525_TEMPLATES } from "./phase2525ProfessionalTemplateLibrary";
-import { PHASE2526_TEMPLATES } from "./phase2526ProfessionalTemplateLibrary";
-import { PHASE2527_TEMPLATES } from "./phase2527ProfessionalTemplateLibrary";
-import { PHASE2529_TEMPLATES } from "./phase2529CategoryCompletionLibrary";
-import { auditProfessionalizedTemplates, professionalizeTemplates } from "./phase2538Professionalization";
-import { auditTemplateMarketplace, prepareTemplateMarketplace } from "./phase2540MarketplaceProfessionalization";
-import { auditPhase25421Redesign, redesignAllTemplatesForPhase25421 } from "./phase25421CanvaQualityRedesign";
-import { PHASE43_TEMPLATES } from "./phase43ProfessionalTemplateEcosystem";
+import { PHASE2513_TEMPLATES } from "./templateCatalog2513TemplateMegaLibrary";
+import { PHASE2518_TEMPLATES } from "./templateCatalog2518TemplateExpansion";
+import { PHASE2519_TEMPLATES } from "./templateCatalog2519TemplateExpansion";
+import { PHASE2525_TEMPLATES } from "./templateCatalog2525ProfessionalTemplateLibrary";
+import { PHASE2526_TEMPLATES } from "./templateCatalog2526ProfessionalTemplateLibrary";
+import { PHASE2527_TEMPLATES } from "./templateCatalog2527ProfessionalTemplateLibrary";
+import { PHASE2529_TEMPLATES } from "./templateCatalog2529CategoryCompletionLibrary";
+import { auditProfessionalizedTemplates, professionalizeTemplates } from "./templateCatalog2538Professionalization";
+import { auditTemplateMarketplace, prepareTemplateMarketplace } from "./templateCatalog2540MarketplaceProfessionalization";
+import { auditPhase25421Redesign, redesignAllTemplatesForPhase25421 } from "./templateCatalog25421CanvaQualityRedesign";
+import { PHASE43_TEMPLATES } from "./templateCatalog43ProfessionalTemplateEcosystem";
 
-// Legacy Phase 24.2A.3 registry signature: registerMany([...BUSINESS_CARD_TEMPLATES, ...BUSINESS_DOCUMENT_TEMPLATES])
-// Legacy Phase 24.2B registry signature: registerMany([...BUSINESS_CARD_TEMPLATES, ...BUSINESS_DOCUMENT_TEMPLATES, ...MARKETING_SOCIAL_TEMPLATES])
+// Legacy .3 registry signature: registerMany([...BUSINESS_CARD_TEMPLATES, ...BUSINESS_DOCUMENT_TEMPLATES])
+// Legacy registry signature: registerMany([...BUSINESS_CARD_TEMPLATES, ...BUSINESS_DOCUMENT_TEMPLATES, ...MARKETING_SOCIAL_TEMPLATES])
 void BUSINESS_DOCUMENT_TEMPLATES;
 void MARKETING_SOCIAL_TEMPLATES;
 
 export const LEGACY_GENERATED_TEMPLATES = [...BUSINESS_CARD_TEMPLATES, ...PHASE242Q_NON_CARD_TEMPLATES];
-// Phase 25.21 quality reset: only genuinely distinct, handcrafted libraries are shown.
-// The Phase 25.13/25.18/25.19 generator-based collections remain exported for
+// quality reset: only genuinely distinct, handcrafted libraries are shown.
+// The /25.18/25.19 generator-based collections remain exported for
 // compatibility and future redesign work, but are intentionally excluded from
 // the active browser because they reused the same composition across formats.
 export const DISABLED_REPETITIVE_TEMPLATE_COUNT =
@@ -39,7 +39,7 @@ const PHASE2538_SOURCE_TEMPLATES = [
   ...PHASE43_TEMPLATES,
 ];
 
-// Phase 25.38 applies a non-destructive professional design pass to every active
+// applies a non-destructive professional design pass to every active
 // template. It standardizes font pairing, body rhythm, image treatment, metadata,
 // palettes, and quality scoring while preserving each template's original layout.
 export const ALL_PROFESSIONAL_TEMPLATES = redesignAllTemplatesForPhase25421(
@@ -64,18 +64,18 @@ export { PHASE242Q_NON_CARD_TEMPLATES, PHASE242Q_TEMPLATE_SPECS } from "./compre
 
 export { REAL_PROFESSIONAL_TEMPLATES } from "./realProfessionalTemplates";
 
-export { PHASE2513_TEMPLATES, PHASE2513_TEMPLATE_COUNT, PHASE2513_CATEGORY_GROUPS, PHASE2513_COLLECTION_TARGETS } from "./phase2513TemplateMegaLibrary";
+export { PHASE2513_TEMPLATES, PHASE2513_TEMPLATE_COUNT, PHASE2513_CATEGORY_GROUPS, PHASE2513_COLLECTION_TARGETS } from "./templateCatalog2513TemplateMegaLibrary";
 
-export { PHASE2518_TEMPLATES, PHASE2518_TEMPLATE_COUNT, PHASE2518_COUNTS_BY_SUBCATEGORY } from "./phase2518TemplateExpansion";
+export { PHASE2518_TEMPLATES, PHASE2518_TEMPLATE_COUNT, PHASE2518_COUNTS_BY_SUBCATEGORY } from "./templateCatalog2518TemplateExpansion";
 
-export { PHASE2519_TEMPLATES, PHASE2519_TEMPLATE_COUNT, PHASE2519_COUNTS_BY_SUBCATEGORY } from "./phase2519TemplateExpansion";
+export { PHASE2519_TEMPLATES, PHASE2519_TEMPLATE_COUNT, PHASE2519_COUNTS_BY_SUBCATEGORY } from "./templateCatalog2519TemplateExpansion";
 
-export { PHASE2525_TEMPLATES, PHASE2525_TEMPLATE_COUNT } from "./phase2525ProfessionalTemplateLibrary";
+export { PHASE2525_TEMPLATES, PHASE2525_TEMPLATE_COUNT } from "./templateCatalog2525ProfessionalTemplateLibrary";
 
-export { PHASE2526_TEMPLATES, PHASE2526_TEMPLATE_COUNT, PHASE2526_COUNTS_BY_SUBCATEGORY } from "./phase2526ProfessionalTemplateLibrary";
+export { PHASE2526_TEMPLATES, PHASE2526_TEMPLATE_COUNT, PHASE2526_COUNTS_BY_SUBCATEGORY } from "./templateCatalog2526ProfessionalTemplateLibrary";
 
-export { PHASE2527_TEMPLATES, PHASE2527_TEMPLATE_COUNT, PHASE2527_COUNTS_BY_SUBCATEGORY } from "./phase2527ProfessionalTemplateLibrary";
+export { PHASE2527_TEMPLATES, PHASE2527_TEMPLATE_COUNT, PHASE2527_COUNTS_BY_SUBCATEGORY } from "./templateCatalog2527ProfessionalTemplateLibrary";
 
-export { PHASE2529_TEMPLATES, PHASE2529_TEMPLATE_COUNT, PHASE2529_TARGET_PER_SUBCATEGORY, PHASE2529_COUNTS_BY_SUBCATEGORY, PHASE2529_SUBCATEGORY_COUNT } from "./phase2529CategoryCompletionLibrary";
+export { PHASE2529_TEMPLATES, PHASE2529_TEMPLATE_COUNT, PHASE2529_TARGET_PER_SUBCATEGORY, PHASE2529_COUNTS_BY_SUBCATEGORY, PHASE2529_SUBCATEGORY_COUNT } from "./templateCatalog2529CategoryCompletionLibrary";
 
-export { PHASE43_CATEGORIES, PHASE43_TEMPLATES, PHASE43_TEMPLATE_COUNT, searchPhase43Templates, phase43Audit } from "./phase43ProfessionalTemplateEcosystem";
+export { PHASE43_CATEGORIES, PHASE43_TEMPLATES, PHASE43_TEMPLATE_COUNT, searchPhase43Templates, phase43Audit } from "./templateCatalog43ProfessionalTemplateEcosystem";

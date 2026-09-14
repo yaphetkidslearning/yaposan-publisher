@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
-import { PHASE46_CAPABILITIES, PHASE46_PERFORMANCE_BUDGETS, getPhase46MetricStatus, phase46PerformanceScore, recordPhase46Measurement, type Phase46Measurement } from "../utils/phase46ProfessionalPerformanceEngine";
+import { PHASE46_CAPABILITIES, PHASE46_PERFORMANCE_BUDGETS, getPhase46MetricStatus, phase46PerformanceScore, recordPhase46Measurement, type Phase46Measurement } from "../utils/professionalPerformanceEngine";
 
 const INITIAL: Phase46Measurement[] = [
   recordPhase46Measurement("startup", 1460, "Warm application start"),
@@ -23,14 +23,14 @@ export default function PerformanceCenter() {
   return <SafeAreaView style={s.root}>
     <View style={s.top}>
       <Pressable onPress={() => router.back()} style={s.back}><Ionicons name="arrow-back" size={23} color="#0f172a" /></Pressable>
-      <View style={{ flex: 1 }}><Text style={s.title}>Professional Performance Engine</Text><Text style={s.sub}>Phase 46 · Rendering, caching, scheduling, history, and diagnostics</Text></View>
+      <View style={{ flex: 1 }}><Text style={s.title}>Professional Performance Engine</Text><Text style={s.sub}>Rendering, caching, scheduling, history, and diagnostics</Text></View>
       <Pressable onPress={rerun} style={s.button}><Ionicons name="speedometer-outline" size={17} color="#fff" /><Text style={s.buttonText}>Run diagnostic</Text></Pressable>
     </View>
     <ScrollView contentContainerStyle={s.content}>
       <View style={s.hero}><View><Text style={s.kicker}>CURRENT PERFORMANCE SCORE</Text><Text style={s.score}>{score}<Text style={s.scoreSmall}> / 100</Text></Text><Text style={s.heroText}>The score is calculated from measurable performance budgets. It does not claim GPU acceleration or production deployment without runtime evidence.</Text></View><Ionicons name="flash-outline" size={88} color="#f59e0b" /></View>
       <Text style={s.section}>Performance budgets</Text>
       <View style={s.grid}>{measurements.map((measurement) => { const budget = PHASE46_PERFORMANCE_BUDGETS.find((item) => item.metric === measurement.metric)!; const status = getPhase46MetricStatus(measurement); return <View key={measurement.metric} style={s.card}><View style={s.cardTop}><Ionicons name={status === "healthy" ? "checkmark-circle" : status === "warning" ? "warning" : "alert-circle"} size={22} color={status === "healthy" ? "#059669" : status === "warning" ? "#d97706" : "#dc2626"} /><Text style={s.cardTitle}>{budget.label}</Text></View><Text style={s.metric}>{measurement.durationMs} ms</Text><Text style={s.target}>Target ≤ {budget.targetMs} ms · Warning &gt; {budget.warningMs} ms</Text><Text style={s.detail}>{measurement.detail}</Text></View>; })}</View>
-      <Text style={s.section}>Phase 46 capabilities</Text>
+      <Text style={s.section}>capabilities</Text>
       <View style={s.list}>{PHASE46_CAPABILITIES.map((capability) => <View key={capability} style={s.listItem}><Ionicons name="checkmark" size={18} color="#0f766e" /><Text style={s.listText}>{capability}</Text></View>)}</View>
     </ScrollView>
   </SafeAreaView>;

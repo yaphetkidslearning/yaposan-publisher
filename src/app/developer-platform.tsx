@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { SafeAreaView, ScrollView, StyleSheet, Text, Pressable, View } from "react-native";
-import { PHASE51_PLUGIN_ENGINE, PHASE51_PLUGIN_ITEMS } from "../utils/phase51PluginPlatformEngine";
+import { PHASE51_PLUGIN_ENGINE, PHASE51_PLUGIN_ITEMS } from "../utils/pluginPlatformEngine";
 
 export default function DeveloperPlatform() {
   const router = useRouter();
   return <SafeAreaView style={styles.root}>
-    <View style={styles.header}><Pressable onPress={()=>router.back()} style={styles.back}><Ionicons name="arrow-back" size={22} color="#0f172a"/></Pressable><View><Text style={styles.title}>Plugin SDK & Developer Platform</Text><Text style={styles.subtitle}>Phase 51 · Extensible editor APIs, plugin lifecycle, starter extensions, and honest distribution gates</Text></View></View>
+    <View style={styles.header}><Pressable onPress={()=>router.back()} style={styles.back}><Ionicons name="arrow-back" size={22} color="#0f172a"/></Pressable><View><Text style={styles.title}>Plugin SDK & Developer Platform</Text><Text style={styles.subtitle}>Extensible editor APIs, plugin lifecycle, starter extensions, and honest distribution gates</Text></View></View>
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.hero}><Text style={styles.heroValue}>{PHASE51_PLUGIN_ENGINE.score}%</Text><View style={{flex:1}}><Text style={styles.heroTitle}>{PHASE51_PLUGIN_ENGINE.label}</Text><Text style={styles.heroText}>{PHASE51_PLUGIN_ENGINE.summary}</Text></View></View>
       {PHASE51_PLUGIN_ITEMS.map((item) => <View key={item.id} style={styles.card}><View style={styles.icon}><Ionicons name={item.icon} size={20} color="#ffffff"/></View><View style={{flex:1}}><Text style={styles.cardTitle}>{item.title}</Text><Text style={styles.cardText}>{item.description}</Text></View><View style={styles.badge}><Text style={styles.badgeText}>{item.status}</Text></View></View>)}

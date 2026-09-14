@@ -1,4 +1,0 @@
-import fs from 'node:fs'; import path from 'node:path';
-const root=path.join(process.cwd(),'docs'); const records=[];
-function walk(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){const full=path.join(dir,entry.name); if(entry.isDirectory()) walk(full); else if(entry.name.endsWith('.md')){const text=fs.readFileSync(full,'utf8'); records.push({id:path.relative(root,full).replace(/\\/g,'/'),title:(text.match(/^#\s+(.+)$/m)?.[1]??entry.name),keywords:[...new Set((text.toLowerCase().match(/[a-z][a-z0-9-]{3,}/g)??[]))].slice(0,100)});}}}
-walk(root); fs.mkdirSync(path.join(process.cwd(),'release'),{recursive:true}); fs.writeFileSync(path.join(process.cwd(),'release','phase24i-help-index.json'),JSON.stringify({generatedAt:new Date().toISOString(),documents:records},null,2)); console.log(`Indexed ${records.length} help documents.`);

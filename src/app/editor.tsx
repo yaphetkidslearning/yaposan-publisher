@@ -41,7 +41,7 @@ import LayoutCompletionManagerModal from "../components/publisher/LayoutCompleti
 import PrepressManagerModal from "../components/publisher/PrepressManagerModal";
 import MailMergeManagerModal from "../components/publisher/MailMergeManagerModal";
 import DataVisualizationManagerModal from "../components/publisher/DataVisualizationManagerModal";
-import Phase15FinalManagerModal from "../components/publisher/Phase15FinalManagerModal";
+import FinalManagerModal from "../components/publisher/FinalManagerModal";
 import ProfessionalVectorManagerModal from "../components/publisher/ProfessionalVectorManagerModal";
 import PaintingStudioModal from "../components/publisher/PaintingStudioModal";
 import RetouchStudioModal from "../components/publisher/RetouchStudioModal";
@@ -61,7 +61,7 @@ import ProfessionalPublishingAnalyticsModal from "../components/publisher/Profes
 import ProfessionalEnterpriseIntegrationModal from "../components/publisher/ProfessionalEnterpriseIntegrationModal";
 import ProfessionalEnterpriseSecurityModal from "../components/publisher/ProfessionalEnterpriseSecurityModal";
 import ProfessionalEnterpriseOperationsModal from "../components/publisher/ProfessionalEnterpriseOperationsModal";
-import ProfessionalPhase25CertificationModal from "../components/publisher/ProfessionalPhase25CertificationModal";
+import ProfessionalCertificationModal from "../components/publisher/ProfessionalCertificationModal";
 import AnimationExportModal from "../components/publisher/AnimationExportModal";
 import CollaborationReviewModal from "../components/publisher/CollaborationReviewModal";
 import CollaborationVersionControlModal from "../components/publisher/CollaborationVersionControlModal";
@@ -70,7 +70,7 @@ import DesktopPackagingCenterModal from "../components/publisher/DesktopPackagin
 import DesktopUpdateCenterModal from "../components/publisher/DesktopUpdateCenterModal";
 import TelemetryDiagnosticsCenterModal from "../components/publisher/TelemetryDiagnosticsCenterModal";
 import CommercialReleaseCompletionModal from "../components/publisher/CommercialReleaseCompletionModal";
-import Phase20CompletionModal from "../components/publisher/Phase20CompletionModal";
+import CompletionModal from "../components/publisher/CompletionModal";
 import DocumentFoundationModal from "../components/publisher/DocumentFoundationModal";
 import DocumentStylesModal from "../components/publisher/DocumentStylesModal";
 import DocumentReferencesModal from "../components/publisher/DocumentReferencesModal";
@@ -83,15 +83,15 @@ import { addAnimationToElement, copyElementAnimations, createElementAnimation, D
 import { exportDigitalEditorRuntimeReport, normalizeDigitalPublishingEditorIntegration, updateDigitalPublishingEditorState } from "../utils/digitalPublishingEditorIntegrationEngine";
 import { createFullFidelityWebsiteZip, normalizeFullFidelityWebRuntime } from "../utils/fullFidelityWebRuntimeEngine";
 import { addInteractionToElement, createInteractionRuntime, getInteractiveSettings, removeElementInteraction, setPageTransition, updateElementInteraction, type ElementInteraction, type InteractiveProjectSettings, type PageTransition } from "../utils/interactivePublishingEngine";
-// Phase 19.6 performs full-fidelity asset-aware animation and media exports.
-// Legacy Phase 19.3 integration marker: buildAnimationExportPackage.
+// performs full-fidelity asset-aware animation and media exports.
+// Legacy integration marker: buildAnimationExportPackage.
 import { DEFAULT_ANIMATION_EXPORT_SETTINGS, performAnimationExport, type AnimationExportSettings } from "../utils/animationExportEngine";
 import { applyChangeSet, archiveBranch, createBranch, createChangeSet, createProjectVersion, exportPhase23Report, getPhase23State, mergeBranch, parseChangeSet, promoteBranch, restoreProjectVersion, revokeBranchApproval, saveActiveBranch, serializeChangeSet, storePhase23Certification, submitBranchApproval, switchBranch, withPhase23State, type ApprovalDecision, type ApprovalRole, type ProjectVersion, type ReleaseChannel } from "../utils/collaborationVersionControlEngine";
 import { exportPlatformReleaseCertification } from "../utils/platformReleaseCertificationEngine";
 import { exportDesktopPackagingCertification } from "../utils/desktopPackagingEngine";
 import { addReviewComment, addReviewMember, addWorkflowTask, advanceWorkflowStage, createReviewSnapshot, exportReviewReport, getCollaborationReviewState, replyToReviewComment, setReviewApproval, setReviewCommentStatus, setReviewPolicy, setWorkflowPolicy, updateReviewComment, updateReviewMember, updateWorkflowTask, withReviewState, type ReviewPriority, type ReviewRole } from "../utils/collaborationReviewEngine";
-import { archivePhase203Release, certifyPhase203Release, exportPhase203CompletionReport, runPhase203Automation, setPhase203Automation } from "../utils/phase203CompletionEngine";
-import { certifyPhase204, exportPhase204Audit, repairPhase204Issues, runPhase204Audit, storePhase204Audit } from "../utils/phase204AuditEngine";
+import { archivePhase203Release, certifyPhase203Release, exportPhase203CompletionReport, runPhase203Automation, setPhase203Automation } from "../utils/workflowCompletionEngine";
+import { certifyPhase204, exportPhase204Audit, repairPhase204Issues, runPhase204Audit, storePhase204Audit } from "../utils/workflowAuditEngine";
 import { addDocumentSection, buildPageNumberMap, calculateDocumentStatistics, deleteDocumentSection, moveDocumentSection, movePageToSection, normalizeDocumentFoundation, updateDocumentSection, updateDocumentSettings } from "../utils/documentFoundationEngine";
 import { addDocumentStyle, applyDocumentStyle, clearDocumentStyle, deleteDocumentStyle, duplicateDocumentStyle, exportDocumentStyles, updateDocumentStyle } from "../utils/documentStyleEngine";
 import { addBookmark, addCrossReference, addIndexEntry, addNote, deleteBookmark, deleteCrossReference, deleteIndexEntry, deleteNote, exportDocumentReferences } from "../utils/documentReferenceEngine";
@@ -174,7 +174,7 @@ import { addTableColumn, addTableRow, createTableElement, csvToTable, deleteTabl
 import { runAiWriting } from "../services/aiService";
 import { applyMergeRecord } from "../services/mergeFieldService";
 import { loadCreationProject } from "../services/creationProjectStore";
-import { creationToPublisherProject } from "../services/phase9112StudioAdapters";
+import { creationToPublisherProject } from "../services/studioAdapters";
 import type { AiPresetPrompt, AiPromptRecord, AiWritingAction, MergeDataRecord } from "../types/aiWriting";
 import { loadAiHistory, loadSavedPrompts, saveAiHistory, saveSavedPrompts } from "../utils/aiWritingStorage";
 import { addEmbeddedFont, discoverLocalFonts, fontReplacementCandidates, loadDiscoveredLocalFonts, loadFontFavorites, loadRecentFonts, rememberRecentFont, removeEmbeddedFont, saveDiscoveredLocalFonts, saveFontFavorites } from "../utils/typographyManager";
@@ -353,7 +353,7 @@ export default function EditorScreen() {
   const recoveryDecisionRef = useRef<((restore: boolean) => void) | null>(null);
 
   const [loading, setLoading] = useState(true);
-  // Phase 24.0Z4: recovery popups removed. Autosave continues silently without interrupting startup.
+  // 4: recovery popups removed. Autosave continues silently without interrupting startup.
   const recoveryPrompt = null;
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -363,7 +363,7 @@ export default function EditorScreen() {
   const requestRecoveryDecision = useCallback((_projectName: string) => Promise.resolve(false), []);
   const finishRecoveryDecision = useCallback((_restore: boolean) => undefined, []);
   const [project, setProject] = useState<PublisherProject>({ ...initialProject, animationSettings: DEFAULT_ANIMATION_PROJECT_SETTINGS, phase19Version: "19.2" });
-  // Phase 9.7: React project state is the single rendering source of truth.
+  // React project state is the single rendering source of truth.
   // projectRef mirrors it only for async callbacks, autosave, and recovery.
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<RibbonTab>("Home");
@@ -520,7 +520,7 @@ export default function EditorScreen() {
   );
   const selectedElement = selectedElements[0] ?? null;
 
-  // Phase 9.1 regression guard: recovered, replaced, duplicated, or switched
+  // regression guard: recovered, replaced, duplicated, or switched
   // projects can invalidate the previous selection IDs. Keeping stale IDs made
   // the status bar report a selection while the Properties panel and ribbon
   // had no real selected object, leaving contextual commands disabled.
@@ -720,7 +720,8 @@ export default function EditorScreen() {
 
   useEffect(() => navigation.addListener("beforeRemove", (event) => {
     if (!isDirty || bypassLeaveGuardRef.current) return;
-    event.preventDefault();
+    const preventDefault = (event as { preventDefault?: () => void }).preventDefault;
+    preventDefault?.();
     confirmLeave(() => navigation.dispatch(event.data.action));
   }), [confirmLeave, isDirty, navigation]);
 
@@ -2610,7 +2611,7 @@ A local recovery copy is still stored in this browser.`);
         projectName={project.name}
         onClose={() => setShowEnterpriseOperations(false)}
       />
-      <ProfessionalPhase25CertificationModal
+      <ProfessionalCertificationModal
         visible={showPhase25Certification}
         projectName={project.name}
         onClose={() => setShowPhase25Certification(false)}
@@ -2629,7 +2630,7 @@ A local recovery copy is still stored in this browser.`);
         onChange={(updates) => setProject((current) => updateDigitalPublishingEditorState(current, updates))}
         onExportReport={() => {
           const report = exportDigitalEditorRuntimeReport(project);
-          void exportTextFile(report, `${safeFileName(project.name)}-phase22.5-runtime-report.json`, "application/json");
+          void exportTextFile(report, `${safeFileName(project.name)}-digital-publishing-runtime-report.json`, "application/json");
           showEditorNotice("Digital publishing runtime report exported");
         }}
         onExportWebsite={() => {
@@ -2668,10 +2669,10 @@ A local recovery copy is still stored in this browser.`);
         onClose={() => setShowCollaborationVersionControl(false)}
         onCreateVersion={(label, author, note) => { setProject((current) => withPhase23State(current, createProjectVersion(current, label, author, note))); showEditorNotice("Immutable project version created"); }}
         onRestore={(version: ProjectVersion) => { pushHistory(); setProject((current) => restoreProjectVersion(current, version)); showEditorNotice(`Restored ${version.label}`); }}
-        onExportChangeSet={(baseVersionId, note) => { try { const set = createChangeSet(project, baseVersionId, "Project Owner", note); void exportTextFile(serializeChangeSet(set), `${safeFileName(project.name)}-phase23-changeset.json`, "application/json"); showEditorNotice(`Exported ${set.changes.length} changes`); } catch (error) { Alert.alert("Change-set export failed", error instanceof Error ? error.message : String(error)); } }}
+        onExportChangeSet={(baseVersionId, note) => { try { const set = createChangeSet(project, baseVersionId, "Project Owner", note); void exportTextFile(serializeChangeSet(set), `${safeFileName(project.name)}-changeset.json`, "application/json"); showEditorNotice(`Exported ${set.changes.length} changes`); } catch (error) { Alert.alert("Change-set export failed", error instanceof Error ? error.message : String(error)); } }}
         onImportChangeSet={() => { void (async () => { try { const result = await DocumentPicker.getDocumentAsync({ type: "application/json", copyToCacheDirectory: true }); if (result.canceled || !result.assets[0]) return; const file = new ExpoFile(result.assets[0].uri); const source = await file.text(); const set = parseChangeSet(source); const merged = applyChangeSet(project, set, "incoming"); pushHistory(); setProject(merged.project); showEditorNotice(`Merged change set with ${merged.conflicts.length} resolved conflict(s)`); } catch (error) { Alert.alert("Change-set import failed", error instanceof Error ? error.message : String(error)); } })(); }}
         onCertify={() => { setProject((current) => storePhase23Certification(current)); const certification = getPhase23State(storePhase23Certification(project)).lastCertification; showEditorNotice(certification?.passed ? `Version workspace certified at ${certification.score}%` : `Version certification found ${certification?.issues.length ?? 0} issue(s)`); }}
-        onExportReport={() => { void exportTextFile(exportPhase23Report(project), `${safeFileName(project.name)}-phase23-certification.json`, "application/json"); showEditorNotice("Version certification report exported"); }}
+        onExportReport={() => { void exportTextFile(exportPhase23Report(project), `${safeFileName(project.name)}-version-certification.json`, "application/json"); showEditorNotice("Version certification report exported"); }}
         onCreateBranch={(name: string, author: string, description: string, baseVersionId?: string, channel?: ReleaseChannel) => { try { setProject((current) => createBranch(current, name, author, description, baseVersionId, channel)); showEditorNotice(`Branch ${name} created`); } catch (error) { Alert.alert("Branch creation failed", error instanceof Error ? error.message : String(error)); } }}
         onSwitchBranch={(branchId: string) => { try { pushHistory(); setProject((current) => switchBranch(current, branchId)); showEditorNotice("Branch workspace switched"); } catch (error) { Alert.alert("Branch switch failed", error instanceof Error ? error.message : String(error)); } }}
         onSaveBranch={() => { setProject((current) => saveActiveBranch(current)); showEditorNotice("Active branch snapshot saved"); }}
@@ -2748,7 +2749,7 @@ A local recovery copy is still stored in this browser.`);
         onMovePage={(pageId, sectionId) => { pushHistory(); setProject(current => movePageToSection(current, pageId, sectionId)); showEditorNotice("Page moved to section"); }}
         onSettings={(viewMode, metadata) => { pushHistory(); setProject(current => updateDocumentSettings(current, { viewMode, metadata: { ...normalizeDocumentFoundation(current).documentFoundation!.metadata, ...metadata } })); }}
         onNavigate={(pageId, elementId) => { setProject(current => ({ ...current, activePageId: pageId })); setSelectedElementIds(elementId ? [elementId] : []); showEditorNotice(elementId ? "Opened document object" : "Opened document page"); }}
-        onExportReport={() => { const normalized = normalizeDocumentFoundation(project); const report = { phase: "21.0", generatedAt: new Date().toISOString(), projectId: project.id, projectName: project.name, document: normalized.documentFoundation, pageNumbers: buildPageNumberMap(normalized), statistics: calculateDocumentStatistics(normalized) }; void exportTextFile(JSON.stringify(report, null, 2), `${safeFileName(project.name)}-phase21.0-document-report.json`, "application/json"); }}
+        onExportReport={() => { const normalized = normalizeDocumentFoundation(project); const report = { reportVersion: "1.0", generatedAt: new Date().toISOString(), projectId: project.id, projectName: project.name, document: normalized.documentFoundation, pageNumbers: buildPageNumberMap(normalized), statistics: calculateDocumentStatistics(normalized) }; void exportTextFile(JSON.stringify(report, null, 2), `${safeFileName(project.name)}-document-report.json`, "application/json"); }}
       />
       <DocumentStylesModal
         visible={showDocumentStyles}
@@ -2761,7 +2762,7 @@ A local recovery copy is still stored in this browser.`);
         onDelete={(id) => { try { pushHistory(); setProject(current => deleteDocumentStyle(current, id)); showEditorNotice("Style deleted"); } catch (error) { Alert.alert("Cannot delete style", error instanceof Error ? error.message : String(error)); } }}
         onApply={(id) => { pushHistory(); setProject(current => applyDocumentStyle(current, id, selectedElementIds)); showEditorNotice("Style applied to selection"); }}
         onClear={() => { pushHistory(); setProject(current => clearDocumentStyle(current, selectedElementIds)); showEditorNotice("Style link cleared"); }}
-        onExport={() => void exportTextFile(exportDocumentStyles(project), `${safeFileName(project.name)}-phase21.1-styles.json`, "application/json")}
+        onExport={() => void exportTextFile(exportDocumentStyles(project), `${safeFileName(project.name)}-document-styles.json`, "application/json")}
       />
       <DocumentReferencesModal
         visible={showDocumentReferences}
@@ -2778,7 +2779,7 @@ A local recovery copy is still stored in this browser.`);
         onCrossReference={(label, targetKind, targetId) => { if (!targetId.trim()) return; pushHistory(); setProject(current => { const referenced = addCrossReference(current, { label: label.trim() || targetId, sourcePageId: current.activePageId, sourceElementId: selectedElementIds[0], targetKind, targetId, displayMode: "label" }); if (targetKind !== "url" || !selectedElementIds.length) return referenced; const ids = new Set(selectedElementIds); return { ...referenced, pages: referenced.pages.map(page => ({ ...page, elements: page.elements.map(element => ids.has(element.id) ? { ...element, hyperlink: targetId } : element) })) }; }); showEditorNotice(targetKind === "url" ? "Hyperlink added" : "Cross-reference added"); }}
         onDeleteCrossReference={(id) => { pushHistory(); setProject(current => deleteCrossReference(current, id)); }}
         onNavigate={(pageId, elementId) => { setProject(current => ({ ...current, activePageId: pageId })); setSelectedElementIds(elementId ? [elementId] : []); }}
-        onExport={() => void exportTextFile(exportDocumentReferences(project), `${safeFileName(project.name)}-phase21.2-references.json`, "application/json")}
+        onExport={() => void exportTextFile(exportDocumentReferences(project), `${safeFileName(project.name)}-document-references.json`, "application/json")}
       />
       <DocumentVariablesModal
         visible={showDocumentVariables}
@@ -2794,7 +2795,7 @@ A local recovery copy is still stored in this browser.`);
         onToggleRule={(id, enabled) => { pushHistory(); setProject(current => updateRunningContentRule(current, id, { enabled })); }}
         onDeleteRule={(id) => { pushHistory(); setProject(current => deleteRunningContentRule(current, id)); }}
         onResolveSelection={() => { if (!selectedElementIds.length) return; pushHistory(); const ids = new Set(selectedElementIds); setProject(current => ({ ...current, pages: current.pages.map(page => ({ ...page, elements: page.elements.map(element => ids.has(element.id) && element.type === "text" && element.text ? { ...element, text: resolveSmartContent(current, element.text, { pageId: page.id, elementId: element.id }) } : element) })) })); showEditorNotice("Smart content resolved"); }}
-        onExport={() => void exportTextFile(exportDocumentVariables(project), `${safeFileName(project.name)}-phase21.3-smart-content.json`, "application/json")}
+        onExport={() => void exportTextFile(exportDocumentVariables(project), `${safeFileName(project.name)}-smart-content.json`, "application/json")}
       />
       <PublicationCompletionModal
         visible={showPublicationCompletion}
@@ -2806,10 +2807,10 @@ A local recovery copy is still stored in this browser.`);
         onOptimize={() => { pushHistory(); setProject(current => optimizePublication(current)); showEditorNotice("Publication optimized"); }}
         onCertify={() => { pushHistory(); setProject(current => certifyPublication(current)); showEditorNotice("Publication certification completed"); }}
         onNavigate={(pageId, elementId) => { setProject(current => ({ ...current, activePageId: pageId })); setSelectedElementIds(elementId ? [elementId] : []); }}
-        onExportJson={() => void exportTextFile(exportProductionReport(project, "json"), `${safeFileName(project.name)}-phase21.4-production-report.json`, "application/json")}
-        onExportText={() => void exportTextFile(exportProductionReport(project, "txt"), `${safeFileName(project.name)}-phase21.4-production-report.txt`, "text/plain")}
+        onExportJson={() => void exportTextFile(exportProductionReport(project, "json"), `${safeFileName(project.name)}-production-report.json`, "application/json")}
+        onExportText={() => void exportTextFile(exportProductionReport(project, "txt"), `${safeFileName(project.name)}-production-report.txt`, "text/plain")}
       />
-      <Phase20CompletionModal
+      <CompletionModal
         visible={showPhase20Completion}
         project={project}
         state={getCollaborationReviewState(project)}
@@ -2824,11 +2825,11 @@ A local recovery copy is still stored in this browser.`);
           }
         }}
         onArchive={(releaseId) => setProject((current) => withReviewState(current, archivePhase203Release(getCollaborationReviewState(current), releaseId)))}
-        onExport={() => void exportTextFile(exportPhase203CompletionReport(project, getCollaborationReviewState(project)), `${safeFileName(project.name)}-phase20.3-completion.json`, "application/json")}
+        onExport={() => void exportTextFile(exportPhase203CompletionReport(project, getCollaborationReviewState(project)), `${safeFileName(project.name)}-collaboration-completion.json`, "application/json")}
         onRunAudit={() => { setProject((current) => withReviewState(current, storePhase204Audit(getCollaborationReviewState(current), runPhase204Audit(current, getCollaborationReviewState(current))))); showEditorNotice("Final collaboration audit completed"); }}
         onRepairAudit={() => { setProject((current) => withReviewState(current, repairPhase204Issues(current, getCollaborationReviewState(current)))); showEditorNotice("Recoverable audit issues repaired"); }}
         onCertifyAudit={() => { try { setProject((current) => withReviewState(current, certifyPhase204(current, getCollaborationReviewState(current)))); showEditorNotice("Collaboration audit certificate issued"); } catch (error) { Alert.alert("Final certification blocked", error instanceof Error ? error.message : String(error)); } }}
-        onExportAudit={() => void exportTextFile(exportPhase204Audit(project, getCollaborationReviewState(project)), `${safeFileName(project.name)}-phase20.4-audit.json`, "application/json")}
+        onExportAudit={() => void exportTextFile(exportPhase204Audit(project, getCollaborationReviewState(project)), `${safeFileName(project.name)}-collaboration-audit.json`, "application/json")}
         onClose={() => setShowPhase20Completion(false)}
       />
       <ProfessionalRasterManagerModal
@@ -2932,7 +2933,7 @@ A local recovery copy is still stored in this browser.`);
         onMovePage={moveActivePageInSpread}
         onClose={() => setShowLayoutCompletion(false)}
       />
-      <Phase15FinalManagerModal
+      <FinalManagerModal
         visible={showPhase15FinalManager}
         project={project}
         selectedElement={selectedElement}

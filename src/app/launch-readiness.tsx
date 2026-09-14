@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { DEFAULT_READINESS_CHECKS, PHASE35_MODULES, createIncident, readinessScore, updateReadiness, type Incident, type ReadinessCheck, type ReadinessStatus } from "../utils/phase35LaunchReadinessEngine";
+import { DEFAULT_READINESS_CHECKS, PHASE35_MODULES, createIncident, readinessScore, updateReadiness, type Incident, type ReadinessCheck, type ReadinessStatus } from "../utils/launchReadinessEngine";
 
 const CHECK_KEY = "yaposan.phase35.readiness";
 const INCIDENT_KEY = "yaposan.phase35.incidents";
@@ -20,11 +20,11 @@ export default function LaunchReadinessScreen() {
   const modules = useMemo(() => PHASE35_MODULES.filter(m => `${m.id} ${m.title} ${m.description} ${m.features.join(" ")}`.toLowerCase().includes(query.toLowerCase())), [query]);
   const selected = PHASE35_MODULES.find(m => m.id === active) ?? PHASE35_MODULES[0];
   const selectedCheck = checks.find(c => c.moduleId === selected.id)!;
-  const setStatus = (status: ReadinessStatus) => setChecks(current => current.map(c => c.moduleId === selected.id ? updateReadiness(c, status, status === "passed" ? "Validated in Phase 35 workspace" : undefined) : c));
+  const setStatus = (status: ReadinessStatus) => setChecks(current => current.map(c => c.moduleId === selected.id ? updateReadiness(c, status, status === "passed" ? "Validated in workspace" : undefined) : c));
   const score = readinessScore(checks);
   return <SafeAreaView style={styles.safe}><View style={styles.shell}>
-    <View style={styles.header}><Pressable onPress={() => router.back()} style={styles.iconButton}><Ionicons name="arrow-back" size={21} color="#dcfce7" /></Pressable><View style={{flex:1}}><Text style={styles.eyebrow}>YAPOSAN PHASE 35.0</Text><Text style={styles.title}>Launch Readiness & Platform Completion</Text><Text style={styles.subtitle}>Packages 35.0–35.12 close the operational, governance and certification gaps.</Text></View><View style={styles.score}><Text style={styles.scoreValue}>{score}%</Text><Text style={styles.scoreLabel}>READY</Text></View></View>
-    <View style={styles.body}><View style={styles.sidebar}><TextInput value={query} onChangeText={setQuery} placeholder="Search Phase 35" placeholderTextColor="#64748b" style={styles.search}/><ScrollView>{modules.map(m => <Pressable key={m.id} onPress={() => setActive(m.id)} style={[styles.moduleButton, active === m.id && styles.moduleButtonActive]}><Text style={styles.moduleId}>{m.id}</Text><Text style={styles.moduleTitle}>{m.title}</Text></Pressable>)}</ScrollView></View>
+    <View style={styles.header}><Pressable onPress={() => router.back()} style={styles.iconButton}><Ionicons name="arrow-back" size={21} color="#dcfce7" /></Pressable><View style={{flex:1}}><Text style={styles.eyebrow}>YAPOSAN</Text><Text style={styles.title}>Launch Readiness & Platform Completion</Text><Text style={styles.subtitle}>Packages 35.0–35.12 close the operational, governance and certification gaps.</Text></View><View style={styles.score}><Text style={styles.scoreValue}>{score}%</Text><Text style={styles.scoreLabel}>READY</Text></View></View>
+    <View style={styles.body}><View style={styles.sidebar}><TextInput value={query} onChangeText={setQuery} placeholder="Search " placeholderTextColor="#64748b" style={styles.search}/><ScrollView>{modules.map(m => <Pressable key={m.id} onPress={() => setActive(m.id)} style={[styles.moduleButton, active === m.id && styles.moduleButtonActive]}><Text style={styles.moduleId}>{m.id}</Text><Text style={styles.moduleTitle}>{m.title}</Text></Pressable>)}</ScrollView></View>
       <ScrollView style={styles.main} contentContainerStyle={styles.content}>
         <View style={styles.hero}><View style={{flex:1}}><Text style={styles.heroId}>PACKAGE {selected.id}</Text><Text style={styles.heroTitle}>{selected.title}</Text><Text style={styles.heroText}>{selected.description}</Text></View><View style={styles.statusPill}><Text style={styles.statusText}>{selectedCheck.status.toUpperCase()}</Text></View></View>
         <View style={styles.actions}>{(["not-started","in-progress","blocked","passed"] as ReadinessStatus[]).map(status => <Pressable key={status} onPress={() => setStatus(status)} style={styles.action}><Text style={styles.actionText}>{status.replace("-", " ")}</Text></Pressable>)}</View>

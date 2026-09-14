@@ -1,9 +1,0 @@
-{
-  "schema": "yaposan.phase24.0a.installer-manifest",
-  "version": 1,
-  "generatedAt": "2026-07-27T17:37:48.959Z",
-  "product": "Yaposan Publisher",
-  "releaseVersion": "1.0.0",
-  "artifacts": [],
-  "complete": false
-}

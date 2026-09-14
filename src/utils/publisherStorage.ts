@@ -2,8 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import { createBlankProject } from "../constants/publisher";
 import type { PublisherPage, PublisherProject, PublisherProjectVersion, SavedProjectSummary } from "../types/publisher";
-import { analyzeProjectIntegrity } from "./projectPhase8DManager";
-import { scanLinkedAssets } from "./projectProfessionalManager";
+import { analyzeProjectIntegrity } from "./projectFileManager";
+import { scanLinkedAssets } from "./projectAssetScanner";
 
 const CURRENT_PROJECT_KEY = "yaposan.publisher.phase2.current";
 const PROJECT_INDEX_KEY = "yaposan.publisher.phase8.index";

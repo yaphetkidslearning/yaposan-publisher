@@ -42,7 +42,7 @@ export default function MarketplaceScreen() {
       }
     }
     zip.file("IMAGE-REPORT.txt", imageReport.join("\n") || "No product images were attached.");
-    zip.file("README.txt", "Yaposan Phase 17.19 Commerce Package\nContains CSV, JSON, validation data, and product image files when the source URI is readable.\n");
+    zip.file("README.txt", "YAPOSAN Commerce Package\nContains CSV, JSON, validation data, and product image files when the source URI is readable.\n");
     const data = await zip.generateAsync({ type: "blob" }); download("yaposan-commerce-package.zip", data, "application/zip"); setNotice("Commerce ZIP package exported with image report.");
   };
   const importJson = () => {

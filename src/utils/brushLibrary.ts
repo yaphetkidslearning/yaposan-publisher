@@ -56,7 +56,7 @@ export function createCustomBrush(name: string, settings: PaintingSettings, cate
     presetId: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     category,
     custom: true,
-    description: "Custom Phase 18.1 brush preset",
+    description: "Custom brush preset",
     tags: [normalized.tip, normalized.texture, "custom"],
   };
 }

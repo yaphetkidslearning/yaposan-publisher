@@ -11,7 +11,7 @@ export default function ProfessionalPublishingAnalyticsModal({ visible, projectN
   const report = useMemo(() => generatePublishingAnalyticsReport(DEFAULT_PUBLISHING_ANALYTICS_WORKSPACE, range), [range]);
   return <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
     <View style={styles.root}>
-      <View style={styles.header}><View><Text style={styles.title}>Professional Publishing Analytics</Text><Text style={styles.subtitle}>{projectName} · Phase 25.7</Text></View><Pressable onPress={onClose} style={styles.close}><Ionicons name="close" size={22} color="#fff" /></Pressable></View>
+      <View style={styles.header}><View><Text style={styles.title}>Professional Publishing Analytics</Text><Text style={styles.subtitle}>{projectName} · </Text></View><Pressable onPress={onClose} style={styles.close}><Ionicons name="close" size={22} color="#fff" /></Pressable></View>
       <View style={styles.rangeRow}>{ranges.map((item) => <Pressable key={item} onPress={() => setRange(item)} style={[styles.range, range === item && styles.rangeActive]}><Text style={[styles.rangeText, range === item && styles.rangeTextActive]}>{item.toUpperCase()}</Text></Pressable>)}</View>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}><View><Text style={styles.eyebrow}>PUBLISHING HEALTH</Text><Text style={styles.score}>{report.score}</Text><Text style={styles.scoreCaption}>Analytics readiness score</Text></View><Ionicons name="analytics" size={66} color="#60a5fa" /></View>

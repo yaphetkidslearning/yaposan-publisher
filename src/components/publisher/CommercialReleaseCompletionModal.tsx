@@ -24,7 +24,7 @@ export default function CommercialReleaseCompletionModal({ visible, project, onC
 
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
     <View style={styles.overlay}><View style={styles.card}>
-      <View style={styles.header}><View><Text style={styles.title}>Commercial Release Center</Text><Text style={styles.subtitle}>Phase 24.0D-H · Licensing, testing, documentation, security and performance</Text></View><Pressable onPress={onClose}><Text style={styles.close}>Close</Text></Pressable></View>
+      <View style={styles.header}><View><Text style={styles.title}>Commercial Release Center</Text><Text style={styles.subtitle}>Licensing, testing, documentation, security and performance</Text></View><Pressable onPress={onClose}><Text style={styles.close}>Close</Text></Pressable></View>
       <View style={styles.tabs}>{(["Licensing", "E2E Tests", "Documentation", "Security", "Performance"] as Tab[]).map((t) => <Pressable key={t} onPress={() => setTab(t)} style={[styles.tab, tab === t && styles.tabActive]}><Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t}</Text></Pressable>)}</View>
       <ScrollView style={styles.body} contentContainerStyle={styles.content}>
         {tab === "Licensing" && <>

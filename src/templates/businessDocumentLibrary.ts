@@ -52,7 +52,7 @@ function pageElements(spec: Spec, id: string, variant: number): PublisherElement
 function makeTemplate(spec: Spec, index: number): ProfessionalTemplate {
   const serial = index + 1;
   const id = `${spec.key}-${String(serial).padStart(3, "0")}`;
-  const page: PublisherPage = { id: `${id}-page-1`, name: "Page 1", width: spec.width, height: spec.height, orientation: spec.orientation, sizeKey: spec.pageSize.toLowerCase().replace(/\s+/g, "-"), backgroundColor: palettes[index % palettes.length][1], margin: 36, bleed: DEFAULT_BLEED, elements: pageElements(spec, id, index) };
+  const page: PublisherPage = { id: `${id}-page-1`, name: "Page 1", width: spec.width, height: spec.height, orientation: spec.orientation, sizeKey: "custom", backgroundColor: palettes[index % palettes.length][1], margin: 36, bleed: DEFAULT_BLEED, elements: pageElements(spec, id, index) };
   return { metadata: { id, name: `${palettes[index % palettes.length][0]} ${spec.name} ${serial}`, category: spec.category, subcategory: spec.subcategory, industry: "Business", description: `Fully editable ${spec.name.toLowerCase()} template with smart placeholders, theme colors, logo, QR code, and print-ready layout.`, tags: [spec.key, "editable", "business", "print", "smart placeholders"], pageSize: spec.pageSize, orientation: spec.orientation, previewColor: palettes[index % palettes.length][2], author: "Yaposan", version: "24.2.3", editable: true, featured: serial <= 10, trending: serial % 11 === 0, access: serial % 5 === 0 ? "premium" : "free", createdAt: NOW, updatedAt: NOW, themeId: palettes[index % palettes.length][0].toLowerCase(), supportedThemeIds: ["corporate-blue", "modern-dark", "luxury-gold", "minimal-white"] }, pages: [page] };
 }
 

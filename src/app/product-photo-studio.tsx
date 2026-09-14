@@ -89,7 +89,7 @@ export default function ProductPhotoStudio(){
     if(!isAuthenticated||running)return; setRunning(true);
     try{
       const queue=items.filter(x=>!["pass"].includes(x.status));
-      // legacy baseline concurrency=3; Phase 91.7 replaces this with bounded adjustable workers.
+      // legacy baseline concurrency=3; replaces this with bounded adjustable workers.
       const concurrency=Math.max(2,Math.min(12,batchConcurrency));
       let batchTarget:{luma:number;rgb:number[]}|undefined;
       if(normalizeBatch&&queue.length){
@@ -122,13 +122,13 @@ export default function ProductPhotoStudio(){
       const ext=outputFormat==="jpeg"?"jpg":outputFormat;
       zip.file(item.name.replace(/\.[^.]+$/,"")+`-yaposan.${ext}`,match[2],{base64:true});
     }
-    zip.file("YAPOSAN-BATCH-README.txt",`Yaposan 91.7 batch export\nImages: ${ready.length}\nPure white mode: ${strictWhite&&background==="white"?"ON (#FFFFFF audited)":"OFF"}\n`);
+    zip.file("YAPOSAN-BATCH-README.txt",`Yaposan batch export\nImages: ${ready.length}\nPure white mode: ${strictWhite&&background==="white"?"ON (#FFFFFF audited)":"OFF"}\n`);
     const blob=await zip.generateAsync({type:"blob"});
     const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`yaposan-product-photos-${Date.now()}.zip`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
 
   return <SafeAreaView style={s.safe}>
-    <View style={s.header}><View><Text style={s.eyebrow}>YAPOSAN 91.8 · DURABLE PURE-WHITE BATCH ENGINE</Text><Text style={s.title}>Yaposan Product Photo Studio</Text><Text style={s.sub}>Durable server batches · exact #FFFFFF certification · resume/recovery · up to 500 photos · hard $0 paid-API default</Text></View><Link href="/photo-studio" asChild><Pressable style={s.secondary}><Ionicons name="images-outline" size={17}/><Text style={s.secondaryText}>Photo Studio</Text></Pressable></Link></View>
+    <View style={s.header}><View><Text style={s.eyebrow}>YAPOSAN · PRODUCT PHOTO ENGINE</Text><Text style={s.title}>Yaposan Product Photo Studio</Text><Text style={s.sub}>Durable server batches · exact #FFFFFF certification · resume/recovery · up to 500 photos · hard $0 paid-API default</Text></View><Link href="/photo-studio" asChild><Pressable style={s.secondary}><Ionicons name="images-outline" size={17}/><Text style={s.secondaryText}>Photo Studio</Text></Pressable></Link></View>
     <ScrollView contentContainerStyle={s.content}>
       <View style={s.notice}><Ionicons name="shield-checkmark-outline" size={22} color="#075985"/><View style={{flex:1}}><Text style={s.noticeTitle}>No surprise API bill</Text><Text style={s.noticeText}>91.8 keeps paid per-image fallback disabled by default. Advanced matting, candidate selection, catalog normalization, retries, duplicate detection, and high-resolution processing run on the organization-controlled Yaposan service. Competitive-quality claims still require a real benchmark.</Text></View></View>
       <View style={s.controls}>

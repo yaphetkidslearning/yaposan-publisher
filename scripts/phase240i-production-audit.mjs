@@ -1,4 +1,0 @@
-import fs from 'node:fs';
-const required=['src/utils/phase240iProductionHardeningEngine.ts','scripts/phase240i-security-scan.mjs','scripts/phase240i-performance-benchmark.mjs','scripts/phase240i-e2e-smoke.mjs','scripts/phase240i-docs-index.mjs','tests/phase240i-production-hardening.test.mjs','PHASE24.0I-FINAL-PRODUCTION-HARDENING.md'];
-const missing=required.filter((file)=>!fs.existsSync(file)); const pkg=JSON.parse(fs.readFileSync('package.json','utf8')); const scripts=['test:phase24.0i','security:phase24.0i','benchmark:phase24.0i','e2e:phase24.0i','docs:phase24.0i','verify:phase24.0i']; const missingScripts=scripts.filter((s)=>!pkg.scripts[s]);
-if(pkg.version!=='24.0.9'||missing.length||missingScripts.length){console.error({version:pkg.version,missing,missingScripts});process.exit(1);} console.log('Phase 24.0I production audit passed.');

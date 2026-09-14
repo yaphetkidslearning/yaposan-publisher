@@ -34,7 +34,7 @@ export const duplicateManagedTemplate = (
   const duplicate = cloneTemplate(source);
   duplicate.metadata.id = newId;
   duplicate.metadata.name = newName ?? `${source.metadata.name} Copy`;
-  duplicate.metadata.updated = new Date().toISOString();
+  duplicate.metadata.updatedAt = new Date().toISOString();
   return { ...state, active: [duplicate, ...state.active] };
 };
 
@@ -46,7 +46,7 @@ export const renameManagedTemplate = (
   ...state,
   active: state.active.map((template) =>
     template.metadata.id === templateId
-      ? { ...template, metadata: { ...template.metadata, name, updated: new Date().toISOString() } }
+      ? { ...template, metadata: { ...template.metadata, name, updatedAt: new Date().toISOString() } }
       : template,
   ),
 });

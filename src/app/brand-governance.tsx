@@ -15,7 +15,7 @@ import {
   updateRequestStatus,
   type BrandAsset,
   type ContentRequest,
-} from "../utils/phase54BrandGovernanceEngine/index";
+} from "../utils/brandGovernanceEngine";
 
 const ASSET_KEY = "yaposan.phase54.brandAssets";
 const REQUEST_KEY = "yaposan.phase54.contentRequests";
@@ -41,7 +41,7 @@ export default function BrandGovernanceScreen() {
   return <SafeAreaView style={styles.root}>
     <View style={styles.header}>
       <Pressable onPress={() => router.back()} style={styles.back}><Ionicons name="arrow-back" size={22} color="#0f172a" /></Pressable>
-      <View style={{ flex: 1 }}><Text style={styles.title}>Brand Governance</Text><Text style={styles.subtitle}>Phase 54 · Govern assets, rules, requests, approvals, and brand compliance</Text></View>
+      <View style={{ flex: 1 }}><Text style={styles.title}>Brand Governance</Text><Text style={styles.subtitle}>Govern assets, rules, requests, approvals, and brand compliance</Text></View>
     </View>
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.hero}>

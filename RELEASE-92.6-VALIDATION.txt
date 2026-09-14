@@ -1,5 +1,0 @@
-Yaposan Phase 92.6 — Complete Lint Hardening
-
-Source regression certification: run `npm run test:phase92.6`.
-Production certification: run `npm run verify:phase92.6` in the installed production repository.
-Push is prohibited until the production gate exits 0.

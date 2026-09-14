@@ -66,7 +66,7 @@ function createTemplate(spec: Spec, index: number): ProfessionalTemplate {
   const pages: PublisherPage[] = Array.from({ length: pageCount }, (_, pageIndex) => ({
     id: `${id}-page-${pageIndex + 1}`, name: pageCount === 12 ? `Month ${pageIndex + 1}` : `Page ${pageIndex + 1}`,
     width: spec.width, height: spec.height, orientation: spec.orientation === "square" ? "portrait" : spec.orientation,
-    sizeKey: spec.pageSize.toLowerCase().replace(/\s+/g, "-"), backgroundColor: palettes[index % palettes.length][1],
+    sizeKey: "custom", backgroundColor: palettes[index % palettes.length][1],
     margin: 32, bleed: DEFAULT_BLEED, elements: createElements(spec, `${id}-p${pageIndex + 1}`, index + pageIndex, pageIndex),
   }));
   const [paletteName, , accent] = palettes[index % palettes.length];
@@ -75,7 +75,7 @@ function createTemplate(spec: Spec, index: number): ProfessionalTemplate {
       id, name: `${paletteName} ${spec.name} ${serial}`, category: spec.category, subcategory: spec.plural,
       industry: spec.key === "social-media" ? "Multi-platform" : spec.key === "corporate" ? "Corporate" : "All Industries",
       description: `Professional, fully editable ${spec.name.toLowerCase()} template with smart placeholders, brand colors, print-safe layout, and reusable page structure.`,
-      tags: [spec.key, spec.name.toLowerCase(), "editable", "professional", "brand", "phase 24.2Q"],
+      tags: [spec.key, spec.name.toLowerCase(), "editable", "professional", "brand", ""],
       pageSize: spec.pageSize, orientation: spec.orientation, previewColor: accent, author: "Yaposan", version: "24.2Q",
       editable: true, featured: serial <= 12, trending: serial % 13 === 0, access: serial % 7 === 0 ? "premium" : "free",
       createdAt: NOW, updatedAt: NOW, themeId: paletteName.toLowerCase(), supportedThemeIds: ["corporate-blue", "modern-dark", "luxury-gold", "minimal-white"],

@@ -12,7 +12,7 @@ import {
   PHASE52_CAPABILITIES,
   PHASE52_GLOBAL_PUBLISHING,
   type LocalePack,
-} from "../utils/phase52GlobalPublishingEngine";
+} from "../utils/globalPublishingEngine";
 
 const STORAGE_KEY = "yaposan.phase52.localePacks";
 
@@ -37,7 +37,7 @@ export default function GlobalPublishing() {
   return <SafeAreaView style={styles.root}>
     <View style={styles.header}>
       <Pressable onPress={() => router.back()} style={styles.back}><Ionicons name="arrow-back" size={22} color="#0f172a" /></Pressable>
-      <View style={{ flex: 1 }}><Text style={styles.title}>Global Localization & Publishing</Text><Text style={styles.subtitle}>Phase 52 · Publish professional documents for multiple languages, regions, and text directions</Text></View>
+      <View style={{ flex: 1 }}><Text style={styles.title}>Global Localization & Publishing</Text><Text style={styles.subtitle}>Publish professional documents for multiple languages, regions, and text directions</Text></View>
     </View>
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.hero}>

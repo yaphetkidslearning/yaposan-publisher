@@ -5,7 +5,7 @@ import { Alert, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text,
 import * as DocumentPicker from "expo-document-picker";
 import { File as ExpoFile } from "expo-file-system";
 import type { PublisherProject } from "../types/publisher";
-import { analyzeProjectIntegrity, deduplicateProjectAssets, repairIntegrityIssue, repairProjectIntegrity, relinkProjectAsset, type IntegrityIssue } from "../utils/projectPhase8DManager";
+import { analyzeProjectIntegrity, deduplicateProjectAssets, repairIntegrityIssue, repairProjectIntegrity, relinkProjectAsset, type IntegrityIssue } from "../utils/projectFileManager";
 import { listSavedPublisherProjects, loadPublisherProject, savePublisherProject } from "../utils/publisherStorage";
 
 export default function ProjectDiagnosticsScreen(){

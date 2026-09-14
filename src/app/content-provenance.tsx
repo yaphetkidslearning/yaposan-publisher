@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
-import { DEFAULT_PROVENANCE_RECORDS, DEFAULT_TRUST_POLICIES, PHASE56_CAPABILITIES, PHASE56_CONTENT_PROVENANCE, buildExportManifest, createLocalFingerprint, provenanceBlockers, provenanceTrustScore, updateProvenanceStatus, type ProvenanceRecord, type ProvenanceStatus } from "../utils/phase56ContentProvenanceEngine";
+import { DEFAULT_PROVENANCE_RECORDS, DEFAULT_TRUST_POLICIES, PHASE56_CAPABILITIES, PHASE56_CONTENT_PROVENANCE, buildExportManifest, createLocalFingerprint, provenanceBlockers, provenanceTrustScore, updateProvenanceStatus, type ProvenanceRecord, type ProvenanceStatus } from "../utils/contentProvenanceEngine";
 
 const STORAGE_KEY = "yaposan.phase56.provenanceRecords";
 const statuses: ProvenanceStatus[] = ["verified", "review", "unsigned", "broken"];
@@ -23,7 +23,7 @@ export default function ContentProvenanceScreen() {
   };
 
   return <SafeAreaView style={styles.root}>
-    <View style={styles.header}><Pressable onPress={() => router.back()} style={styles.back}><Ionicons name="arrow-back" size={22} color="#0f172a" /></Pressable><View style={{flex:1}}><Text style={styles.title}>Content Provenance</Text><Text style={styles.subtitle}>Phase 56 · Origin, authenticity, disclosure, and trust</Text></View></View>
+    <View style={styles.header}><Pressable onPress={() => router.back()} style={styles.back}><Ionicons name="arrow-back" size={22} color="#0f172a" /></Pressable><View style={{flex:1}}><Text style={styles.title}>Content Provenance</Text><Text style={styles.subtitle}>Origin, authenticity, disclosure, and trust</Text></View></View>
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.hero}><View style={styles.scoreRing}><Text style={styles.score}>{score}%</Text><Text style={styles.scoreLabel}>trust score</Text></View><View style={{flex:1}}><Text style={styles.heroTitle}>{PHASE56_CONTENT_PROVENANCE.label}</Text><Text style={styles.heroText}>{PHASE56_CONTENT_PROVENANCE.summary}</Text></View></View>
 
@@ -43,7 +43,7 @@ export default function ContentProvenanceScreen() {
       <Text style={styles.sectionTitle}>Export trust manifest</Text>
       <View style={styles.manifest}><View style={styles.row}><Ionicons name="document-text" size={22} color="#0f766e" /><View style={{flex:1}}><Text style={styles.cardTitle}>{manifest.title}</Text><Text style={styles.meta}>{manifest.assetFingerprints.length} verified fingerprints · signer: {manifest.signer}</Text></View></View><Text style={styles.body}>AI generated: {manifest.disclosureSummary.generated} · assisted: {manifest.disclosureSummary.assisted} · composited: {manifest.disclosureSummary.composited}</Text></View>
 
-      <Text style={styles.sectionTitle}>Phase 56 capabilities</Text>
+      <Text style={styles.sectionTitle}>capabilities</Text>
       <View style={styles.grid}>{PHASE56_CAPABILITIES.map((item) => <View key={item.id} style={[styles.capability, item.status === "External" && styles.external]}><Text style={styles.cardTitle}>{item.title}</Text><Text style={styles.body}>{item.description}</Text><Text style={item.status === "Ready" ? styles.readyText : styles.externalText}>{item.status}</Text></View>)}</View>
 
       <Text style={styles.sectionTitle}>Authenticity audit</Text>

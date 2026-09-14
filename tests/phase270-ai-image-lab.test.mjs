@@ -1,2 +1,0 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
-test('Phase 27 restoration and style lab is integrated',()=>{const x=fs.readFileSync('src/utils/aiImageLabEngine.ts','utf8');for(const term of ['restore','scratch-repair','colorize','cartoon','anime','upscale','animate-photo'])assert.match(x,new RegExp(term));assert.match(fs.readFileSync('src/app/photo-studio.tsx','utf8'),/photo-ai-lab/);});

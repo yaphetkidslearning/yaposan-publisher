@@ -10,7 +10,7 @@ const features = [
 
 export default function PublicSite() {
   return (
-    <View style={styles.page} accessibilityRole="main">
+    <View style={styles.page}>
       <View style={styles.header}>
         <Text style={styles.brand} accessibilityRole="header">Yaposan</Text>
         <View style={styles.nav}>

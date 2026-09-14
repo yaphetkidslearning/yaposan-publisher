@@ -1,3 +1,3 @@
-# Phase 24.0D-H Release Notes
+# Commercial Release Notes
 
-Adds commercial licensing, end-to-end release checks, production documentation, security auditing, performance benchmarks, and a unified Commercial Release Center.
+Current commercial-release behavior is documented by the root `RELEASE-NOTES.md` and `CHANGELOG.md`. This guide is intentionally kept short so public documentation reflects the maintained product rather than historical development snapshots.

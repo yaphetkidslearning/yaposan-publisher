@@ -31,7 +31,7 @@ function template(config: {
   return {
     metadata: {
       id: config.id, name: config.name, category: config.category, subcategory: config.subcategory, industry: config.industry,
-      description: config.description, tags: [config.subcategory, config.industry, config.style, "handcrafted", "phase 24.3C", "exact-preview"],
+      description: config.description, tags: [config.subcategory, config.industry, config.style, "handcrafted", "", "exact-preview"],
       pageSize: config.pageSize, orientation: config.orientation, previewColor: config.previewColor, palette: config.palette, fonts: config.fonts,
       author: "Yaposan Design Studio", version: "24.3C", editable: true, featured: true, access: config.access ?? "free",
       createdAt: NOW, updatedAt: NOW, style: config.style, qualityScore: 100, masterTemplateId: config.id,
