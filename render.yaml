@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://render.com/static/blueprint-spec.schema.json
+﻿# yaml-language-server: $schema=https://render.com/static/blueprint-spec.schema.json
 services:
   - type: web
     name: yaposan-web
@@ -60,9 +60,9 @@ services:
       - key: PRODUCT_PHOTO_WORKER_TOKEN
         generateValue: true
       - key: IDENTITY_PROVIDER
-        value: oidc
+        value: local
       - key: REQUIRE_EXTERNAL_IDENTITY
-        value: "true"
+        value: "false"
       - key: OIDC_ISSUER
         sync: false
       - key: OIDC_CLIENT_ID
@@ -225,3 +225,4 @@ databases:
     region: virginia
     postgresMajorVersion: "17"
     ipAllowList: []
+
