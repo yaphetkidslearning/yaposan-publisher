@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+﻿import { Ionicons } from "@expo/vector-icons";
 import { Link, useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -160,8 +160,8 @@ const workspaces: Workspace[] = [
 ];
 
 const aiAccessOptions: AiAccessOption[] = [
-  { name: "Connect Your AI Provider", price: "Recommended · Pay provider directly", icon: "key-outline", accent: "#9333ea", dark: "#5f199e", button: "Connect My AI", href: "/ai-provider-settings", featured: true, features: ["Connect OpenAI, Gemini, Anthropic, or another compatible provider", "Your provider account is billed directly for its AI usage", "Yaposan does not charge for your provider's AI usage"] },
-  { name: "Use Local AI", price: "Free · Your hardware", icon: "home-outline", accent: "#14b8a6", dark: "#087c73", button: "Use Local AI", href: "/ai-provider-settings", features: ["Connect supported local AI such as Ollama or LM Studio", "No Yaposan cloud-AI charges", "Keep supported AI processing on infrastructure you control"] },
+  { name: "Connect Your AI Provider", price: "Recommended Â· Pay provider directly", icon: "key-outline", accent: "#9333ea", dark: "#5f199e", button: "Connect My AI", href: "/ai-provider-settings", featured: true, features: ["Connect OpenAI, Gemini, Anthropic, or another compatible provider", "Your provider account is billed directly for its AI usage", "Yaposan does not charge for your provider's AI usage"] },
+  { name: "Use Local AI", price: "Free Â· Your hardware", icon: "home-outline", accent: "#14b8a6", dark: "#087c73", button: "Use Local AI", href: "/ai-provider-settings", features: ["Connect supported local AI such as Ollama or LM Studio", "No Yaposan cloud-AI charges", "Keep supported AI processing on infrastructure you control"] },
 ];
 
 const publicationTypes: Array<{ title: string; icon: IconName; accent: string; soft: string }> = [
@@ -184,9 +184,9 @@ const publishChannels: PublishChannel[] = [
   { name: "Shopify", short: "S", href: "/marketplace?channel=shopify", accent: "#5e8e3e", background: "#eff8e8", kind: "badge" },
   { name: "Amazon", short: "a", href: "/marketplace?channel=amazon", accent: "#ff9900", background: "#fff7e7", kind: "badge" },
   { name: "Facebook Marketplace", short: "f", href: "/marketplace?channel=facebook", accent: "#1877f2", background: "#edf5ff", kind: "badge" },
-  { name: "Instagram Shop", short: "◎", href: "/marketplace?channel=instagram", accent: "#d62976", background: "#fff0f7", kind: "badge" },
-  { name: "TikTok Shop", short: "♪", href: "/marketplace?channel=tiktok", accent: "#00f2ea", background: "#07151f", kind: "badge" },
-  { name: "Walmart Marketplace", short: "✹", href: "/marketplace?channel=walmart", accent: "#0071ce", background: "#edf7ff", kind: "badge" },
+  { name: "Instagram Shop", short: "â—Ž", href: "/marketplace?channel=instagram", accent: "#d62976", background: "#fff0f7", kind: "badge" },
+  { name: "TikTok Shop", short: "â™ª", href: "/marketplace?channel=tiktok", accent: "#00f2ea", background: "#07151f", kind: "badge" },
+  { name: "Walmart Marketplace", short: "âœ¹", href: "/marketplace?channel=walmart", accent: "#0071ce", background: "#edf7ff", kind: "badge" },
   { name: "Pinterest Catalog", short: "P", href: "/marketplace?channel=pinterest", accent: "#e60023", background: "#fff0f3", kind: "badge" },
 ];
 
@@ -318,7 +318,7 @@ export default function HomeScreen() {
     <SafeAreaView style={[styles.safeArea, darkMode && styles.darkSafeArea]}>
       <Modal visible={showOnboarding} transparent animationType="fade" onRequestClose={() => void dismissOnboarding()}>
         <View style={styles.onboardingShade}><View style={styles.onboardingCard}>
-          <View style={styles.onboardingTop}><Text style={styles.onboardingEyebrow}>FIRST-TIME GUIDE · {onboardingStep + 1}/{onboarding.length}</Text><Pressable onPress={() => void dismissOnboarding()}><Ionicons name="close" size={22} color="#475569" /></Pressable></View>
+          <View style={styles.onboardingTop}><Text style={styles.onboardingEyebrow}>FIRST-TIME GUIDE Â· {onboardingStep + 1}/{onboarding.length}</Text><Pressable onPress={() => void dismissOnboarding()}><Ionicons name="close" size={22} color="#475569" /></Pressable></View>
           <Text style={styles.onboardingTitle}>{onboarding[onboardingStep].title}</Text><Text style={styles.onboardingBody}>{onboarding[onboardingStep].body}</Text>
           <View style={styles.onboardingDots}>{onboarding.map((_,i)=><View key={i} style={[styles.onboardingDot,i===onboardingStep&&styles.onboardingDotOn]} />)}</View>
           <View style={styles.onboardingActions}>{onboardingStep>0?<Pressable style={styles.onboardingSecondary} onPress={()=>setOnboardingStep(v=>v-1)}><Text style={styles.onboardingSecondaryText}>Back</Text></Pressable>:<Pressable style={styles.onboardingSecondary} onPress={() => void dismissOnboarding()}><Text style={styles.onboardingSecondaryText}>Skip</Text></Pressable>}<Pressable style={styles.onboardingPrimary} onPress={()=>onboardingStep<onboarding.length-1?setOnboardingStep(v=>v+1):void dismissOnboarding()}><Text style={styles.onboardingPrimaryText}>{onboardingStep<onboarding.length-1?"Next":"Start creating"}</Text></Pressable></View>
@@ -363,7 +363,7 @@ export default function HomeScreen() {
           <View style={[styles.topShowcase, mobile && styles.topShowcaseMobile]}>
             <View style={styles.iHeader}>
               <View style={styles.iHeaderCopy}>
-                <Text style={[styles.iEyebrow, darkMode && styles.darkEyebrow]}>Welcome to Yaposan! 👋</Text>
+                <Text style={[styles.iEyebrow, darkMode && styles.darkEyebrow]}>Welcome to Yaposan! ðŸ‘‹</Text>
                 <Text style={[styles.iHeading, darkMode && styles.darkHeading, mobile && styles.headingMobile]}>
                   What will you <Text style={styles.headingCreate}>create</Text><Text style={styles.headingToday}> today?</Text>
                 </Text>
@@ -476,7 +476,7 @@ export default function HomeScreen() {
 
           <View style={styles.planSection}>
             <Text style={[styles.planSectionTitle, darkMode && styles.darkSectionTitle]}>Connect AI to power AI features</Text>
-            <Text style={[styles.planSectionSubtitle, darkMode && styles.darkSectionSubtitle]}>Yaposan provides the platform and tools. Connect your own AI provider or supported local AI for AI-powered features. Your provider bills you directly; Yaposan does not charge for your provider's AI usage.</Text>
+            <Text style={[styles.planSectionSubtitle, darkMode && styles.darkSectionSubtitle]}>Yaposan provides the platform and tools. Connect your own AI provider or supported local AI for AI-powered features. Your provider bills you directly; Yaposan does not charge for your provider&apos;s AI usage.</Text>
             <View style={styles.planGrid}>
               {aiAccessOptions.map((option) => (
                 <View
@@ -909,3 +909,4 @@ const styles = createCreatorStyles({
   sidebarSubitemPressed: { backgroundColor: "rgba(255,255,255,0.08)" },
   sidebarSubitemText: { flex: 1, color: "#b9cad9", fontSize: 11, lineHeight: 14, fontWeight: "600" },
 });
+
