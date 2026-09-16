@@ -1,9 +1,9 @@
-﻿import { spawn, spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
 import { parseEnv } from "node:util";
-const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+import pkg from "../package.json" with { type: "json" };
 
 const KNOWN_KEYS = JSON.parse(fs.readFileSync(new URL("../runtime-config-keys.json", import.meta.url), "utf8"));
 
@@ -171,4 +171,3 @@ function requestShutdown(code=0) { if(shuttingDown)return; shuttingDown=true; sh
 process.on("SIGINT",()=>requestShutdown(130));
 process.on("SIGTERM",()=>requestShutdown(143));
 web.on("exit",code=>requestShutdown(code ?? 0));
-

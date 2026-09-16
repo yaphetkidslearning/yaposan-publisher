@@ -1,4 +1,4 @@
-﻿export type CloudConfig = {
+export type CloudConfig = {
   databaseUrl?: string;
   sessionSecret: string;
   accessTokenMinutes: number;
@@ -168,7 +168,5 @@ export function validateProductionConfig(config: CloudConfig, nodeEnv = process.
   if (nodeEnv === "production" && config.identityProvider === "local" && config.requireEmailVerification && !config.emailFrom) issues.push("EMAIL_FROM is required in production when local email verification is enabled");
   if (nodeEnv === "production" && config.identityProvider === "local" && config.requireEmailVerification && !config.publicWebUrl) issues.push("PUBLIC_WEB_URL is required in production for verification and password-reset links");
   if (nodeEnv === "production" && config.adminBootstrapEmail && (/\.(local|localhost)$/i.test(config.adminBootstrapEmail) || config.adminBootstrapEmail.endsWith("@localhost"))) issues.push("ADMIN_BOOTSTRAP_EMAIL must be a deliverable email address in production so Admin password recovery works");
-
   return issues;
 }
-

@@ -1,4 +1,4 @@
-﻿# yaml-language-server: $schema=https://render.com/static/blueprint-spec.schema.json
+# yaml-language-server: $schema=https://render.com/static/blueprint-spec.schema.json
 services:
   - type: web
     name: yaposan-web
@@ -54,7 +54,7 @@ services:
       - key: PUBLIC_ORIGINS
         value: https://yaposan.com,https://app.yaposan.com,https://www.yaposan.com
       - key: PUBLIC_WEB_URL
-        value: https://app.yaposan.com
+        value: https://yaposan.com
       - key: ADMIN_SESSION_SECRET
         generateValue: true
       - key: PRODUCT_PHOTO_WORKER_TOKEN
@@ -109,6 +109,8 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: REQUIRE_EMAIL_VERIFICATION
+        value: "true"
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM
@@ -225,4 +227,3 @@ databases:
     region: virginia
     postgresMajorVersion: "17"
     ipAllowList: []
-

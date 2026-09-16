@@ -162,7 +162,7 @@ import {
 
 const config = loadCloudConfig();
 const runtimeMetrics = new RuntimeMetrics();
-const releaseVersion = "119.10.4";
+const releaseVersion = "119.10.6";
 
 const collaborationStoreReady = configureCollaborationStore({
   driver: config.collaborationDriver,
@@ -1300,12 +1300,17 @@ export async function handleRequest(
 
     if (req.method === "POST" && url.pathname === "/api/v1/spaces") {
       const b = await bodyJson(req) as { organizationId?: string; name?: string; slug?: string; kind?: "personal"|"team"|"business"; visibility?: "private"|"team" };
+      const requestedKind = b.kind ?? "personal";
+      if (requestedKind === "personal") {
+        const existingPersonal = (await listUserSpaces(db, userId)).find(space => space.kind === "personal" && space.ownerUserId === userId);
+        if (existingPersonal) return json(res, 200, { space: existingPersonal, existing: true }, requestId);
+      }
       const memberships = await db.find("memberships", row => row.userId === userId);
       const organizationId = String(b.organizationId ?? memberships[0]?.organizationId ?? "");
       if (!organizationId) return json(res, 400, { error: { code: "SPACE_ORGANIZATION_REQUIRED", message: "An organization is required to create an AI page." } }, requestId);
       try {
-        const space = await createSpace(db, { userId, organizationId, name: String(b.name ?? "My AI Page"), slug: b.slug, kind: b.kind, visibility: b.visibility });
-        return json(res, 201, { space }, requestId);
+        const space = await createSpace(db, { userId, organizationId, name: String(b.name ?? "My AI Page"), slug: b.slug, kind: requestedKind, visibility: b.visibility });
+        return json(res, 201, { space, existing: false }, requestId);
       } catch (error) {
         return json(res, 400, { error: { code: "SPACE_CREATE_FAILED", message: error instanceof Error ? error.message : "Could not create AI page." } }, requestId);
       }

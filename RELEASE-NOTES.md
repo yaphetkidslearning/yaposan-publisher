@@ -1,3 +1,9 @@
+## Yaposan 119.10.6
+
+119.10.6 keeps the 119.10.5 authentication and AI Page routing fixes and refines the public homepage responsive layout. The two-column desktop hero now remains side-by-side across normal laptop and desktop viewport widths, with a medium-width layout that reduces heading size and card spacing instead of prematurely stacking the hero. Mobile still stacks below 700px.
+
+119.10.6 fixes authentication-state and AI Page navigation consistency across the public homepage, My AI Page, and Creator. Signed-in users now get My Page and Sign Out actions, existing personal pages reopen instead of starting a duplicate-creation flow, and the backend returns the existing personal page when creation is requested again. The production blueprint also reflects the working local-auth and verified-email configuration.
+
 ## Yaposan 119.10.4
 - AI access layout cleanup: Connect Your AI Provider and Use Local AI now render as two wide rectangular cards across the available desktop width, with a normal center gap.
 - Mobile behavior remains stacked at full width.

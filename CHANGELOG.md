@@ -1,3 +1,13 @@
+## 119.10.6
+
+- Desktop hero responsiveness: preserve the left-copy/right-card layout down to 700px, add medium-width sizing for 700–1099px, and reserve stacked hero/buttons for true mobile widths.
+
+- Made the public homepage authentication-aware so signed-in users see My Page / Sign Out instead of a stale Sign In state.
+- Routed AI Page actions through My Page so existing pages reopen instead of repeatedly starting page creation.
+- Added Sign Out to the My AI Page sidebar and kept Website Home / Creator Home navigation consistent.
+- Prevented accidental creation of additional personal AI Pages; existing legacy duplicates remain accessible but no new personal duplicates are created.
+- Aligned the production Render blueprint with the working local-auth + verified-email setup (Resend).
+
 ## 119.10.4
 - Expanded the two AI access cards to fill the desktop row evenly, removing the large empty center gap.
 - Kept 100% stacked cards on mobile and equal-height desktop cards with aligned actions.

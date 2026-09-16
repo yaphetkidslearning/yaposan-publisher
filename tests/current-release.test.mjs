@@ -7,9 +7,9 @@ const exists=(p)=>fs.existsSync(p);
 function walk(dir){const out=[];if(!exists(dir))return out;for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())out.push(...walk(p));else out.push(p)}return out}
 
 test('release version is aligned',()=>{
-  assert.equal(JSON.parse(read('package.json')).version,'119.10.4');
-  assert.equal(JSON.parse(read('app.json')).expo.version,'119.10.4');
-  assert.match(read('server/index.ts'),/releaseVersion = "119\.10\.4"/);
+  assert.equal(JSON.parse(read('package.json')).version,'119.10.6');
+  assert.equal(JSON.parse(read('app.json')).expo.version,'119.10.6');
+  assert.match(read('server/index.ts'),/releaseVersion = "119\.10\.6"/);
 });
 
 test('production source has no phase-named runtime files',()=>{
@@ -152,7 +152,7 @@ test('Edit profile modal remains usable on short screens',()=>{
  assert.match(sidebar,/Save profile/);
 });
 
-test('119.10.4 homepage keeps product hierarchy and supporting capabilities separate',()=>{
+test('119.10.6 homepage keeps product hierarchy and supporting capabilities separate',()=>{
   const home=read('src/app/index.tsx');
   assert.match(home,/The AI Page is the product\./);
   assert.match(home,/Everything around your AI Page\./);
@@ -163,10 +163,10 @@ test('119.10.4 homepage keeps product hierarchy and supporting capabilities sepa
   assert.match(home,/Public, private & paid content/);
 });
 
-test('119.10.4 homepage has responsive public navigation and hero layout',()=>{
+test('119.10.6 homepage has responsive public navigation and hero layout',()=>{
   const home=read('src/app/index.tsx');
   assert.match(home,/const \{ width \} = useWindowDimensions\(\)/);
-  assert.match(home,/const compact = width < 820/);
+  assert.match(home,/const compact = width < 700/);
   assert.match(home,/navCompact/);
   assert.match(home,/navActionsCompact/);
   assert.match(home,/heroCompact/);
@@ -180,7 +180,7 @@ test('global DM dock contains API failures instead of crashing the app',()=>{
   assert.match(dm,/Retry/);
 });
 
-test('119.10.4 homepage responds to mobile, positioning, navigation, and feedback requirements',()=>{
+test('119.10.6 homepage responds to mobile, positioning, navigation, and feedback requirements',()=>{
   const home=read('src/app/index.tsx');
   const html=read('src/app/+html.tsx');
   const feedback=read('src/app/feedback.tsx');
@@ -200,8 +200,59 @@ test('119.10.4 homepage responds to mobile, positioning, navigation, and feedbac
 });
 
 
-test('119.10.4 AI access cards fill the desktop row and stack on mobile',()=>{
+test('119.10.6 AI access cards fill the desktop row and stack on mobile',()=>{
   const creator=read('src/app/creator.tsx');
   assert.match(creator,/const planWidth = useMemo\(\(\) => \(mobile \? "100%" : "49%"\)/);
   assert.match(creator,/planGrid: \{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "stretch", gap: 10 \}/);
+});
+
+
+test('119.10.6 keeps homepage auth state, logout, and My Page routing consistent',()=>{
+  const home=read('src/app/index.tsx');
+  const sidebar=read('src/components/space/SpaceSidebar.tsx');
+  assert.match(home,/const auth = useAuth\(\)/);
+  assert.match(home,/>AI Page<\/Text>/);
+  assert.match(home,/auth\.isAuthenticated\?"Open My AI Page":"Create My AI Page"/);
+  assert.match(home,/Sign Out/);
+  assert.match(home,/router\.push\("\/my-space"/);
+  assert.match(sidebar,/Website Home/);
+  assert.match(sidebar,/Sign Out/);
+  assert.match(sidebar,/auth\.signOut\(\)/);
+  const creator=read('src/app/creator.tsx');
+  assert.match(creator,/accessibilityLabel="Sign out"/);
+  assert.match(creator,/>Sign Out<\/Text>/);
+});
+
+test('119.10.6 prevents accidental duplicate personal AI Pages',()=>{
+  const create=read('src/app/create-ai-page.tsx');
+  const chooser=read('src/app/my-space.tsx');
+  const server=read('server/index.ts');
+  assert.match(create,/authorizedFetch\("\/api\/v1\/spaces"\)/);
+  assert.match(create,/router\.replace\("\/my-space"/);
+  assert.doesNotMatch(chooser,/Create another AI Page/);
+  assert.match(server,/existingPersonal/);
+  assert.match(server,/existing: true/);
+});
+
+test('119.10.6 production blueprint keeps local auth and verified-email delivery configuration',()=>{
+  const render=read('render.yaml');
+  const config=read('server/config.ts');
+  assert.match(render,/key: IDENTITY_PROVIDER\s+value: local/);
+  assert.match(render,/key: REQUIRE_EXTERNAL_IDENTITY\s+value: "false"/);
+  assert.match(render,/key: REQUIRE_EMAIL_VERIFICATION\s+value: "true"/);
+  assert.match(render,/key: RESEND_API_KEY\s+sync: false/);
+  assert.match(render,/key: EMAIL_FROM\s+sync: false/);
+  assert.doesNotMatch(config,/Production local-password identity is legacy fallback/);
+});
+
+
+test('119.10.6 keeps the desktop hero side-by-side until true mobile width',()=>{
+  const home=read('src/app/index.tsx');
+  assert.match(home,/const compact = width < 700/);
+  assert.match(home,/const medium = width >= 700 && width < 1100/);
+  assert.match(home,/medium && s\.heroMedium/);
+  assert.match(home,/medium && s\.titleMedium/);
+  assert.match(home,/medium && s\.choiceCardMedium/);
+  assert.match(home,/heroCompact:\{flexDirection:"column"/);
+  assert.match(home,/actionsCompact:\{flexDirection:"column"/);
 });

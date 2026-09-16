@@ -1,7 +1,7 @@
 {
   "name": "yaposan",
   "main": "expo-router/entry",
-  "version": "119.10.4",
+  "version": "119.10.6",
   "dependencies": {
     "@expo/ui": "~57.0.4",
     "@expo/vector-icons": "^15.0.2",
