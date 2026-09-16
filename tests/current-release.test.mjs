@@ -7,9 +7,9 @@ const exists=(p)=>fs.existsSync(p);
 function walk(dir){const out=[];if(!exists(dir))return out;for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())out.push(...walk(p));else out.push(p)}return out}
 
 test('release version is aligned',()=>{
-  assert.equal(JSON.parse(read('package.json')).version,'119.10.6');
-  assert.equal(JSON.parse(read('app.json')).expo.version,'119.10.6');
-  assert.match(read('server/index.ts'),/releaseVersion = "119\.10\.6"/);
+  assert.equal(JSON.parse(read('package.json')).version,'119.10.7');
+  assert.equal(JSON.parse(read('app.json')).expo.version,'119.10.7');
+  assert.match(read('server/index.ts'),/releaseVersion = "119\.10\.7"/);
 });
 
 test('production source has no phase-named runtime files',()=>{
@@ -152,7 +152,7 @@ test('Edit profile modal remains usable on short screens',()=>{
  assert.match(sidebar,/Save profile/);
 });
 
-test('119.10.6 homepage keeps product hierarchy and supporting capabilities separate',()=>{
+test('119.10.7 homepage keeps product hierarchy and supporting capabilities separate',()=>{
   const home=read('src/app/index.tsx');
   assert.match(home,/The AI Page is the product\./);
   assert.match(home,/Everything around your AI Page\./);
@@ -163,14 +163,15 @@ test('119.10.6 homepage keeps product hierarchy and supporting capabilities sepa
   assert.match(home,/Public, private & paid content/);
 });
 
-test('119.10.6 homepage has responsive public navigation and hero layout',()=>{
+test('119.10.7 homepage has canonical web responsive navigation and hero layout',()=>{
   const home=read('src/app/index.tsx');
   assert.match(home,/const \{ width \} = useWindowDimensions\(\)/);
-  assert.match(home,/const compact = width < 700/);
-  assert.match(home,/navCompact/);
-  assert.match(home,/navActionsCompact/);
-  assert.match(home,/heroCompact/);
-  assert.match(home,/gridCompact/);
+  assert.match(home,/Platform\.OS !== "web" && width < 700/);
+  assert.match(home,/@media \(min-width: 1100px\)/);
+  assert.match(home,/@media \(min-width: 700px\) and \(max-width: 1099px\)/);
+  assert.match(home,/@media \(max-width: 699px\)/);
+  assert.match(home,/nativeID="y-home-hero"/);
+  assert.match(home,/nativeID="y-home-nav"/);
 });
 
 test('global DM dock contains API failures instead of crashing the app',()=>{
@@ -180,7 +181,7 @@ test('global DM dock contains API failures instead of crashing the app',()=>{
   assert.match(dm,/Retry/);
 });
 
-test('119.10.6 homepage responds to mobile, positioning, navigation, and feedback requirements',()=>{
+test('119.10.7 homepage responds to mobile, positioning, navigation, and feedback requirements',()=>{
   const home=read('src/app/index.tsx');
   const html=read('src/app/+html.tsx');
   const feedback=read('src/app/feedback.tsx');
@@ -200,14 +201,14 @@ test('119.10.6 homepage responds to mobile, positioning, navigation, and feedbac
 });
 
 
-test('119.10.6 AI access cards fill the desktop row and stack on mobile',()=>{
+test('119.10.7 AI access cards fill the desktop row and stack on mobile',()=>{
   const creator=read('src/app/creator.tsx');
   assert.match(creator,/const planWidth = useMemo\(\(\) => \(mobile \? "100%" : "49%"\)/);
   assert.match(creator,/planGrid: \{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "stretch", gap: 10 \}/);
 });
 
 
-test('119.10.6 keeps homepage auth state, logout, and My Page routing consistent',()=>{
+test('119.10.7 keeps homepage auth state, logout, and My Page routing consistent',()=>{
   const home=read('src/app/index.tsx');
   const sidebar=read('src/components/space/SpaceSidebar.tsx');
   assert.match(home,/const auth = useAuth\(\)/);
@@ -223,7 +224,7 @@ test('119.10.6 keeps homepage auth state, logout, and My Page routing consistent
   assert.match(creator,/>Sign Out<\/Text>/);
 });
 
-test('119.10.6 prevents accidental duplicate personal AI Pages',()=>{
+test('119.10.7 prevents accidental duplicate personal AI Pages',()=>{
   const create=read('src/app/create-ai-page.tsx');
   const chooser=read('src/app/my-space.tsx');
   const server=read('server/index.ts');
@@ -234,7 +235,7 @@ test('119.10.6 prevents accidental duplicate personal AI Pages',()=>{
   assert.match(server,/existing: true/);
 });
 
-test('119.10.6 production blueprint keeps local auth and verified-email delivery configuration',()=>{
+test('119.10.7 production blueprint keeps local auth and verified-email delivery configuration',()=>{
   const render=read('render.yaml');
   const config=read('server/config.ts');
   assert.match(render,/key: IDENTITY_PROVIDER\s+value: local/);
@@ -246,13 +247,12 @@ test('119.10.6 production blueprint keeps local auth and verified-email delivery
 });
 
 
-test('119.10.6 keeps the desktop hero side-by-side until true mobile width',()=>{
+test('119.10.7 keeps direct-load and internal-navigation homepage layout consistent',()=>{
   const home=read('src/app/index.tsx');
-  assert.match(home,/const compact = width < 700/);
-  assert.match(home,/const medium = width >= 700 && width < 1100/);
-  assert.match(home,/medium && s\.heroMedium/);
-  assert.match(home,/medium && s\.titleMedium/);
-  assert.match(home,/medium && s\.choiceCardMedium/);
-  assert.match(home,/heroCompact:\{flexDirection:"column"/);
-  assert.match(home,/actionsCompact:\{flexDirection:"column"/);
+  assert.match(home,/Web uses CSS media queries below/);
+  assert.match(home,/direct loads, refreshes, browser history, and client-side navigation/);
+  assert.match(home,/#y-home-hero \{ flex-direction: row !important/);
+  assert.match(home,/#y-home-actions \{ flex-direction: row !important/);
+  assert.match(home,/#y-home-choice \{ max-width: 470px !important/);
+  assert.match(home,/@media \(max-width: 699px\)/);
 });

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import Head from "expo-router/head";
-import { SafeAreaView, ScrollView, StyleSheet, Text, Pressable, View, useWindowDimensions } from "react-native";
+import { SafeAreaView, ScrollView, StyleSheet, Text, Pressable, View, useWindowDimensions, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
@@ -28,8 +28,11 @@ export default function YaposanHome(){
   const auth = useAuth();
   const routeParams = useLocalSearchParams<{tour?: string}>();
   const [showGuide,setShowGuide] = useState(false);
-  const compact = width < 700;
-  const medium = width >= 700 && width < 1100;
+  // Native keeps JS-driven breakpoints. Web uses CSS media queries below so
+  // direct loads, refreshes, browser history, and client-side navigation all
+  // resolve from the same actual browser viewport instead of hydration state.
+  const compact = Platform.OS !== "web" && width < 700;
+  const medium = Platform.OS !== "web" && width >= 700 && width < 1100;
   useEffect(()=>{
     let active=true;
     if(routeParams.tour === "1"){
@@ -50,12 +53,44 @@ export default function YaposanHome(){
     <Head>
       <title>Yaposan — Create Your Own AI Page & Social Space</title>
       <meta name="description" content="Create your own AI-powered page on Yaposan. Build AI, chat, post, comment, share videos, livestream, advertise, grow followers, and create with built-in publishing, photo, video, template, and AI tools." />
+      {Platform.OS === "web" && <style>{`
+        /* Canonical homepage layout for web. CSS media queries use the real
+           browser viewport on first load, refresh, back/forward, and SPA nav. */
+        @media (min-width: 1100px) {
+          #y-home-nav { padding-left: 28px !important; padding-right: 28px !important; flex-direction: row !important; align-items: center !important; flex-wrap: nowrap !important; }
+          #y-home-nav-actions { width: auto !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: flex-end !important; gap: 22px !important; }
+          #y-home-hero { flex-direction: row !important; align-items: center !important; padding: 72px 32px !important; gap: 44px !important; }
+          #y-home-title { font-size: 62px !important; line-height: 66px !important; letter-spacing: -2px !important; }
+          #y-home-actions { flex-direction: row !important; align-items: center !important; }
+          #y-home-choice { max-width: 470px !important; padding: 28px !important; }
+          [id^="y-home-grid-"] { flex-direction: row !important; }
+        }
+        @media (min-width: 700px) and (max-width: 1099px) {
+          #y-home-nav { padding-left: 22px !important; padding-right: 22px !important; flex-direction: row !important; align-items: center !important; flex-wrap: nowrap !important; }
+          #y-home-nav-actions { width: auto !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: flex-end !important; gap: 14px !important; }
+          #y-home-hero { flex-direction: row !important; align-items: center !important; padding: 56px 26px !important; gap: 26px !important; }
+          #y-home-title { font-size: 46px !important; line-height: 50px !important; letter-spacing: -1.4px !important; }
+          #y-home-lead { font-size: 17px !important; line-height: 26px !important; }
+          #y-home-actions { flex-direction: row !important; }
+          #y-home-choice { max-width: 420px !important; padding: 22px !important; }
+          [id^="y-home-grid-"] { flex-direction: row !important; }
+        }
+        @media (max-width: 699px) {
+          #y-home-nav { padding: 14px 18px !important; flex-direction: row !important; align-items: flex-start !important; flex-wrap: wrap !important; gap: 12px !important; }
+          #y-home-nav-actions { width: 100% !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: flex-start !important; gap: 14px !important; }
+          #y-home-hero { flex-direction: column !important; align-items: stretch !important; padding: 42px 20px !important; gap: 28px !important; }
+          #y-home-title { font-size: 43px !important; line-height: 48px !important; letter-spacing: -1.2px !important; }
+          #y-home-actions { flex-direction: column !important; }
+          #y-home-choice { max-width: none !important; width: 100% !important; }
+          [id^="y-home-grid-"] { flex-direction: column !important; }
+        }
+      `}</style>}
     </Head>
     <SafeAreaView style={s.screen}>
       <ScrollView contentContainerStyle={s.page}>
-        <View style={[s.nav, compact && s.navCompact]}>
+        <View nativeID="y-home-nav" style={[s.nav, compact && s.navCompact]}>
           <Text style={s.brand}>YAPOSAN</Text>
-          <View style={[s.navActions, compact && s.navActionsCompact]}>
+          <View nativeID="y-home-nav-actions" style={[s.navActions, compact && s.navActionsCompact]}>
             <Pressable onPress={openMyPage}><Text style={s.navLink}>AI Page</Text></Pressable>
             <Pressable onPress={()=>router.push("/help")}><Text style={s.navLink}>How It Works</Text></Pressable>
             <Pressable onPress={()=>router.push("/feedback")}><Text style={s.navLink}>Feedback</Text></Pressable>
@@ -72,18 +107,18 @@ export default function YaposanHome(){
           </View>
         </View>}
 
-        <View style={[s.hero, medium && s.heroMedium, compact && s.heroCompact]}>
+        <View nativeID="y-home-hero" style={[s.hero, medium && s.heroMedium, compact && s.heroCompact]}>
           <View style={[s.heroCopy, medium && s.heroCopyMedium]}>
             <Text style={s.eyebrow}>YOUR AI. YOUR PAGE. YOUR DIGITAL SPACE.</Text>
-            <Text style={[s.title, medium && s.titleMedium, compact && s.titleCompact]}>Create your own AI-powered page on the internet.</Text>
-            <Text style={[s.lead, medium && s.leadMedium]}>Create a personal AI page, connect your preferred AI provider, publish content, communicate with followers, and use built-in creative tools — all from one space.</Text>
-            <View style={[s.actions, compact && s.actionsCompact]}>
+            <Text nativeID="y-home-title" style={[s.title, medium && s.titleMedium, compact && s.titleCompact]}>Create your own AI-powered page on the internet.</Text>
+            <Text nativeID="y-home-lead" style={[s.lead, medium && s.leadMedium]}>Create a personal AI page, connect your preferred AI provider, publish content, communicate with followers, and use built-in creative tools — all from one space.</Text>
+            <View nativeID="y-home-actions" style={[s.actions, compact && s.actionsCompact]}>
               <Pressable style={s.primary} onPress={openMyPage}><Ionicons name="sparkles" size={20} color="#fff"/><Text style={s.primaryText}>{auth.isAuthenticated?"Open My AI Page":"Create My AI Page"}</Text></Pressable>
               <Pressable style={s.secondary} onPress={()=>router.push("/creator")}><Ionicons name="color-palette-outline" size={20} color="#5b21b6"/><Text style={s.secondaryText}>Explore Yaposan</Text></Pressable>
             </View>
             <Text style={s.note}>One identity. One AI space. Your content, audience, tools, and AI together.</Text>
           </View>
-          <View style={[s.choiceCard, medium && s.choiceCardMedium]}>
+          <View nativeID="y-home-choice" style={[s.choiceCard, medium && s.choiceCardMedium]}>
             <Text style={s.choiceTitle}>The AI Page is the product.</Text>
             <View style={s.choice}><View style={s.choiceIcon}><Ionicons name="person-circle-outline" size={25} color="#7c3aed"/></View><View style={s.choiceText}><Text style={s.choiceHeading}>My AI Page</Text><Text style={s.choiceBody}>Build a personal AI-powered space for your content, community, work, and connected AI.</Text></View></View>
             <View style={s.divider}/>
@@ -95,13 +130,13 @@ export default function YaposanHome(){
           <Text style={s.sectionKicker}>WHAT MAKES YAPOSAN DIFFERENT</Text>
           <Text style={s.sectionTitle}>Everything around your AI Page.</Text>
           <Text style={s.sectionLead}>Yaposan gives people, creators, professionals, and businesses one AI-powered space where their AI, content, community, work, and creative tools live together.</Text>
-          <View style={[s.grid, compact && s.gridCompact]}>{pillars.map(([icon,title,copy])=><View key={title} style={s.card}><Ionicons name={icon} size={28} color="#6d28d9"/><Text style={s.cardTitle}>{title}</Text><Text style={s.cardCopy}>{copy}</Text></View>)}</View>
+          <View nativeID="y-home-grid-pillars" style={[s.grid, compact && s.gridCompact]}>{pillars.map(([icon,title,copy])=><View key={title} style={s.card}><Ionicons name={icon} size={28} color="#6d28d9"/><Text style={s.cardTitle}>{title}</Text><Text style={s.cardCopy}>{copy}</Text></View>)}</View>
         </View>
 
         <View style={s.section}>
           <Text style={s.sectionKicker}>ONE SPACE, MANY CAPABILITIES</Text>
           <Text style={s.sectionTitle}>Create, publish, communicate, and grow from one place.</Text>
-          <View style={[s.grid, compact && s.gridCompact]}>{capabilities.map(([icon,title,copy])=><View key={title} style={s.card}><Ionicons name={icon} size={28} color="#6d28d9"/><Text style={s.cardTitle}>{title}</Text><Text style={s.cardCopy}>{copy}</Text></View>)}</View>
+          <View nativeID="y-home-grid-capabilities" style={[s.grid, compact && s.gridCompact]}>{capabilities.map(([icon,title,copy])=><View key={title} style={s.card}><Ionicons name={icon} size={28} color="#6d28d9"/><Text style={s.cardTitle}>{title}</Text><Text style={s.cardCopy}>{copy}</Text></View>)}</View>
         </View>
 
         <View style={s.visionBand}>

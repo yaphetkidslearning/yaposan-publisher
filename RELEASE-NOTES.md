@@ -1,8 +1,8 @@
-## Yaposan 119.10.6
+## Yaposan 119.10.7
 
-119.10.6 keeps the 119.10.5 authentication and AI Page routing fixes and refines the public homepage responsive layout. The two-column desktop hero now remains side-by-side across normal laptop and desktop viewport widths, with a medium-width layout that reduces heading size and card spacing instead of prematurely stacking the hero. Mobile still stacks below 700px.
+119.10.7 keeps the 119.10.5 authentication and AI Page routing fixes and refines the public homepage responsive layout. The two-column desktop hero now remains side-by-side across normal laptop and desktop viewport widths, with a medium-width layout that reduces heading size and card spacing instead of prematurely stacking the hero. Mobile still stacks below 700px.
 
-119.10.6 fixes authentication-state and AI Page navigation consistency across the public homepage, My AI Page, and Creator. Signed-in users now get My Page and Sign Out actions, existing personal pages reopen instead of starting a duplicate-creation flow, and the backend returns the existing personal page when creation is requested again. The production blueprint also reflects the working local-auth and verified-email configuration.
+119.10.7 fixes authentication-state and AI Page navigation consistency across the public homepage, My AI Page, and Creator. Signed-in users now get My Page and Sign Out actions, existing personal pages reopen instead of starting a duplicate-creation flow, and the backend returns the existing personal page when creation is requested again. The production blueprint also reflects the working local-auth and verified-email configuration.
 
 ## Yaposan 119.10.4
 - AI access layout cleanup: Connect Your AI Provider and Use Local AI now render as two wide rectangular cards across the available desktop width, with a normal center gap.
@@ -137,3 +137,6 @@ Yaposan now presents a simpler AI model: connect your own AI provider or support
 
 ## 119.10.1
 SEO positioning now presents Yaposan first as a platform for creating an AI-powered page and digital space. Global search/social metadata emphasizes connecting a preferred AI provider or local AI while keeping creative tools as supporting capabilities.
+
+## 119.10.7
+This release fixes the inconsistent homepage layout seen when opening `yaposan.com` directly versus returning through the in-app Website Home action. Web responsiveness now uses canonical CSS media queries so route entry method and browser history do not change the desktop layout.

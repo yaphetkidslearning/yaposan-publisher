@@ -1,4 +1,4 @@
-﻿import { spawn, spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
@@ -171,4 +171,3 @@ function requestShutdown(code=0) { if(shuttingDown)return; shuttingDown=true; sh
 process.on("SIGINT",()=>requestShutdown(130));
 process.on("SIGTERM",()=>requestShutdown(143));
 web.on("exit",code=>requestShutdown(code ?? 0));
-

@@ -162,7 +162,7 @@ import {
 
 const config = loadCloudConfig();
 const runtimeMetrics = new RuntimeMetrics();
-const releaseVersion = "119.10.6";
+const releaseVersion = "119.10.7";
 
 const collaborationStoreReady = configureCollaborationStore({
   driver: config.collaborationDriver,

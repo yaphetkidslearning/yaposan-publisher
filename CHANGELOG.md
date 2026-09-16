@@ -1,4 +1,4 @@
-## 119.10.6
+## 119.10.7
 
 - Desktop hero responsiveness: preserve the left-copy/right-card layout down to 700px, add medium-width sizing for 700–1099px, and reserve stacked hero/buttons for true mobile widths.
 
@@ -109,3 +109,8 @@
 - Updated the global meta description around AI Pages, customer-selected AI providers/local AI, publishing, creative tools, and digital spaces.
 - Open Graph, Twitter/X metadata, and JSON-LD structured data now inherit the same positioning from the global SEO source of truth.
 - Updated the Expo application description to match the new positioning.
+
+## 119.10.7
+- Canonicalized the web homepage responsive layout so direct URL loads, refreshes, browser Back/Forward, and internal Website Home navigation render the same structure.
+- Moved web homepage breakpoints to CSS media queries based on the actual browser viewport, avoiding hydration/navigation-state width mismatches.
+- Preserved side-by-side desktop hero/card layout at 1280px and above while retaining tablet/mobile reflow.
