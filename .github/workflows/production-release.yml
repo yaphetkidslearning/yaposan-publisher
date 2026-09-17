@@ -25,12 +25,12 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: npm run test:phase92.3
-      - run: npm run check:phase92.3
-      - run: npm run typecheck
-      - run: npm run test:rc12
+      - run: npm run typecheck:full
+      - run: npm run lint -- --quiet
+      - run: npm run test:release
+      - run: npm run security:secrets:tree
+      - run: npm run licenses:check
       - run: npm run deploy:render:validate
-      - run: npm run deploy:step3:validate
       - run: npm run build:web
         env:
           EXPO_PUBLIC_API_URL: https://api.yaposan.com

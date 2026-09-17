@@ -1,7 +1,7 @@
 {
   "name": "yaposan",
   "main": "expo-router/entry",
-  "version": "119.10.7",
+  "version": "119.10.8",
   "dependencies": {
     "@expo/ui": "~57.0.4",
     "@expo/vector-icons": "^15.0.2",
@@ -88,8 +88,8 @@
     "package:source": "node scripts/create-source-release.mjs",
     "security:gitleaks": "gitleaks git . --config .gitleaks.toml",
     "licenses:check": "node scripts/check-dependency-licenses.mjs",
-    "open-source:preflight": "npm run check && npm run test:release && npm run licenses:check",
-    "public:preflight": "npm run open-source:preflight",
+    "open-source:preflight": "npm run typecheck:full && npm run lint -- --quiet && npm run test:release && npm run security:secrets:tree && npm run licenses:check",
+    "public:preflight": "npm run open-source:preflight && npm run build:web",
     "verify:production": "node scripts/verify-production.mjs",
     "preflight:production": "node scripts/production-preflight-1174.mjs",
     "certify:production:ci": "npm run open-source:preflight",
@@ -124,7 +124,8 @@
     "deploy:down": "docker compose -f docker-compose.deploy.yml down",
     "deploy:render:validate": "node deploy/scripts/validate-render-blueprint.mjs render.yaml",
     "deploy:smoke": "node deploy/scripts/hosted-smoke-test.mjs",
-    "security:sbom": "node scripts/generate-sbom.mjs"
+    "security:sbom": "node scripts/generate-sbom.mjs",
+    "security:secrets:tree": "node scripts/scan-source-secrets.mjs"
   },
   "private": true,
   "description": "Open-source AI-powered page and creative platform for personal AI, publishing, community, content, and bring-your-own-provider workflows.",

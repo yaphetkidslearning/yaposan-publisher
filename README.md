@@ -1,42 +1,52 @@
 # Yaposan
 
-Yaposan is a creator platform for personal AI Pages, social publishing, creative Studios, tools, projects, files, commerce, and user-controlled AI/provider connections.
+Yaposan is an open-source platform for creating a personal AI-powered Page / digital space, connecting a preferred AI provider or supported local AI, publishing content, communicating with a community, and using built-in creative tools.
 
 ## Current release
 
-Version **119.3.4** is the production-clean source release. The repository intentionally excludes obsolete milestone reports, validation snapshots, and other historical packaging clutter.
+Version **119.10.8** is the open-source-readiness release. It keeps the 119.10.7 homepage, authentication, AI Page routing, and verified-email behavior while improving public-repository onboarding, contribution guidance, secret scanning, and GitHub workflows.
 
 ## Quick start
+
+Requirements: Node.js 22+ and npm.
 
 ```bash
 npm install
 npm run web
 ```
 
-For the API only:
+`npm run web` starts the local API and Expo web experience together. For the API only:
 
 ```bash
 npm run server
 ```
 
+Copy `.env.example` to `.env` only when you need local service configuration. Never commit `.env` or real credentials.
+
 ## Quality checks
 
 ```bash
-npm run typecheck
+npm run typecheck:full
 npm run lint -- --quiet
 npm run test:release
+npm run security:secrets:tree
+npm run licenses:check
 npm run build:web
 ```
 
-The source package does not include `node_modules`; install dependencies before running dependency-based checks.
+For the normal contributor gate, run:
+
+```bash
+npm run open-source:preflight
+```
 
 ## Main product areas
 
-- Personal AI Page with profile, cover, followers, public publishing, privacy, and direct messages.
-- Social feed with posts, Stories, Reels, Communities, Events, Live, Channels, Notes, Polls, and Collab / Remix.
-- AI models and user-controlled provider/API connections.
+- Personal AI Page with profile, cover, followers, publishing, privacy, direct messages, and AI connections.
+- Social content and community features.
+- Bring-your-own AI provider and supported local AI workflows.
 - Creative Studios, Publisher, image/video/audio tools, templates, projects, and files.
-- Creator marketplace, usage/billing, team controls, administration, security, and production operations.
+- Creator commerce, team controls, administration, security, and production operations.
 
 ## Repository map
 
@@ -46,8 +56,27 @@ The source package does not include `node_modules`; install dependencies before 
 - `src/templates/` — editable design template catalog
 - `server/` — API and server services
 - `database/migrations/` — ordered database migrations
-- `services/` — supporting services such as background removal
+- `services/` — supporting services
 - `tests/current-release.test.mjs` — current structural/product regression suite
-- `docs/` — maintained documentation
+- `docs/` — maintained architecture, open-source, and operating documentation
+- `.github/` — issue templates, pull-request template, Dependabot, CodeQL, and CI workflows
 
-See `INSTALL.md`, `TESTING.md`, `SECURITY.md`, `CONTRIBUTING.md`, and `docs/ARCHITECTURE.md` for more detail.
+## Contributing
+
+Contributions are welcome. Start with `CONTRIBUTING.md` and `docs/OPEN_SOURCE.md`. Bug reports, accessibility fixes, documentation, tests, translations, and focused product improvements are all useful.
+
+Before opening a pull request:
+
+```bash
+npm run open-source:preflight
+```
+
+## Security
+
+Do not open public issues for vulnerabilities or exposed credentials. Follow `SECURITY.md` and use GitHub private vulnerability reporting when available.
+
+Before making a private repository public, follow `docs/PUBLIC-RELEASE-CHECKLIST.md` and run a full Git-history secret scan in the real Git clone.
+
+## License
+
+Yaposan is licensed under the **MIT License**. See `LICENSE` and `THIRD_PARTY_NOTICES.md`.
