@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Objective Phase 1 alpha-mask benchmark: IoU, Dice, SAD, MSE, gradient MAE, boundary F1."""
+"""Objective alpha-mask benchmark: IoU, Dice, SAD, MSE, gradient MAE, boundary F1."""
 import argparse, csv, json, math
 from pathlib import Path
 from PIL import Image, ImageFilter, ImageChops

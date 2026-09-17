@@ -1,3 +1,13 @@
+# Yaposan 119.10.8 — Open-source readiness
+
+- Refreshes README and contributor onboarding for the current product and release.
+- Adds maintained open-source and public-release checklists.
+- Adds a source-tree secret scan and strengthens the public preflight command.
+- Replaces stale milestone-specific GitHub workflow commands with current neutral validation commands.
+- Moves SBOM output to a neutral `artifacts/sbom` path.
+- Keeps the MIT license, security policy, governance model, issue templates, Discussions templates, Dependabot, CodeQL, and pull-request workflow.
+- Does not expose hosted production credentials, customer data, billing systems, or private infrastructure.
+
 ## Yaposan 119.10.7
 
 119.10.7 keeps the 119.10.5 authentication and AI Page routing fixes and refines the public homepage responsive layout. The two-column desktop hero now remains side-by-side across normal laptop and desktop viewport widths, with a medium-width layout that reduces heading size and card spacing instead of prematurely stacking the hero. Mobile still stacks below 700px.

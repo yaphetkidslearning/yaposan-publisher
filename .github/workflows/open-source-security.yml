@@ -19,8 +19,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
-      - name: Phase 90.9 certification
-        run: npm run verify:phase90.9
+      - name: Open-source preflight
+        run: npm run open-source:preflight
       - name: Full Git history secret scan
         uses: gitleaks/gitleaks-action@v2
         env:
