@@ -1,3 +1,12 @@
+# Yaposan 119.10.9 — Contributor-facing open-source presentation
+
+- Makes the repository front page explain the Yaposan vision immediately.
+- Adds a prominent **Help Build Yaposan** section for developers, designers, AI contributors, testers, accessibility contributors, and documentation contributors.
+- Clarifies the core product direction: personal AI-powered Pages / digital spaces rather than a collection of unrelated creative tools.
+- Explains the bring-your-own-AI direction and the goal of supporting external providers and supported local AI.
+- Adds clear paths to Issues, Discussions, Pull Requests, contribution guidance, setup, testing, and security documentation.
+- Keeps all 119.10.8 open-source readiness, secret scanning, GitHub workflows, homepage behavior, authentication, AI Page routing, and verified-email behavior.
+
 # Yaposan 119.10.8 — Open-source readiness
 
 - Refreshes README and contributor onboarding for the current product and release.
