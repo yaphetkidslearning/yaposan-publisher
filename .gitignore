@@ -17,3 +17,5 @@ gitleaks-full-report.json
 
 # Local persistent development database
 .yaposan/
+
+gitleaks-history-report.json
